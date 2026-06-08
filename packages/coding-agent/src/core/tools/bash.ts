@@ -1,6 +1,7 @@
 import { constants } from "node:fs";
 import { access as fsAccess } from "node:fs/promises";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
+import { AI_DASH } from "ai-dash";
 import { Container, Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { spawn } from "child_process";
 import { type Static, Type } from "typebox";
@@ -8,13 +9,7 @@ import { keyHint } from "../../modes/interactive/components/keybinding-hints.ts"
 import { truncateToVisualLines } from "../../modes/interactive/components/visual-truncate.ts";
 import { theme } from "../../modes/interactive/theme/theme.ts";
 import { waitForChildProcess } from "../../utils/child-process.ts";
-import {
-	getShellConfig,
-	getShellEnv,
-	killProcessTree,
-	trackDetachedChildPid,
-	untrackDetachedChildPid,
-} from "../../utils/shell.ts";
+import { getShellEnv, killProcessTree, trackDetachedChildPid, untrackDetachedChildPid } from "../../utils/shell.ts";
 import type { ToolDefinition, ToolRenderResultOptions } from "../extensions/types.ts";
 import { OutputAccumulator } from "./output-accumulator.ts";
 import { getTextOutput, invalidArgText, str } from "./render-utils.ts";
@@ -22,7 +17,13 @@ import { wrapToolDefinition } from "./tool-definition-wrapper.ts";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult } from "./truncate.ts";
 
 const bashSchema = Type.Object({
-	command: Type.String({ description: "Bash command to execute" }),
+	command: Type.Union(
+		[
+			Type.String({ description: "A single shell command to execute" }),
+			Type.Array(Type.String(), { description: "Multiple independent shell commands to run in parallel" }),
+		],
+		{ description: "The shell command(s) to execute" },
+	),
 	timeout: Type.Optional(Type.Number({ description: "Timeout in seconds (optional, no default timeout)" })),
 });
 
@@ -31,6 +32,14 @@ export type BashToolInput = Static<typeof bashSchema>;
 export interface BashToolDetails {
 	truncation?: TruncationResult;
 	fullOutputPath?: string;
+	metadata?: BashIntent;
+}
+
+export interface BashIntent {
+	intent: "read" | "edit" | "list" | "search" | "fs" | "bash";
+	cmd?: string;
+	path?: string;
+	compound?: boolean;
 }
 
 /**
@@ -54,19 +63,16 @@ export interface BashOperations {
 			timeout?: number;
 			env?: NodeJS.ProcessEnv;
 		},
-	) => Promise<{ exitCode: number | null }>;
+	) => Promise<{ exitCode: number | null; metadata?: BashIntent }>;
 }
 
 /**
- * Create bash operations using pi's built-in local shell execution backend.
- *
- * This is useful for extensions that intercept user_bash and still want pi's
- * standard local shell behavior while wrapping or rewriting commands.
+ * Create bash operations using ai-dash as the shell backend.
+ * Spawns ai-dash -c <command> and reads fd 3 for semantic metadata.
  */
-export function createLocalBashOperations(options?: { shellPath?: string }): BashOperations {
+export function createLocalBashOperations(): BashOperations {
 	return {
 		exec: async (command, cwd, { onData, signal, timeout, env }) => {
-			const { shell, args } = getShellConfig(options?.shellPath);
 			try {
 				await fsAccess(cwd, constants.F_OK);
 			} catch {
@@ -76,11 +82,12 @@ export function createLocalBashOperations(options?: { shellPath?: string }): Bas
 				throw new Error("aborted");
 			}
 
-			const child = spawn(shell, [...args, command], {
+			// Spawn ai-dash with fd 3 piped for metadata
+			const child = spawn(AI_DASH, ["-c", command], {
 				cwd,
 				detached: process.platform !== "win32",
 				env: env ?? getShellEnv(),
-				stdio: ["ignore", "pipe", "pipe"],
+				stdio: ["ignore", "pipe", "pipe", "pipe"],
 				windowsHide: true,
 			});
 			if (child.pid) trackDetachedChildPid(child.pid);
@@ -90,24 +97,27 @@ export function createLocalBashOperations(options?: { shellPath?: string }): Bas
 				if (child.pid) killProcessTree(child.pid);
 			};
 
+			// Read fd 3 for semantic metadata
+			let metadataJson = "";
+			if (child.stdio[3]) {
+				child.stdio[3].on("data", (chunk: Buffer) => {
+					metadataJson += chunk.toString("utf-8");
+				});
+			}
+
 			try {
-				// Set timeout if provided.
 				if (timeout !== undefined && timeout > 0) {
 					timeoutHandle = setTimeout(() => {
 						timedOut = true;
 						if (child.pid) killProcessTree(child.pid);
 					}, timeout * 1000);
 				}
-				// Stream stdout and stderr.
 				child.stdout?.on("data", onData);
 				child.stderr?.on("data", onData);
-				// Handle abort signal by killing the entire process tree.
 				if (signal) {
 					if (signal.aborted) onAbort();
 					else signal.addEventListener("abort", onAbort, { once: true });
 				}
-				// Handle shell spawn errors and wait for the process to terminate without hanging
-				// on inherited stdio handles held by detached descendants.
 				const exitCode = await waitForChildProcess(child);
 				if (signal?.aborted) {
 					throw new Error("aborted");
@@ -115,7 +125,19 @@ export function createLocalBashOperations(options?: { shellPath?: string }): Bas
 				if (timedOut) {
 					throw new Error(`timeout:${timeout}`);
 				}
-				return { exitCode };
+
+				// Parse metadata from fd 3
+				let metadata: BashIntent | undefined;
+				if (metadataJson) {
+					try {
+						const line = metadataJson.trim().split("\n")[0];
+						if (line) metadata = JSON.parse(line);
+					} catch {
+						// Ignore parse errors
+					}
+				}
+
+				return { exitCode, metadata };
 			} finally {
 				if (child.pid) untrackDetachedChildPid(child.pid);
 				if (timeoutHandle) clearTimeout(timeoutHandle);
@@ -176,11 +198,18 @@ function formatDuration(ms: number): string {
 	return `${(ms / 1000).toFixed(1)}s`;
 }
 
-function formatBashCall(args: { command?: string; timeout?: number } | undefined): string {
-	const command = str(args?.command);
+function formatBashCall(args: { command?: string | string[]; timeout?: number } | undefined): string {
+	const rawCommand = args?.command;
 	const timeout = args?.timeout as number | undefined;
 	const timeoutSuffix = timeout ? theme.fg("muted", ` (timeout ${timeout}s)`) : "";
-	const commandDisplay = command === null ? invalidArgText(theme) : command ? command : theme.fg("toolOutput", "...");
+	let commandDisplay: string;
+	if (rawCommand === undefined || rawCommand === null) {
+		commandDisplay = invalidArgText(theme);
+	} else if (Array.isArray(rawCommand)) {
+		commandDisplay = rawCommand.join(" && ");
+	} else {
+		commandDisplay = rawCommand || theme.fg("toolOutput", "...");
+	}
 	return theme.fg("toolTitle", theme.bold(`$ ${commandDisplay}`)) + timeoutSuffix;
 }
 
@@ -274,23 +303,25 @@ export function createBashToolDefinition(
 	cwd: string,
 	options?: BashToolOptions,
 ): ToolDefinition<typeof bashSchema, BashToolDetails | undefined, BashRenderState> {
-	const ops = options?.operations ?? createLocalBashOperations({ shellPath: options?.shellPath });
+	const ops = options?.operations ?? createLocalBashOperations();
 	const commandPrefix = options?.commandPrefix;
 	const spawnHook = options?.spawnHook;
 	return {
 		name: "bash",
 		label: "bash",
 		description: `Execute a bash command in the current working directory. Returns stdout and stderr. Output is truncated to last ${DEFAULT_MAX_LINES} lines or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). If truncated, full output is saved to a temp file. Optionally provide a timeout in seconds.`,
-		promptSnippet: "Execute bash commands (ls, grep, find, etc.)",
+		promptSnippet: "Execute shell commands via ai-dash. Use cat to read, fedit to edit, grep to search, find to list.",
 		parameters: bashSchema,
 		async execute(
 			_toolCallId,
-			{ command, timeout }: { command: string; timeout?: number },
+			{ command, timeout }: { command: string | string[]; timeout?: number },
 			signal?: AbortSignal,
 			onUpdate?,
 			_ctx?,
 		) {
-			const resolvedCommand = commandPrefix ? `${commandPrefix}\n${command}` : command;
+			// Normalize: array of commands → single command joined by newlines
+			const singleCommand = Array.isArray(command) ? command.join("\n") : command;
+			const resolvedCommand = commandPrefix ? `${commandPrefix}\n${singleCommand}` : singleCommand;
 			const spawnContext = resolveSpawnContext(resolvedCommand, cwd, spawnHook);
 			const output = new OutputAccumulator({ tempFilePrefix: "pi-bash" });
 			let updateTimer: NodeJS.Timeout | undefined;
@@ -375,6 +406,7 @@ export function createBashToolDefinition(
 
 			try {
 				let exitCode: number | null;
+				let intent: BashIntent | undefined;
 				try {
 					const result = await ops.exec(spawnContext.command, spawnContext.cwd, {
 						onData: handleData,
@@ -383,6 +415,7 @@ export function createBashToolDefinition(
 						env: spawnContext.env,
 					});
 					exitCode = result.exitCode;
+					intent = result.metadata;
 				} catch (err) {
 					const snapshot = await finishOutput();
 					const { text } = formatOutput(snapshot, "");
@@ -401,7 +434,12 @@ export function createBashToolDefinition(
 				if (exitCode !== 0 && exitCode !== null) {
 					throw new Error(appendStatus(outputText, `Command exited with code ${exitCode}`));
 				}
-				return { content: [{ type: "text", text: outputText }], details };
+				const toolDetails: BashToolDetails | undefined = details
+					? { ...details, metadata: intent }
+					: intent
+						? { metadata: intent }
+						: undefined;
+				return { content: [{ type: "text", text: outputText }], details: toolDetails };
 			} finally {
 				clearUpdateTimer();
 			}

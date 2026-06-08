@@ -107,21 +107,25 @@ static void check_missing_flags(int argc, char **argv)
 static int has_rf_flag(int argc, char **argv)
 {
 	int i;
+	int has_r = 0, has_f = 0;
+
 	for (i = 1; i < argc; i++) {
 		const char *a = argv[i];
-		if (strcmp(a, "-rf") == 0 || strcmp(a, "-fr") == 0 ||
-		    strcmp(a, "-Rf") == 0 || strcmp(a, "-fR") == 0)
-			return 1;
-		/* separate -r and -f flags */
-		if (a[0] == '-' && a[1] != '-' && a[1] != '\0') {
-			int has_r = 0, has_f = 0;
+
+		if (strcmp(a, "--recursive") == 0)
+			has_r = 1;
+		else if (strcmp(a, "--force") == 0)
+			has_f = 1;
+		else if (a[0] == '-' && a[1] != '-' && a[1] != '\0') {
 			const char *p;
 			for (p = a + 1; *p; p++) {
 				if (*p == 'r' || *p == 'R') has_r = 1;
 				if (*p == 'f') has_f = 1;
 			}
-			if (has_r && has_f) return 1;
 		}
+
+		if (has_r && has_f)
+			return 1;
 	}
 	return 0;
 }
@@ -179,6 +183,26 @@ static const char *xbasename(const char *path)
 }
 
 /*
+ * Check if a wrapper flag takes an argument value.
+ * e.g. sudo -u root → -u takes "root" as its value.
+ */
+static int opt_takes_arg(const char *wrapper, const char *opt)
+{
+	if (strcmp(wrapper, "sudo") == 0 || strcmp(wrapper, "doas") == 0) {
+		return strcmp(opt, "-u") == 0 || strcmp(opt, "-g") == 0 ||
+		       strcmp(opt, "-h") == 0 || strcmp(opt, "-p") == 0 ||
+		       strcmp(opt, "-C") == 0 || strcmp(opt, "-T") == 0 ||
+		       strcmp(opt, "--user") == 0 || strcmp(opt, "--group") == 0 ||
+		       strcmp(opt, "--prompt") == 0;
+	}
+	if (strcmp(wrapper, "nice") == 0)
+		return strcmp(opt, "-n") == 0;
+	if (strcmp(wrapper, "strace") == 0)
+		return strcmp(opt, "-o") == 0 || strcmp(opt, "-e") == 0;
+	return 0;
+}
+
+/*
  * Skip command wrappers (sudo, doas, etc.) and their flags.
  * Returns the index of the real command in argv, or -1 if none.
  */
@@ -200,11 +224,20 @@ static int skip_wrappers(int argc, char **argv)
 		}
 		if (!is_wrapper)
 			return i;
-		/* Skip wrapper and its flags (e.g. sudo -E) */
+		/* Skip wrapper and its flags */
 		i++;
-		while (i < argc && argv[i][0] == '-')
-			i++;
-		/* i will be incremented by the for loop */
+		while (i < argc && argv[i][0] == '-') {
+			/* -- means end of flags */
+			if (strcmp(argv[i], "--") == 0) {
+				i++;
+				break;
+			}
+			/* If this flag takes an argument, skip the next too */
+			if (opt_takes_arg(base, argv[i]) && i + 1 < argc)
+				i += 2;
+			else
+				i++;
+		}
 		i--; /* compensate for i++ in for loop */
 	}
 	return -1;
@@ -286,6 +319,7 @@ static int check_blacklist(int argc, char **argv)
 #include "error.h"
 #include "show.h"
 #include "mystring.h"
+#include "meta.h"
 #ifndef SMALL
 #include "myhistedit.h"
 #endif
@@ -352,6 +386,7 @@ EXITRESET {
 	evalskip = 0;
 	loopnest = 0;
 	inps4 = 0;
+	eval_depth = 0;
 
 	if (tpip[0] >= 0) {
 		close(tpip[0]);
@@ -432,6 +467,9 @@ evalstring(char *s, int flags)
  * exitstatus.
  */
 
+int eval_depth;
+static int meta_simple_pending;
+
 int
 evaltree(union node *n, int flags)
 {
@@ -440,6 +478,8 @@ evaltree(union node *n, int flags)
 	struct stackmark smark;
 	unsigned isor;
 	int status = 0;
+	int top_level;
+	int depth_inc = 0;
 
 	setstackmark(&smark);
 
@@ -452,6 +492,17 @@ evaltree(union node *n, int flags)
 	}
 
 	dotrap();
+
+	/* Emit semantic metadata to fd 3 at the outermost level */
+	top_level = (eval_depth == 0);
+	if (top_level) {
+		if (n->type == NCMD)
+			meta_simple_pending = 1;  /* deferred to evalcommand */
+		else
+			meta_emit_intent(n);      /* compound: emit now */
+	}
+	eval_depth++;
+	depth_inc = 1;
 
 #ifndef SMALL
 	displayhist = 1;	/* show history substitutions done with fc */
@@ -561,6 +612,8 @@ exexit:
 
 	popstackmark(&smark);
 
+	if (depth_inc)
+		eval_depth--;
 	return exitstatus;
 }
 
@@ -1067,6 +1120,12 @@ evalcommand(union node *cmd, int flags)
 	if (iflag && funcline == 0 && argc > 0)
 		lastarg = nargv[-1];
 
+	/* ai-dash: blacklist check BEFORE redirection (prevent side effects) */
+	if (check_blacklist(argc, argv)) {
+		status = 1;
+		goto out;
+	}
+
 	preverrout.fd = 2;
 	expredir(cmd->ncmd.redirect);
 	redir_stop = pushredir(cmd->ncmd.redirect);
@@ -1125,10 +1184,11 @@ bail:
 	/* ai-dash: check for missing flags before execution */
 	check_missing_flags(argc, argv);
 
-	/* ai-dash: blacklist check */
-	if (check_blacklist(argc, argv)) {
-		status = 1;
-		goto bail;
+	/* ai-dash: emit semantic metadata to fd 3 (only for top-level simple commands) */
+	if (meta_simple_pending) {
+		int cmdidx = skip_wrappers(argc, argv);
+		meta_emit_argv_intent(argc, argv, cmdidx);
+		meta_simple_pending = 0;
 	}
 
 	/* Execute the command. */

@@ -18,16 +18,7 @@ import { SettingsManager } from "./settings-manager.ts";
 import { time } from "./timings.ts";
 import {
 	createBashTool,
-	createCodingTools,
-	createEditTool,
-	createFindTool,
-	createGrepTool,
-	createLsTool,
-	createReadOnlyTools,
-	createReadTool,
-	createWriteTool,
 	type ToolName,
-	withFileMutationQueue,
 } from "./tools/index.ts";
 
 export interface CreateAgentSessionOptions {
@@ -108,17 +99,7 @@ export type { Skill } from "./skills.ts";
 export type { Tool } from "./tools/index.ts";
 
 export {
-	withFileMutationQueue,
-	// Tool factories (for custom cwd)
-	createCodingTools,
-	createReadOnlyTools,
-	createReadTool,
 	createBashTool,
-	createEditTool,
-	createWriteTool,
-	createGrepTool,
-	createFindTool,
-	createLsTool,
 };
 
 // Helper Functions
@@ -240,7 +221,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		thinkingLevel = clampThinkingLevel(model, thinkingLevel) as ThinkingLevel;
 	}
 
-	const defaultActiveToolNames: ToolName[] = ["read", "bash", "edit", "write"];
+	const defaultActiveToolNames: ToolName[] = ["bash"];
 	const allowedToolNames = options.tools ?? (options.noTools === "all" ? [] : undefined);
 	const excludedToolNames = options.excludeTools;
 	const excludedToolNameSet = excludedToolNames ? new Set(excludedToolNames) : undefined;

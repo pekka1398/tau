@@ -57,6 +57,7 @@ int evaltree(union node *, int);
 void evalbackcmd(union node *, struct backcmd *);
 
 extern int evalskip;
+extern int eval_depth;
 
 /* reasons for skipping commands (see comment on breakcmd routine) */
 #define SKIPBREAK	(1 << 0)

@@ -60,20 +60,9 @@ import type { SlashCommandInfo } from "../slash-commands.ts";
 import type { SourceInfo } from "../source-info.ts";
 import type { BuildSystemPromptOptions } from "../system-prompt.ts";
 import type { BashOperations } from "../tools/bash.ts";
-import type { EditToolDetails } from "../tools/edit.ts";
 import type {
 	BashToolDetails,
 	BashToolInput,
-	EditToolInput,
-	FindToolDetails,
-	FindToolInput,
-	GrepToolDetails,
-	GrepToolInput,
-	LsToolDetails,
-	LsToolInput,
-	ReadToolDetails,
-	ReadToolInput,
-	WriteToolInput,
 } from "../tools/index.ts";
 
 export type { ExecOptions, ExecResult } from "../exec.ts";
@@ -787,36 +776,6 @@ export interface BashToolCallEvent extends ToolCallEventBase {
 	input: BashToolInput;
 }
 
-export interface ReadToolCallEvent extends ToolCallEventBase {
-	toolName: "read";
-	input: ReadToolInput;
-}
-
-export interface EditToolCallEvent extends ToolCallEventBase {
-	toolName: "edit";
-	input: EditToolInput;
-}
-
-export interface WriteToolCallEvent extends ToolCallEventBase {
-	toolName: "write";
-	input: WriteToolInput;
-}
-
-export interface GrepToolCallEvent extends ToolCallEventBase {
-	toolName: "grep";
-	input: GrepToolInput;
-}
-
-export interface FindToolCallEvent extends ToolCallEventBase {
-	toolName: "find";
-	input: FindToolInput;
-}
-
-export interface LsToolCallEvent extends ToolCallEventBase {
-	toolName: "ls";
-	input: LsToolInput;
-}
-
 export interface CustomToolCallEvent extends ToolCallEventBase {
 	toolName: string;
 	input: Record<string, unknown>;
@@ -830,12 +789,6 @@ export interface CustomToolCallEvent extends ToolCallEventBase {
  */
 export type ToolCallEvent =
 	| BashToolCallEvent
-	| ReadToolCallEvent
-	| EditToolCallEvent
-	| WriteToolCallEvent
-	| GrepToolCallEvent
-	| FindToolCallEvent
-	| LsToolCallEvent
 	| CustomToolCallEvent;
 
 interface ToolResultEventBase {
@@ -851,36 +804,6 @@ export interface BashToolResultEvent extends ToolResultEventBase {
 	details: BashToolDetails | undefined;
 }
 
-export interface ReadToolResultEvent extends ToolResultEventBase {
-	toolName: "read";
-	details: ReadToolDetails | undefined;
-}
-
-export interface EditToolResultEvent extends ToolResultEventBase {
-	toolName: "edit";
-	details: EditToolDetails | undefined;
-}
-
-export interface WriteToolResultEvent extends ToolResultEventBase {
-	toolName: "write";
-	details: undefined;
-}
-
-export interface GrepToolResultEvent extends ToolResultEventBase {
-	toolName: "grep";
-	details: GrepToolDetails | undefined;
-}
-
-export interface FindToolResultEvent extends ToolResultEventBase {
-	toolName: "find";
-	details: FindToolDetails | undefined;
-}
-
-export interface LsToolResultEvent extends ToolResultEventBase {
-	toolName: "ls";
-	details: LsToolDetails | undefined;
-}
-
 export interface CustomToolResultEvent extends ToolResultEventBase {
 	toolName: string;
 	details: unknown;
@@ -889,35 +812,11 @@ export interface CustomToolResultEvent extends ToolResultEventBase {
 /** Fired after a tool executes. Can modify result. */
 export type ToolResultEvent =
 	| BashToolResultEvent
-	| ReadToolResultEvent
-	| EditToolResultEvent
-	| WriteToolResultEvent
-	| GrepToolResultEvent
-	| FindToolResultEvent
-	| LsToolResultEvent
 	| CustomToolResultEvent;
 
 // Type guards for ToolResultEvent
 export function isBashToolResult(e: ToolResultEvent): e is BashToolResultEvent {
 	return e.toolName === "bash";
-}
-export function isReadToolResult(e: ToolResultEvent): e is ReadToolResultEvent {
-	return e.toolName === "read";
-}
-export function isEditToolResult(e: ToolResultEvent): e is EditToolResultEvent {
-	return e.toolName === "edit";
-}
-export function isWriteToolResult(e: ToolResultEvent): e is WriteToolResultEvent {
-	return e.toolName === "write";
-}
-export function isGrepToolResult(e: ToolResultEvent): e is GrepToolResultEvent {
-	return e.toolName === "grep";
-}
-export function isFindToolResult(e: ToolResultEvent): e is FindToolResultEvent {
-	return e.toolName === "find";
-}
-export function isLsToolResult(e: ToolResultEvent): e is LsToolResultEvent {
-	return e.toolName === "ls";
 }
 
 /**
@@ -941,12 +840,6 @@ export function isLsToolResult(e: ToolResultEvent): e is LsToolResultEvent {
  * CustomToolCallEvent.toolName is `string` which overlaps with all literals.
  */
 export function isToolCallEventType(toolName: "bash", event: ToolCallEvent): event is BashToolCallEvent;
-export function isToolCallEventType(toolName: "read", event: ToolCallEvent): event is ReadToolCallEvent;
-export function isToolCallEventType(toolName: "edit", event: ToolCallEvent): event is EditToolCallEvent;
-export function isToolCallEventType(toolName: "write", event: ToolCallEvent): event is WriteToolCallEvent;
-export function isToolCallEventType(toolName: "grep", event: ToolCallEvent): event is GrepToolCallEvent;
-export function isToolCallEventType(toolName: "find", event: ToolCallEvent): event is FindToolCallEvent;
-export function isToolCallEventType(toolName: "ls", event: ToolCallEvent): event is LsToolCallEvent;
 export function isToolCallEventType<TName extends string, TInput extends Record<string, unknown>>(
 	toolName: TName,
 	event: ToolCallEvent,

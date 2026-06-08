@@ -1,20 +1,92 @@
 /*
- * fedit — file edit builtin for AI-assisted shell.
+ * fedit — file edit builtin for AI-assisted shell (ai-dash)
  *
- * Usage: fedit <file> << 'MARKER'
- * <<<<<<< SEARCH
- * content to find
- * =======
- * replacement content
- * >>>>>>> REPLACE
- * MARKER
+ * fedit performs targeted text replacements in files using a
+ * SEARCH/REPLACE patch format inspired by git merge conflict markers.
+ * It is the primary file editing interface for AI coding agents.
  *
- * Multiple SEARCH/REPLACE blocks can be chained.
- * Search matching: exact → trim trailing ws → trim all ws.
+ * ── Syntax ──────────────────────────────────────────────────────
+ *
+ *   fedit <file> << 'EOF'
+ *   <<<<<<< SEARCH
+ *   exact content to find in the file
+ *   =======
+ *   replacement content
+ *   >>>>>>> REPLACE
+ *   EOF
+ *
+ * ── Markers ─────────────────────────────────────────────────────
+ *
+ *   <<<<<<< SEARCH   — begins a search block
+ *   =======          — separates search from replace
+ *   >>>>>>> REPLACE  — ends the block
+ *
+ * ── Rules ───────────────────────────────────────────────────────
+ *
+ *   - Multiple SEARCH/REPLACE blocks can be chained in one call
+ *   - The SEARCH block must contain the exact lines currently in the
+ *     file (fuzzy matching is applied: exact → trim trailing ws →
+ *     trim all ws → unicode normalize)
+ *   - The REPLACE block contains the replacement lines
+ *   - Lines outside markers are ignored (comments, noise)
+ *   - SEARCH block cannot be empty
+ *   - fedit is atomic: if any block fails, the file is unchanged
+ *   - Each SEARCH must match exactly once in the file (uniqueness)
+ *
+ * ── Deletion ────────────────────────────────────────────────────
+ *
+ *   To delete lines, use an empty REPLACE block:
+ *
+ *   <<<<<<< SEARCH
+ *   lines to remove
+ *   =======
+ *   >>>>>>> REPLACE
+ *
+ * ── Insertion ───────────────────────────────────────────────────
+ *
+ *   To insert new lines, include surrounding context in SEARCH
+ *   and add the new lines in REPLACE:
+ *
+ *   <<<<<<< SEARCH
+ *   def greet(name):
+ *       print(f"Hello, {name}!")
+ *   =======
+ *   def farewell(name):
+ *       print(f"Goodbye, {name}!")
+ *
+ *   def greet(name):
+ *       print(f"Hello, {name}!")
+ *   >>>>>>> REPLACE
+ *
+ * ── Output ──────────────────────────────────────────────────────
+ *
+ *   On success, fedit prints:
+ *   - A unified diff of each change (with 3 lines of context)
+ *   - "fedit: applied N block(s) to <file>"
+ *
+ * ── Error codes ─────────────────────────────────────────────────
+ *
+ *   E2000 — no arguments
+ *   E2001 — no blocks found on stdin
+ *   E2002 — read error (permission denied, etc.)
+ *   E2003 — file not found (+ similar filename suggestion)
+ *   E2004 — target is a directory
+ *   E2005 — file too large (>10MB)
+ *   E2006 — SEARCH block not found in file
+ *   E2007 — SEARCH matches multiple locations (not unique)
+ *   E2008 — malformed block (unterminated, missing separator)
+ *
+ * ── Safety ──────────────────────────────────────────────────────
+ *
+ *   - Blacklisted commands (vim, vi, nano, etc.) are blocked
+ *   - rm is intercepted and moves to trash
+ *   - rm -rf on system paths is blocked
+ *   - fedit itself is safe: atomic write, no partial corruption
  */
 
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -291,6 +363,7 @@ struct chunk {
 	size_t search_count;
 	char **replace;
 	size_t replace_count;
+	int match_pos;  /* filled during pre-flight scan */
 };
 
 struct patch {
@@ -442,16 +515,35 @@ static int read_file(const char *path, struct buf *out) {
 }
 
 static int write_file(const char *path, const char *data, size_t len) {
+	char tmppath[1024];
 	int fd;
-	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	size_t pathlen = strlen(path);
+
+	/* Build temp path: <path>.fedit.XXXXXX */
+	if (pathlen + 16 >= sizeof(tmppath)) return -1;
+	memcpy(tmppath, path, pathlen);
+	memcpy(tmppath + pathlen, ".fedit.XXXXXX", 14);
+
+	fd = mkstemp(tmppath);
 	if (fd < 0) return -1;
+
 	while (len > 0) {
 		ssize_t n = write(fd, data, len);
-		if (n < 0) { close(fd); return -1; }
+		if (n < 0) {
+			close(fd);
+			unlink(tmppath);
+			return -1;
+		}
 		data += n;
 		len -= n;
 	}
 	close(fd);
+
+	/* Atomic rename: replaces original or leaves it intact */
+	if (rename(tmppath, path) < 0) {
+		unlink(tmppath);
+		return -1;
+	}
 	return 0;
 }
 
@@ -477,66 +569,151 @@ static int read_stdin(struct buf *out) {
  * Returns new line array (malloc'd) and count.
  * Returns NULL on error (search block not found).
  */
+/*
+ * Print context lines around a position in the file.
+ * Shows `ctx` lines before and after the match at `pos` with `len` lines.
+ */
+static void print_match_context(char **lines, size_t nlines,
+				size_t pos, size_t len, size_t ctx) {
+	size_t start = pos < ctx ? 0 : pos - ctx;
+	size_t end = pos + len + ctx;
+	size_t j;
+	if (end > nlines) end = nlines;
+	for (j = start; j < end; j++) {
+		const char *prefix = (j >= pos && j < pos + len) ? "  > " : "    ";
+		outfmt(out2, "%s%zu: %s\n", prefix, j + 1, lines[j]);
+	}
+}
+
+/*
+ * Count how many times `pattern` appears in `lines` starting from `start`.
+ * Returns count and fills `last_pos` with the position of the last match.
+ */
+static size_t count_matches(char **lines, size_t nlines,
+			    char **pattern, size_t plen, size_t start,
+			    int *last_pos) {
+	size_t count = 0;
+	int pos = (int)start;
+	*last_pos = -1;
+	while (1) {
+		pos = seek_sequence(lines, nlines, pattern, plen, (size_t)pos);
+		if (pos < 0) break;
+		count++;
+		*last_pos = pos;
+		pos += (int)plen;
+	}
+	return count;
+}
+
+/*
+ * Sort chunks by match_pos descending (for bottom-up application).
+ */
+static void sort_chunks_desc(struct patch *patch) {
+	size_t i, j;
+	for (i = 0; i + 1 < patch->count; i++) {
+		for (j = i + 1; j < patch->count; j++) {
+			if (patch->chunks[j].match_pos > patch->chunks[i].match_pos) {
+				struct chunk tmp = patch->chunks[i];
+				patch->chunks[i] = patch->chunks[j];
+				patch->chunks[j] = tmp;
+			}
+		}
+	}
+}
+
 static int apply_chunks(char **file_lines, size_t file_count,
 			struct patch *patch,
 			char ***out_lines, size_t *out_count) {
-	size_t i, j, pos, new_cap;
-	char **result;
-	size_t result_count;
-	int found;
+	size_t i, j;
 	struct chunk *c;
 
-	/* Work with a copy we can grow */
-	new_cap = file_count + 256;
-	result = malloc(new_cap * sizeof(char *));
-	result_count = 0;
-
-	/* Copy file lines into result, applying patches */
-	pos = 0;
+	/*
+	 * Phase 1: Pre-flight — validate uniqueness, record match positions.
+	 * All blocks are matched against the ORIGINAL file, so order doesn't matter.
+	 */
 	for (i = 0; i < patch->count; i++) {
+		int last_pos;
+		size_t matches;
 		c = &patch->chunks[i];
 
-		found = seek_sequence(file_lines, file_count,
-				      c->search, c->search_count, pos);
-		if (found < 0) {
-			outfmt(out2, "fedit: SEARCH block %zu not found\n", i + 1);
-			free(result);
+		matches = count_matches(file_lines, file_count,
+					c->search, c->search_count, 0, &last_pos);
+
+		if (matches == 0) {
+			outfmt(out2, "fedit: SEARCH block %zu not found in file\n", i + 1);
+			outfmt(out2, "       expected to find:\n");
+			for (j = 0; j < c->search_count && j < 5; j++)
+				outfmt(out2, "         | %s\n", c->search[j]);
+			if (c->search_count > 5)
+				outfmt(out2, "         | ... (%zu more lines)\n",
+				       c->search_count - 5);
+			outfmt(out2, "\n       nearby file content:\n");
+			print_match_context(file_lines, file_count, 0, 0, 5);
 			return -1;
 		}
 
-		/* Copy lines before the match */
-		while (pos < (size_t)found) {
-			if (result_count >= new_cap) {
-				new_cap *= 2;
-				result = realloc(result, new_cap * sizeof(char *));
-			}
-			result[result_count++] = file_lines[pos++];
+		if (matches > 1) {
+			outfmt(out2, "fedit: SEARCH block %zu matches %zu times (must be unique)\n",
+			       i + 1, matches);
+			outfmt(out2, "       search text:\n");
+			for (j = 0; j < c->search_count && j < 3; j++)
+				outfmt(out2, "         | %s\n", c->search[j]);
+			if (c->search_count > 3)
+				outfmt(out2, "         | ... (%zu more lines)\n",
+				       c->search_count - 3);
+			outfmt(out2, "\n       add more surrounding lines to your SEARCH block to make it unique\n");
+			return -1;
 		}
 
-		/* Skip matched search lines */
-		pos += c->search_count;
-
-		/* Insert replace lines */
-		for (j = 0; j < c->replace_count; j++) {
-			if (result_count >= new_cap) {
-				new_cap *= 2;
-				result = realloc(result, new_cap * sizeof(char *));
-			}
-			result[result_count++] = c->replace[j];
-		}
+		c->match_pos = last_pos;
 	}
 
-	/* Copy remaining lines after last match */
-	while (pos < file_count) {
-		if (result_count >= new_cap) {
-			new_cap *= 2;
-			result = realloc(result, new_cap * sizeof(char *));
-		}
-		result[result_count++] = file_lines[pos++];
-	}
+	/*
+	 * Phase 2: Sort by position descending (bottom-up).
+	 * Applying from the end ensures earlier edits don't shift line numbers.
+	 */
+	sort_chunks_desc(patch);
 
-	*out_lines = result;
-	*out_count = result_count;
+	/*
+	 * Phase 3: Apply patches bottom-up on a mutable copy.
+	 */
+	{
+		size_t cap = file_count + 256;
+		size_t count = file_count;
+		char **lines = malloc(cap * sizeof(char *));
+		memcpy(lines, file_lines, file_count * sizeof(char *));
+
+		for (i = 0; i < patch->count; i++) {
+			int pos;
+			size_t after_start, new_count;
+			c = &patch->chunks[i];
+
+			pos = c->match_pos;
+
+			/* Build new array: lines[0..pos) + replace + lines[pos+search_count..end) */
+			after_start = (size_t)pos + c->search_count;
+			new_count = (size_t)pos + c->replace_count + (count - after_start);
+
+			while (new_count >= cap) {
+				cap *= 2;
+				lines = realloc(lines, cap * sizeof(char *));
+			}
+
+			/* Shift tail to make room for replace (or shrink) */
+			memmove(&lines[(size_t)pos + c->replace_count],
+				&lines[after_start],
+				(count - after_start) * sizeof(char *));
+
+			/* Insert replace lines */
+			for (j = 0; j < c->replace_count; j++)
+				lines[(size_t)pos + j] = c->replace[j];
+
+			count = new_count;
+		}
+
+		*out_lines = lines;
+		*out_count = count;
+	}
 	return 0;
 }
 
@@ -647,6 +824,47 @@ int feditcmd(int argc, char **argv) {
 		lines_free(&file_lines);
 		patch_free(&patch);
 		return 1;
+	}
+
+	/* Print diff of changes with context.
+	 * Chunks are sorted descending after apply_chunks, so iterate
+	 * in reverse to show changes from top to bottom. */
+	{
+		size_t i, j;
+	#define CTX_LINES 3
+		for (i = patch.count; i > 0; i--) {
+			struct chunk *c = &patch.chunks[i - 1];
+			int start = c->match_pos;
+			int ctx_before = start < CTX_LINES ? start : CTX_LINES;
+			int ctx_after_start = start + (int)c->search_count;
+			int ctx_after_end = ctx_after_start + CTX_LINES;
+			if (ctx_after_end > (int)file_lines.count)
+				ctx_after_end = (int)file_lines.count;
+			int old_count = ctx_before + (int)c->search_count +
+					(ctx_after_end - ctx_after_start);
+			int new_count = ctx_before + (int)c->replace_count +
+					(ctx_after_end - ctx_after_start);
+
+			outfmt(out1, "@@ -%d,%d +%d,%d @@\n",
+			       start + 1 - ctx_before, old_count,
+			       start + 1 - ctx_before, new_count);
+
+			/* Context before */
+			for (j = 0; (int)j < ctx_before; j++)
+				outfmt(out1, " %s\n",
+				       file_lines.items[start - ctx_before + j]);
+			/* Removed lines */
+			for (j = 0; j < c->search_count; j++)
+				outfmt(out1, "-%s\n", c->search[j]);
+			/* Added lines */
+			for (j = 0; j < c->replace_count; j++)
+				outfmt(out1, "+%s\n", c->replace[j]);
+			/* Context after */
+			for (j = 0; (int)j < ctx_after_end - ctx_after_start; j++)
+				outfmt(out1, " %s\n",
+				       file_lines.items[ctx_after_start + j]);
+		}
+	#undef CTX_LINES
 	}
 
 	/* Join result and write back */

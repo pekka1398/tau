@@ -109,7 +109,8 @@ am__objects_1 = alias.$(OBJEXT) arith_yacc.$(OBJEXT) \
 	parser.$(OBJEXT) redir.$(OBJEXT) show.$(OBJEXT) trap.$(OBJEXT) \
 	output.$(OBJEXT) bltin/printf.$(OBJEXT) system.$(OBJEXT) \
 	bltin/test.$(OBJEXT) bltin/times.$(OBJEXT) \
-	bltin/fedit.$(OBJEXT) bltin/rm.$(OBJEXT) var.$(OBJEXT)
+	bltin/fedit.$(OBJEXT) bltin/rm.$(OBJEXT) meta.$(OBJEXT) \
+	var.$(OBJEXT)
 am_dash_OBJECTS = $(am__objects_1)
 dash_OBJECTS = $(am_dash_OBJECTS)
 dash_DEPENDENCIES = builtins.o init.o nodes.o signames.o syntax.o
@@ -134,10 +135,11 @@ am__depfiles_remade = ./$(DEPDIR)/alias.Po ./$(DEPDIR)/arith_yacc.Po \
 	./$(DEPDIR)/expand.Po ./$(DEPDIR)/histedit.Po \
 	./$(DEPDIR)/input.Po ./$(DEPDIR)/jobs.Po ./$(DEPDIR)/mail.Po \
 	./$(DEPDIR)/main.Po ./$(DEPDIR)/memalloc.Po \
-	./$(DEPDIR)/miscbltin.Po ./$(DEPDIR)/mystring.Po \
-	./$(DEPDIR)/options.Po ./$(DEPDIR)/output.Po \
-	./$(DEPDIR)/parser.Po ./$(DEPDIR)/redir.Po ./$(DEPDIR)/show.Po \
-	./$(DEPDIR)/system.Po ./$(DEPDIR)/trap.Po ./$(DEPDIR)/var.Po \
+	./$(DEPDIR)/meta.Po ./$(DEPDIR)/miscbltin.Po \
+	./$(DEPDIR)/mystring.Po ./$(DEPDIR)/options.Po \
+	./$(DEPDIR)/output.Po ./$(DEPDIR)/parser.Po \
+	./$(DEPDIR)/redir.Po ./$(DEPDIR)/show.Po ./$(DEPDIR)/system.Po \
+	./$(DEPDIR)/trap.Po ./$(DEPDIR)/var.Po \
 	bltin/$(DEPDIR)/fedit.Po bltin/$(DEPDIR)/printf.Po \
 	bltin/$(DEPDIR)/rm.Po bltin/$(DEPDIR)/test.Po \
 	bltin/$(DEPDIR)/times.Po
@@ -317,11 +319,13 @@ dash_CFILES = \
 	alias.c arith_yacc.c arith_yylex.c cd.c error.c eval.c exec.c expand.c \
 	histedit.c input.c jobs.c mail.c main.c memalloc.c miscbltin.c \
 	mystring.c options.c parser.c redir.c show.c trap.c output.c \
-	bltin/printf.c system.c bltin/test.c bltin/times.c bltin/fedit.c bltin/rm.c var.c
+	bltin/printf.c system.c bltin/test.c bltin/times.c bltin/fedit.c bltin/rm.c \
+	meta.c var.c
 
 dash_SOURCES = \
 	$(dash_CFILES) \
 	alias.h arith_yacc.h bltin/bltin.h cd.h error.h eval.h exec.h \
+	meta.h \
 	expand.h \
 	init.h input.h jobs.h machdep.h mail.h main.h memalloc.h miscbltin.h \
 	myhistedit.h mystring.h options.h output.h parser.h redir.h shell.h \
@@ -458,6 +462,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mail.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/memalloc.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/meta.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/miscbltin.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mystring.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/options.Po@am__quote@ # am--include-marker
@@ -686,6 +691,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/mail.Po
 	-rm -f ./$(DEPDIR)/main.Po
 	-rm -f ./$(DEPDIR)/memalloc.Po
+	-rm -f ./$(DEPDIR)/meta.Po
 	-rm -f ./$(DEPDIR)/miscbltin.Po
 	-rm -f ./$(DEPDIR)/mystring.Po
 	-rm -f ./$(DEPDIR)/options.Po
@@ -760,6 +766,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/mail.Po
 	-rm -f ./$(DEPDIR)/main.Po
 	-rm -f ./$(DEPDIR)/memalloc.Po
+	-rm -f ./$(DEPDIR)/meta.Po
 	-rm -f ./$(DEPDIR)/miscbltin.Po
 	-rm -f ./$(DEPDIR)/mystring.Po
 	-rm -f ./$(DEPDIR)/options.Po

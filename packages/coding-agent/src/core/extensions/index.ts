@@ -48,8 +48,6 @@ export type {
 	CustomToolCallEvent,
 	CustomToolResultEvent,
 	EditorFactory,
-	EditToolCallEvent,
-	EditToolResultEvent,
 	ExecOptions,
 	ExecResult,
 	Extension,
@@ -73,22 +71,16 @@ export type {
 	ExtensionUIContext,
 	ExtensionUIDialogOptions,
 	ExtensionWidgetOptions,
-	FindToolCallEvent,
-	FindToolResultEvent,
 	GetActiveToolsHandler,
 	GetAllToolsHandler,
 	GetCommandsHandler,
 	GetThinkingLevelHandler,
-	GrepToolCallEvent,
-	GrepToolResultEvent,
 	// Events - Input
 	InputEvent,
 	InputEventResult,
 	InputSource,
 	KeybindingsManager,
 	LoadExtensionsResult,
-	LsToolCallEvent,
-	LsToolResultEvent,
 	// Events - Message
 	MessageEndEvent,
 	// Message Rendering
@@ -101,8 +93,6 @@ export type {
 	// Provider Registration
 	ProviderConfig,
 	ProviderModelConfig,
-	ReadToolCallEvent,
-	ReadToolResultEvent,
 	// Commands
 	RegisteredCommand,
 	RegisteredTool,
@@ -155,19 +145,11 @@ export type {
 	UserBashEventResult,
 	WidgetPlacement,
 	WorkingIndicatorOptions,
-	WriteToolCallEvent,
-	WriteToolResultEvent,
 } from "./types.ts";
 // Type guards
 export {
 	defineTool,
 	isBashToolResult,
-	isEditToolResult,
-	isFindToolResult,
-	isGrepToolResult,
-	isLsToolResult,
-	isReadToolResult,
 	isToolCallEventType,
-	isWriteToolResult,
 } from "./types.ts";
 export { wrapRegisteredTool, wrapRegisteredTools } from "./wrapper.ts";

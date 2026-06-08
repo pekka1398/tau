@@ -13,10 +13,15 @@
 - `**` glob 支持（遞歸匹配，expandmeta 入口攔截 → collect_dirs → 拼接 → expmeta）
 
 ### pi bash tool 負責（外部調用方）
-- 全部輸出截斷（已有 OutputAccumulator，40K 字符 / 200 行）
+- spawn ai-dash -c（替代系統 bash）
+- 讀取 fd 3 語意 metadata（read/edit/list/search/fs/bash）
+- 全部輸出截斷（OutputAccumulator，40K 字符 / 200 行）
 - timeout
 - abort signal
 - 流式輸出推送
+
+### Bash-Only 架構
+模型只看到一個 `bash(command: string)` tool。ai-dash 透過 fd 3 吐出語意 metadata，TUI 根據 intent 決定渲染方式（高亮/diff/compact/原始輸出）。
 
 ### 原因
 外部命令（grep, ls, python...）的輸出不經過 dash 的 output.c — execve() 後子進程直接繼承 fd 1，直通。builtin 輸出量小，不值得在 dash 裡做截斷。統一在 bash tool 層處理更簡單。
@@ -48,6 +53,15 @@ packages/ai-dash/
 ```
 
 ## 已完成
+
+### fd 3 語意 Metadata（meta.c + eval.c）
+- `evaltree()` 在頂層判斷 compound（pipeline/chain）→ 直接吐 `{"intent":"bash","compound":true}`
+- simple command 延後到 `evalcommand()` 用展開後 argv 判斷
+- `classify_intent()` 用 basename 分類：cat/head/tail/sed → read, fedit → edit, ls/tree → list, grep/rg/find → search, cp/mv/mkdir → fs, 其他 → bash
+- 路徑提取只對 cat/head/tail/fedit/ls/tree/find 輸出 path（保守策略）
+- fd 3 optional：`fcntl(3, F_GETFD)` 檢查，不存在就跳過
+- FD_CLOEXEC：外部命令 exec 後自動關閉 fd 3
+- JSON 格式：`{"v":1,"event":"intent","intent":"read","cmd":"cat","path":"foo.c","compound":false}`
 
 ### 黑名單（eval.c: check_blacklist）
 - `skip_wrappers()` 跳過 sudo/doas/time/nice/nohup/strace 及其 flags
