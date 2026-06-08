@@ -5,7 +5,6 @@
 import type { Api, Model } from "@earendil-works/pi-ai";
 import { fuzzyFilter } from "@earendil-works/pi-tui";
 import chalk from "chalk";
-import { formatNoModelsAvailableMessage } from "../core/auth-guidance.ts";
 import type { ModelRegistry } from "../core/model-registry.ts";
 
 /**
@@ -35,7 +34,7 @@ export async function listModels(modelRegistry: ModelRegistry, searchPattern?: s
 	const models = modelRegistry.getAvailable();
 
 	if (models.length === 0) {
-		console.log(formatNoModelsAvailableMessage());
+		console.log("No models available. Set OPENROUTER_API_KEY environment variable.");
 		return;
 	}
 

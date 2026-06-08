@@ -4,7 +4,6 @@ import { clampThinkingLevel, type Message, type Model, streamSimple } from "@ear
 import { getAgentDir } from "../config.ts";
 import { resolvePath } from "../utils/paths.ts";
 import { AgentSession } from "./agent-session.ts";
-import { formatNoModelsAvailableMessage } from "./auth-guidance.ts";
 import { AuthStorage } from "./auth-storage.ts";
 import { DEFAULT_THINKING_LEVEL } from "./defaults.ts";
 import type { ExtensionRunner, LoadExtensionsResult, SessionStartEvent, ToolDefinition } from "./extensions/index.ts";
@@ -214,7 +213,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		});
 		model = result.model;
 		if (!model) {
-			modelFallbackMessage = formatNoModelsAvailableMessage();
+			modelFallbackMessage = "No models available. Set OPENROUTER_API_KEY environment variable.";
 		} else if (modelFallbackMessage) {
 			modelFallbackMessage += `. Using ${model.provider}/${model.id}`;
 		}
@@ -320,8 +319,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				maxRetryDelayMs: options?.maxRetryDelayMs ?? providerRetrySettings.maxRetryDelayMs,
 				headers: mergeProviderAttributionHeaders(
 					model,
-					settingsManager,
-					options?.sessionId,
 					auth.headers,
 					options?.headers,
 				),

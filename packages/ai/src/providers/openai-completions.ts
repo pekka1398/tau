@@ -33,8 +33,6 @@ import { AssistantMessageEventStream } from "../utils/event-stream.ts";
 import { headersToRecord } from "../utils/headers.ts";
 import { parseStreamingJson } from "../utils/json-parse.ts";
 import { sanitizeSurrogates } from "../utils/sanitize-unicode.ts";
-import { isCloudflareProvider, resolveCloudflareBaseUrl } from "./cloudflare.ts";
-import { buildCopilotDynamicHeaders, hasCopilotVisionInput } from "./github-copilot-headers.ts";
 import { clampOpenAIPromptCacheKey } from "./openai-prompt-cache.ts";
 import { buildBaseOptions } from "./simple-options.ts";
 import { transformMessages } from "./transform-messages.ts";
@@ -456,14 +454,6 @@ function createClient(
 	compat: ResolvedOpenAICompletionsCompat = getCompat(model),
 ) {
 	const headers = { ...model.headers };
-	if (model.provider === "github-copilot") {
-		const hasImages = hasCopilotVisionInput(context.messages);
-		const copilotHeaders = buildCopilotDynamicHeaders({
-			messages: context.messages,
-			hasImages,
-		});
-		Object.assign(headers, copilotHeaders);
-	}
 
 	if (sessionId && compat.sendSessionAffinityHeaders) {
 		headers.session_id = sessionId;
@@ -476,20 +466,11 @@ function createClient(
 		Object.assign(headers, optionsHeaders);
 	}
 
-	const defaultHeaders =
-		model.provider === "cloudflare-ai-gateway"
-			? {
-					...headers,
-					Authorization: headers.Authorization ?? null,
-					"cf-aig-authorization": `Bearer ${apiKey}`,
-				}
-			: headers;
-
 	return new OpenAI({
 		apiKey,
-		baseURL: isCloudflareProvider(model.provider) ? resolveCloudflareBaseUrl(model) : model.baseUrl,
+		baseURL: model.baseUrl,
 		dangerouslyAllowBrowser: true,
-		defaultHeaders,
+		defaultHeaders: headers,
 	});
 }
 
@@ -1073,84 +1054,29 @@ function mapStopReason(reason: ChatCompletionChunk.Choice["finish_reason"] | str
  * Returns a fully resolved OpenAICompletionsCompat object with all fields set.
  */
 function detectCompat(model: Model<"openai-completions">): ResolvedOpenAICompletionsCompat {
-	const provider = model.provider;
-	const baseUrl = model.baseUrl;
-
-	const isZai =
-		provider === "zai" ||
-		provider === "zai-coding-cn" ||
-		baseUrl.includes("api.z.ai") ||
-		baseUrl.includes("open.bigmodel.cn");
-	const isTogether =
-		provider === "together" || baseUrl.includes("api.together.ai") || baseUrl.includes("api.together.xyz");
-	const isMoonshot = provider === "moonshotai" || provider === "moonshotai-cn" || baseUrl.includes("api.moonshot.");
-	const isOpenRouter = provider === "openrouter" || baseUrl.includes("openrouter.ai");
-	const isCloudflareWorkersAI = provider === "cloudflare-workers-ai" || baseUrl.includes("api.cloudflare.com");
-	const isCloudflareAiGateway = provider === "cloudflare-ai-gateway" || baseUrl.includes("gateway.ai.cloudflare.com");
-	const isNvidia = provider === "nvidia" || baseUrl.includes("integrate.api.nvidia.com");
-	const isAntLing = provider === "ant-ling" || baseUrl.includes("api.ant-ling.com");
-
-	const isNonStandard =
-		isNvidia ||
-		provider === "cerebras" ||
-		baseUrl.includes("cerebras.ai") ||
-		provider === "xai" ||
-		baseUrl.includes("api.x.ai") ||
-		isTogether ||
-		baseUrl.includes("chutes.ai") ||
-		baseUrl.includes("deepseek.com") ||
-		isZai ||
-		isMoonshot ||
-		provider === "opencode" ||
-		baseUrl.includes("opencode.ai") ||
-		isCloudflareWorkersAI ||
-		isCloudflareAiGateway ||
-		isAntLing;
-
-	const useMaxTokens =
-		baseUrl.includes("chutes.ai") || isMoonshot || isCloudflareAiGateway || isTogether || isNvidia || isAntLing;
-
-	const isGrok = provider === "xai" || baseUrl.includes("api.x.ai");
-	const isDeepSeek = provider === "deepseek" || baseUrl.includes("deepseek.com");
 	const isOpenRouterDeveloperRoleModel =
-		isOpenRouter && (model.id.startsWith("anthropic/") || model.id.startsWith("openai/"));
-	const cacheControlFormat = provider === "openrouter" && model.id.startsWith("anthropic/") ? "anthropic" : undefined;
+		model.id.startsWith("anthropic/") || model.id.startsWith("openai/");
+	const isDeepSeek = model.id.includes("deepseek");
+	const cacheControlFormat = model.id.startsWith("anthropic/") ? "anthropic" : undefined;
 
 	return {
-		supportsStore: !isNonStandard,
-		supportsDeveloperRole: isOpenRouterDeveloperRoleModel || (!isNonStandard && !isOpenRouter),
-		supportsReasoningEffort:
-			!isGrok && !isZai && !isMoonshot && !isTogether && !isCloudflareAiGateway && !isNvidia && !isAntLing,
+		supportsStore: true,
+		supportsDeveloperRole: isOpenRouterDeveloperRoleModel,
+		supportsReasoningEffort: true,
 		supportsUsageInStreaming: true,
-		maxTokensField: useMaxTokens ? "max_tokens" : "max_completion_tokens",
+		maxTokensField: "max_completion_tokens",
 		requiresToolResultName: false,
 		requiresAssistantAfterToolResult: false,
 		requiresThinkingAsText: false,
 		requiresReasoningContentOnAssistantMessages: isDeepSeek,
-		thinkingFormat: isDeepSeek
-			? "deepseek"
-			: isZai
-				? "zai"
-				: isTogether
-					? "together"
-					: isAntLing
-						? "ant-ling"
-						: isOpenRouter
-							? "openrouter"
-							: "openai",
+		thinkingFormat: isDeepSeek ? "deepseek" : "openrouter",
 		openRouterRouting: {},
 		vercelGatewayRouting: {},
 		zaiToolStream: false,
-		supportsStrictMode: !isMoonshot && !isTogether && !isCloudflareAiGateway && !isNvidia,
+		supportsStrictMode: true,
 		cacheControlFormat,
 		sendSessionAffinityHeaders: false,
-		supportsLongCacheRetention: !(
-			isTogether ||
-			isCloudflareWorkersAI ||
-			isCloudflareAiGateway ||
-			isNvidia ||
-			isAntLing
-		),
+		supportsLongCacheRetention: true,
 	};
 }
 

@@ -39,3 +39,15 @@ plans/
 .pi/hf-sessions/
 .pi/hf-sessions-backup/
 collect.sh
+reference-repo
+.venv
+__pycache__
+.env
+node_modules
+1.txt
+legacy
+notes
+hello
+note.md
+prompt
+log

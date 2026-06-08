@@ -21,9 +21,7 @@ import {
 	createAgentSessionFromServices,
 	createAgentSessionServices,
 } from "./core/agent-session-services.ts";
-import { formatNoModelsAvailableMessage } from "./core/auth-guidance.ts";
 import { AuthStorage } from "./core/auth-storage.ts";
-import { exportFromFile } from "./core/export-html/index.ts";
 import type { ExtensionFactory } from "./core/extensions/types.ts";
 import { configureHttpDispatcher } from "./core/http-dispatcher.ts";
 import { KeybindingsManager } from "./core/keybindings.ts";
@@ -582,17 +580,8 @@ export async function main(args: string[], options?: MainOptions) {
 	}
 
 	if (parsed.export) {
-		let result: string;
-		try {
-			const outputPath = parsed.messages.length > 0 ? parsed.messages[0] : undefined;
-			result = await exportFromFile(parsed.export, outputPath);
-		} catch (error: unknown) {
-			const message = error instanceof Error ? error.message : "Failed to export session";
-			console.error(chalk.red(`Error: ${message}`));
-			process.exit(1);
-		}
-		console.log(`Exported to: ${result}`);
-		process.exit(0);
+		console.error(chalk.red("Error: --export is not supported. Session export has been removed."));
+		process.exit(1);
 	}
 
 	if (parsed.mode === "rpc" && parsed.fileArgs.length > 0) {
@@ -810,7 +799,7 @@ export async function main(args: string[], options?: MainOptions) {
 	time("createAgentSession");
 
 	if (appMode !== "interactive" && !session.model) {
-		console.error(chalk.red(formatNoModelsAvailableMessage()));
+		console.error(chalk.red("No models available. Set OPENROUTER_API_KEY environment variable."));
 		process.exit(1);
 	}
 

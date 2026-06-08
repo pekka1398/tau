@@ -37,7 +37,6 @@ import { theme } from "../modes/interactive/theme/theme.ts";
 import { stripFrontmatter } from "../utils/frontmatter.ts";
 import { resolvePath } from "../utils/paths.ts";
 import { sleep } from "../utils/sleep.ts";
-import { formatNoApiKeyFoundMessage, formatNoModelSelectedMessage } from "./auth-guidance.ts";
 import { type BashResult, executeBashWithOperations } from "./bash-executor.ts";
 import {
 	type CompactionResult,
@@ -50,8 +49,6 @@ import {
 	shouldCompact,
 } from "./compaction/index.ts";
 import { DEFAULT_THINKING_LEVEL } from "./defaults.ts";
-import { exportSessionToHtml, type ToolHtmlRenderer } from "./export-html/index.ts";
-import { createToolHtmlRenderer } from "./export-html/tool-renderer.ts";
 import {
 	type ContextUsage,
 	type ExtensionCommandContextActions,
@@ -361,7 +358,7 @@ export class AgentSession {
 		const result = await this._modelRegistry.getApiKeyAndHeaders(model);
 		if (!result.ok) {
 			if (result.error.startsWith("No API key found")) {
-				throw new Error(formatNoApiKeyFoundMessage(model.provider));
+				throw new Error(`No API key found for ${model.provider}. Set OPENROUTER_API_KEY environment variable.`);
 			}
 			throw new Error(result.error);
 		}
@@ -377,7 +374,7 @@ export class AgentSession {
 					`Run '/login ${model.provider}' to re-authenticate.`,
 			);
 		}
-		throw new Error(formatNoApiKeyFoundMessage(model.provider));
+		throw new Error(`No API key found for ${model.provider}. Set OPENROUTER_API_KEY environment variable.`);
 	}
 
 	private async _getCompactionRequestAuth(model: Model<any>): Promise<{
@@ -1048,7 +1045,7 @@ export class AgentSession {
 
 			// Validate model
 			if (!this.model) {
-				throw new Error(formatNoModelSelectedMessage());
+				throw new Error("No model selected. Set OPENROUTER_API_KEY environment variable and use /model to select a model.");
 			}
 
 			if (!this._modelRegistry.hasConfiguredAuth(this.model)) {
@@ -1060,7 +1057,7 @@ export class AgentSession {
 							`Run '/login ${this.model.provider}' to re-authenticate.`,
 					);
 				}
-				throw new Error(formatNoApiKeyFoundMessage(this.model.provider));
+				throw new Error(`No API key found for ${this.model.provider}. Set OPENROUTER_API_KEY environment variable.`);
 			}
 
 			// Check if we need to compact before sending (catches aborted responses)
@@ -1641,7 +1638,7 @@ export class AgentSession {
 
 		try {
 			if (!this.model) {
-				throw new Error(formatNoModelSelectedMessage());
+				throw new Error("No model selected. Set OPENROUTER_API_KEY environment variable and use /model to select a model.");
 			}
 
 			const { apiKey, headers } = await this._getCompactionRequestAuth(this.model);
@@ -3009,21 +3006,8 @@ export class AgentSession {
 	 * @param outputPath Optional output path (defaults to session directory)
 	 * @returns Path to exported file
 	 */
-	async exportToHtml(outputPath?: string): Promise<string> {
-		const themeName = this.settingsManager.getTheme();
-
-		// Create tool renderer if we have an extension runner (for custom tool HTML rendering)
-		const toolRenderer: ToolHtmlRenderer = createToolHtmlRenderer({
-			getToolDefinition: (name) => this.getToolDefinition(name),
-			theme,
-			cwd: this.sessionManager.getCwd(),
-		});
-
-		return await exportSessionToHtml(this.sessionManager, this.state, {
-			outputPath,
-			themeName,
-			toolRenderer,
-		});
+	async exportToHtml(_outputPath?: string): Promise<string> {
+		throw new Error("HTML export has been removed.");
 	}
 
 	/**
