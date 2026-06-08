@@ -1,12 +1,11 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
-*.log
-.DS_Store
+dist-chrome/
+dist-firefox/
 *.tsbuildinfo
-# packages/*/node_modules/
-packages/*/dist/
-packages/*/dist-chrome/
-packages/*/dist-firefox/
 *.cpuprofile
 
 # Environment
@@ -21,12 +20,17 @@ packages/*/dist-firefox/
 *.swo
 *~
 
-# Package specific
-.npm/
+# Logs
+*.log
+tui-debug.log
+
+# Testing / coverage
 coverage/
 .nyc_output/
+
+# Package specific
+.npm/
 .pi_config/
-tui-debug.log
 compaction-results/
 .opencode/
 syntax.jsonl
@@ -34,25 +38,34 @@ out.jsonl
 pi-*.html
 out.html
 packages/coding-agent/binaries/
-todo.md
-plans/
+
+# ai-dash build artifacts
+packages/ai-dash/autom4te.cache/
+packages/ai-dash/src/.deps/
+packages/ai-dash/src/bltin/.deps/
+packages/ai-dash/src/*.o
+packages/ai-dash/src/bltin/*.o
+packages/ai-dash/src/dash
+packages/ai-dash/src/Makefile
+packages/ai-dash/src/config.h
+packages/ai-dash/src/stamp-h1
+packages/ai-dash/Makefile
+packages/ai-dash/config.h
+packages/ai-dash/config.log
+packages/ai-dash/config.status
+packages/ai-dash/stamp-h1
+
+# Pi sessions / data
 .pi/hf-sessions/
 .pi/hf-sessions-backup/
-collect.sh
-reference-repo
-.venv
-__pycache__
-.env
-node_modules
-1.txt
-legacy
-notes
-hello
-note.md
-prompt
-log
 
+# Temp / personal
+.venv/
+__pycache__/
+reference-repo/
+oh/
 1.md
 2.md
-ohautom4te.cache
-.deps
+collect.sh
+demo.py
+ai-dash-design.md
