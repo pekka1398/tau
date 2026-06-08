@@ -67,7 +67,11 @@ function formatLsResult(
 	options: ToolRenderResultOptions,
 	theme: Theme,
 	showImages: boolean,
+	isError: boolean,
 ): string {
+	if (!options.expanded && !isError) {
+		return "";
+	}
 	const output = getTextOutput(result, showImages).trim();
 	let text = "";
 	if (output) {
@@ -214,7 +218,7 @@ export function createLsToolDefinition(
 		},
 		renderResult(result, options, theme, context) {
 			const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
-			text.setText(formatLsResult(result as any, options, theme, context.showImages));
+			text.setText(formatLsResult(result as any, options, theme, context.showImages, context.isError));
 			return text;
 		},
 	};

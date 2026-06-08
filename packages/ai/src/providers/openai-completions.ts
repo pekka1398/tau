@@ -1054,8 +1054,7 @@ function mapStopReason(reason: ChatCompletionChunk.Choice["finish_reason"] | str
  * Returns a fully resolved OpenAICompletionsCompat object with all fields set.
  */
 function detectCompat(model: Model<"openai-completions">): ResolvedOpenAICompletionsCompat {
-	const isOpenRouterDeveloperRoleModel =
-		model.id.startsWith("anthropic/") || model.id.startsWith("openai/");
+	const isOpenRouterDeveloperRoleModel = model.id.startsWith("anthropic/") || model.id.startsWith("openai/");
 	const isDeepSeek = model.id.includes("deepseek");
 	const cacheControlFormat = model.id.startsWith("anthropic/") ? "anthropic" : undefined;
 

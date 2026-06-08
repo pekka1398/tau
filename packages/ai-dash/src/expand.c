@@ -1538,6 +1538,166 @@ static void addglob(const glob64_t *pglob)
 	} while (*++p);
 }
 
+static void addfname_common(char *name)
+{
+	struct strlist *sp;
+
+	sp = (struct strlist *)stalloc(sizeof *sp);
+	sp->text = name;
+	*exparg.lastp = sp;
+	exparg.lastp = &sp->next;
+}
+
+/* Check if pattern contains doublestar */
+static int has_doublestar(const char *pattern)
+{
+	const char *p = pattern;
+	while ((p = strchr(p, '*')) != NULL) {
+		if (p[1] == '*')
+			return 1;
+		p++;
+	}
+	return 0;
+}
+
+/*
+ * Recursively collect all directories under `dir` into an array.
+ * Empty string for `dir` means current directory.
+ */
+static void collect_dirs(const char *dir, const char ***dirs,
+			 size_t *count, size_t *cap)
+{
+	DIR *dh;
+	struct dirent64 *dp;
+	struct stat64 st;
+	char path[1024];
+	size_t dlen;
+
+	dh = opendir(dir && *dir ? dir : ".");
+	if (!dh) return;
+
+	dlen = strlen(dir);
+
+	/* Add this directory to the array */
+	if (*count >= *cap) {
+		*cap = *cap ? *cap * 2 : 16;
+		*dirs = ckrealloc(*dirs, *cap * sizeof(const char *));
+	}
+	(*dirs)[*count] = dir;
+	(*count)++;
+
+	while ((dp = readdir64(dh)) != NULL) {
+		if (dp->d_name[0] == '.')
+			continue;
+		if (dlen > 0) {
+			if (dlen + 1 + strlen(dp->d_name) >= sizeof(path))
+				continue;
+			memcpy(path, dir, dlen);
+			path[dlen] = '/';
+			strcpy(path + dlen + 1, dp->d_name);
+		} else {
+			if (strlen(dp->d_name) >= sizeof(path))
+				continue;
+			strcpy(path, dp->d_name);
+		}
+		if (lstat64(path, &st) < 0 || !S_ISDIR(st.st_mode))
+			continue;
+		collect_dirs(strcpy(ckmalloc(strlen(path) + 1), path), dirs, count, cap);
+	}
+	closedir(dh);
+}
+
+/*
+ * Expand a doublestar glob pattern by collecting all subdirectories,
+ * building standard glob patterns (dir/suffix) for each, and feeding
+ * them back to the original expmeta() for proper matching and sorting.
+ */
+static void expand_doublestar(const char *pattern)
+{
+	const char *star = strstr(pattern, "**");
+	const char *suffix;
+	size_t preflen, suflen;
+	char prefixdir[1024];
+	const char **dirs = NULL;
+	size_t ndirs = 0, dirs_cap = 0;
+	size_t i;
+	struct stat64 st;
+
+	if (!star) return;
+
+	suffix = star + 2;
+	if (*suffix == '/') suffix++;
+	suflen = strlen(suffix);
+
+	preflen = star - pattern;
+	if (preflen > 0 && pattern[preflen - 1] == '/')
+		preflen--;
+
+	/* Collect all directories starting from prefix */
+	if (preflen == 0) {
+		collect_dirs("", &dirs, &ndirs, &dirs_cap);
+	} else {
+		if (preflen >= sizeof(prefixdir))
+			return;
+		memcpy(prefixdir, pattern, preflen);
+		prefixdir[preflen] = '\0';
+		if (!strpbrk(prefixdir, "*?[")) {
+			if (lstat64(prefixdir, &st) >= 0 && S_ISDIR(st.st_mode))
+				collect_dirs(strcpy(ckmalloc(preflen + 1), prefixdir), &dirs, &ndirs, &dirs_cap);
+		}
+		/* TODO: prefix with globs */
+	}
+
+	/* For each directory, build "dir/suffix" and let expmeta match */
+	for (i = 0; i < ndirs; i++) {
+		const char *d = dirs[i];
+		size_t dlen = strlen(d);
+		char *pat;
+		unsigned patlen;
+
+		if (*suffix) {
+			patlen = dlen + 1 + suflen;
+			pat = stalloc(patlen + 1);
+			if (dlen > 0) {
+				memcpy(pat, d, dlen);
+				pat[dlen] = '/';
+				memcpy(pat + dlen + 1, suffix, suflen + 1);
+			} else {
+				memcpy(pat, suffix, suflen + 1);
+			}
+		} else {
+			/* trailing ** — add all entries in this directory */
+			DIR *dh;
+			struct dirent64 *dp2;
+			dh = opendir(dlen > 0 ? d : ".");
+			if (dh) {
+				while ((dp2 = readdir64(dh)) != NULL) {
+					char *full;
+					size_t nlen;
+					if (dp2->d_name[0] == '.')
+						continue;
+					nlen = strlen(dp2->d_name);
+					full = stalloc(dlen + 1 + nlen + 1);
+					if (dlen > 0) {
+						memcpy(full, d, dlen);
+						full[dlen] = '/';
+						memcpy(full + dlen + 1, dp2->d_name, nlen + 1);
+					} else {
+						memcpy(full, dp2->d_name, nlen + 1);
+					}
+					addfname_common(full);
+				}
+				closedir(dh);
+			}
+			continue;
+		}
+		expmeta(pat, patlen, 0);
+	}
+
+	if (dirs)
+		ckfree(dirs);
+}
+
 STATIC void
 expandmeta(struct strlist *str)
 {
@@ -1556,6 +1716,27 @@ expandmeta(struct strlist *str)
 			goto nometa;
 		if (!strpbrk(str->text, "*?]") || !strcmp(str->text, "]"))
 			goto nometa;
+
+		/* Handle ** (doublestar) */
+		if (has_doublestar(str->text)) {
+			savelastp = exparg.lastp;
+			INTOFF;
+			p = preglob(str->text, RMESCAPE_ALLOC | RMESCAPE_HEAP);
+			expand_doublestar(p);
+			if (p != str->text)
+				ckfree(p);
+			INTON;
+			if (exparg.lastp == savelastp)
+				goto nometa;
+			*exparg.lastp = NULL;
+			*savelastp = sp = expsort(*savelastp);
+			while (sp->next != NULL)
+				sp = sp->next;
+			exparg.lastp = &sp->next;
+			str = str->next;
+			continue;
+		}
+
 		savelastp = exparg.lastp;
 
 		INTOFF;
@@ -1583,16 +1764,6 @@ nometa:
 		}
 		str = str->next;
 	}
-}
-
-static void addfname_common(char *name)
-{
-	struct strlist *sp;
-
-	sp = (struct strlist *)stalloc(sizeof *sp);
-	sp->text = name;
-	*exparg.lastp = sp;
-	exparg.lastp = &sp->next;
 }
 
 static char *addfnamealt(char *enddir, size_t expdir_len)
@@ -1662,6 +1833,7 @@ static char *expmeta(char *name, unsigned name_len, size_t expdir_len)
 	size_t len;
 	DIR *dirp;
 	char *pat;
+	char *pattern_end;
 	char *cp;
 	char *p;
 	int c;
@@ -1710,6 +1882,7 @@ static char *expmeta(char *name, unsigned name_len, size_t expdir_len)
 	p = strchrnul(p + 1, '/');
 	zeroedp = p;
 	endname = p;
+	pattern_end = p;
 	if (*p) {
 		esc = mesclen(name, p, mesc) & 1;
 		zeroedp -= esc;

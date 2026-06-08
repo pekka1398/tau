@@ -101,6 +101,167 @@ static void check_missing_flags(int argc, char **argv)
 }
 
 /*
+ * ── ai-dash blacklist ───────────────────────────────────────────
+ */
+
+static int has_rf_flag(int argc, char **argv)
+{
+	int i;
+	for (i = 1; i < argc; i++) {
+		const char *a = argv[i];
+		if (strcmp(a, "-rf") == 0 || strcmp(a, "-fr") == 0 ||
+		    strcmp(a, "-Rf") == 0 || strcmp(a, "-fR") == 0)
+			return 1;
+		/* separate -r and -f flags */
+		if (a[0] == '-' && a[1] != '-' && a[1] != '\0') {
+			int has_r = 0, has_f = 0;
+			const char *p;
+			for (p = a + 1; *p; p++) {
+				if (*p == 'r' || *p == 'R') has_r = 1;
+				if (*p == 'f') has_f = 1;
+			}
+			if (has_r && has_f) return 1;
+		}
+	}
+	return 0;
+}
+
+static int targets_system_path(int argc, char **argv)
+{
+	static const char *roots[] = {
+		"/", "/etc", "/usr", "/boot", "/sbin", "/bin",
+		"/root", NULL
+	};
+	int i, j;
+	const char *home;
+
+	for (i = 1; i < argc; i++) {
+		const char *a = argv[i];
+		if (a[0] != '-' && a[0] != '\0') {
+			for (j = 0; roots[j]; j++) {
+				size_t rlen = strlen(roots[j]);
+				if (strcmp(a, roots[j]) == 0)
+					return 1;
+				if (strncmp(a, roots[j], rlen) == 0 &&
+				    a[rlen] == '/')
+					return 1;
+			}
+			/* ~ and ~/ */
+			if (a[0] == '~' && (a[1] == '\0' || a[1] == '/'))
+				return 1;
+			home = getenv("HOME");
+			if (home && strcmp(a, home) == 0)
+				return 1;
+		}
+	}
+	return 0;
+}
+
+static int argv_has_any_flag(int argc, char **argv, const char *flags[])
+{
+	int i, f;
+	for (i = 1; i < argc; i++) {
+		for (f = 0; flags[f]; f++) {
+			if (strcmp(argv[i], flags[f]) == 0)
+				return 1;
+		}
+	}
+	return 0;
+}
+
+/*
+ * Get basename from a path: "/usr/bin/rm" -> "rm", "rm" -> "rm"
+ */
+static const char *xbasename(const char *path)
+{
+	const char *p = strrchr(path, '/');
+	return p ? p + 1 : path;
+}
+
+/*
+ * Skip command wrappers (sudo, doas, etc.) and their flags.
+ * Returns the index of the real command in argv, or -1 if none.
+ */
+static int skip_wrappers(int argc, char **argv)
+{
+	static const char *wrappers[] = {
+		"sudo", "doas", "time", "nice", "nohup", "strace", NULL
+	};
+	int i, w;
+
+	for (i = 0; i < argc; i++) {
+		const char *base = xbasename(argv[i]);
+		int is_wrapper = 0;
+		for (w = 0; wrappers[w]; w++) {
+			if (strcmp(base, wrappers[w]) == 0) {
+				is_wrapper = 1;
+				break;
+			}
+		}
+		if (!is_wrapper)
+			return i;
+		/* Skip wrapper and its flags (e.g. sudo -E) */
+		i++;
+		while (i < argc && argv[i][0] == '-')
+			i++;
+		/* i will be incremented by the for loop */
+		i--; /* compensate for i++ in for loop */
+	}
+	return -1;
+}
+
+/*
+ * Check if a command is blacklisted. Returns 1 if blocked (caller
+ * should bail with exitstatus=1), 0 if OK.
+ */
+static int check_blacklist(int argc, char **argv)
+{
+	const char *cmd;
+	const char *base;
+	int i, cmdidx;
+
+	if (argc < 1 || !argv[0])
+		return 0;
+
+	/* Skip sudo/doas/etc to find the real command */
+	cmdidx = skip_wrappers(argc, argv);
+	if (cmdidx < 0 || cmdidx >= argc)
+		return 0;
+	cmd = argv[cmdidx];
+	base = xbasename(cmd);
+
+	/* Always-blocked commands */
+	static const char *blocked[] = {
+		"vim", "vi", "nano", "emacs", "ne", "micro",
+		"reboot", "shutdown", "halt", "poweroff",
+		"mkfs", "dd", "wipefs",
+		NULL
+	};
+	for (i = 0; blocked[i]; i++) {
+		if (strcmp(base, blocked[i]) == 0) {
+			sh_warnx("ai-dash: blocked: %s is not allowed", base);
+			return 1;
+		}
+	}
+
+	/* rm -rf on system paths */
+	if (strcmp(base, "rm") == 0 && has_rf_flag(argc - cmdidx, argv + cmdidx) &&
+	    targets_system_path(argc - cmdidx, argv + cmdidx)) {
+		sh_warnx("ai-dash: blocked: rm -rf on system paths");
+		return 1;
+	}
+
+	/* chmod/chown on system paths */
+	if ((strcmp(base, "chmod") == 0 || strcmp(base, "chown") == 0) &&
+	    targets_system_path(argc - cmdidx, argv + cmdidx)) {
+		sh_warnx("ai-dash: blocked: %s on system paths", base);
+		return 1;
+	}
+
+	return 0;
+}
+
+/*
  * Evaluate a command.
  */
 
@@ -963,6 +1124,12 @@ bail:
 
 	/* ai-dash: check for missing flags before execution */
 	check_missing_flags(argc, argv);
+
+	/* ai-dash: blacklist check */
+	if (check_blacklist(argc, argv)) {
+		status = 1;
+		goto bail;
+	}
 
 	/* Execute the command. */
 	switch (cmdentry.cmdtype) {

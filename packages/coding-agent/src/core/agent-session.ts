@@ -1045,7 +1045,9 @@ export class AgentSession {
 
 			// Validate model
 			if (!this.model) {
-				throw new Error("No model selected. Set OPENROUTER_API_KEY environment variable and use /model to select a model.");
+				throw new Error(
+					"No model selected. Set OPENROUTER_API_KEY environment variable and use /model to select a model.",
+				);
 			}
 
 			if (!this._modelRegistry.hasConfiguredAuth(this.model)) {
@@ -1057,7 +1059,9 @@ export class AgentSession {
 							`Run '/login ${this.model.provider}' to re-authenticate.`,
 					);
 				}
-				throw new Error(`No API key found for ${this.model.provider}. Set OPENROUTER_API_KEY environment variable.`);
+				throw new Error(
+					`No API key found for ${this.model.provider}. Set OPENROUTER_API_KEY environment variable.`,
+				);
 			}
 
 			// Check if we need to compact before sending (catches aborted responses)
@@ -1638,7 +1642,9 @@ export class AgentSession {
 
 		try {
 			if (!this.model) {
-				throw new Error("No model selected. Set OPENROUTER_API_KEY environment variable and use /model to select a model.");
+				throw new Error(
+					"No model selected. Set OPENROUTER_API_KEY environment variable and use /model to select a model.",
+				);
 			}
 
 			const { apiKey, headers } = await this._getCompactionRequestAuth(this.model);

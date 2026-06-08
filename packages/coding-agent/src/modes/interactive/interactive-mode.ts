@@ -4110,7 +4110,6 @@ export class InteractiveMode {
 			return;
 		}
 
-
 		try {
 			const apiKey = await this.session.modelRegistry.getApiKeyForProvider(model.provider);
 			if (!isAnthropicSubscriptionAuthKey(apiKey)) {
@@ -4527,7 +4526,6 @@ export class InteractiveMode {
 			return this.handleFatalRuntimeError("Failed to resume session", error);
 		}
 	}
-
 
 	// OAuth methods removed - use OPENROUTER_API_KEY environment variable
 

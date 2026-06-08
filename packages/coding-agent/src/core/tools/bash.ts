@@ -198,6 +198,10 @@ function rebuildBashResultRenderComponent(
 	const state = component.state;
 	component.clear();
 
+	if (!options.expanded && !options.isPartial) {
+		return;
+	}
+
 	let output = getTextOutput(result as any, showImages).trim();
 	const truncation = result.details?.truncation;
 	const fullOutputPath = result.details?.fullOutputPath;

@@ -463,7 +463,7 @@ export class ModelRegistry {
 		}
 
 		const builtInModels = this.loadBuiltInModels(overrides, modelOverrides);
-		let combined = this.mergeCustomModels(builtInModels, customModels);
+		const combined = this.mergeCustomModels(builtInModels, customModels);
 
 		this.models = combined;
 	}
@@ -949,7 +949,6 @@ export class ModelRegistry {
 					compat: modelDef.compat,
 				} as Model<Api>);
 			}
-
 		} else if (config.baseUrl || config.headers) {
 			// Override-only: update baseUrl for existing models. Request headers are resolved per request.
 			this.models = this.models.map((m) => {

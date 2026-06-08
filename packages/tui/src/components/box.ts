@@ -13,15 +13,17 @@ type RenderCache = {
  */
 export class Box implements Component {
 	children: Component[] = [];
-	private paddingX: number;
+	private paddingLeft: number;
+	private paddingRight: number;
 	private paddingY: number;
 	private bgFn?: (text: string) => string;
 
 	// Cache for rendered output
 	private cache?: RenderCache;
 
-	constructor(paddingX = 1, paddingY = 1, bgFn?: (text: string) => string) {
-		this.paddingX = paddingX;
+	constructor(paddingX = 1, paddingY = 1, bgFn?: (text: string) => string, options?: { paddingRight?: number }) {
+		this.paddingLeft = paddingX;
+		this.paddingRight = options?.paddingRight ?? paddingX;
 		this.paddingY = paddingY;
 		this.bgFn = bgFn;
 	}
@@ -76,8 +78,8 @@ export class Box implements Component {
 			return [];
 		}
 
-		const contentWidth = Math.max(1, width - this.paddingX * 2);
-		const leftPad = " ".repeat(this.paddingX);
+		const contentWidth = Math.max(1, width - this.paddingLeft - this.paddingRight);
+		const leftPad = " ".repeat(this.paddingLeft);
 
 		// Render all children
 		const childLines: string[] = [];

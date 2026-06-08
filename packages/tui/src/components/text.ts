@@ -6,7 +6,8 @@ import { applyBackgroundToLine, visibleWidth, wrapTextWithAnsi } from "../utils.
  */
 export class Text implements Component {
 	private text: string;
-	private paddingX: number; // Left/right padding
+	private paddingLeft: number;
+	private paddingRight: number;
 	private paddingY: number; // Top/bottom padding
 	private customBgFn?: (text: string) => string;
 
@@ -15,9 +16,16 @@ export class Text implements Component {
 	private cachedWidth?: number;
 	private cachedLines?: string[];
 
-	constructor(text: string = "", paddingX: number = 1, paddingY: number = 1, customBgFn?: (text: string) => string) {
+	constructor(
+		text: string = "",
+		paddingX: number = 1,
+		paddingY: number = 1,
+		customBgFn?: (text: string) => string,
+		options?: { paddingRight?: number },
+	) {
 		this.text = text;
-		this.paddingX = paddingX;
+		this.paddingLeft = paddingX;
+		this.paddingRight = options?.paddingRight ?? paddingX;
 		this.paddingY = paddingY;
 		this.customBgFn = customBgFn;
 	}
@@ -61,14 +69,14 @@ export class Text implements Component {
 		const normalizedText = this.text.replace(/\t/g, "   ");
 
 		// Calculate content width (subtract left/right margins)
-		const contentWidth = Math.max(1, width - this.paddingX * 2);
+		const contentWidth = Math.max(1, width - this.paddingLeft - this.paddingRight);
 
 		// Wrap text (this preserves ANSI codes but does NOT pad)
 		const wrappedLines = wrapTextWithAnsi(normalizedText, contentWidth);
 
 		// Add margins and background to each line
-		const leftMargin = " ".repeat(this.paddingX);
-		const rightMargin = " ".repeat(this.paddingX);
+		const leftMargin = " ".repeat(this.paddingLeft);
+		const rightMargin = " ".repeat(this.paddingRight);
 		const contentLines: string[] = [];
 
 		for (const line of wrappedLines) {
