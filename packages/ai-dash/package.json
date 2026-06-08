@@ -1,0 +1,13 @@
+{
+  "name": "ai-dash",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./bin": "./bin/ai-dash"
+  },
+  "files": [
+    "bin/ai-dash",
+    "index.js"
+  ]
+}
