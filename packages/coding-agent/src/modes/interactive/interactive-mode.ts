@@ -2633,6 +2633,11 @@ export class InteractiveMode {
 				await this.handleReloadCommand();
 				return;
 			}
+			if (text === "/discord" || text.startsWith("/discord ")) {
+				this.editor.setText("");
+				await this.handleDiscordCommand(text);
+				return;
+			}
 			if (text === "/debug") {
 				this.handleDebugCommand();
 				this.editor.setText("");
@@ -4749,6 +4754,50 @@ export class InteractiveMode {
 		} catch (error) {
 			dismissReloadBox(previousEditor as Component);
 			this.showError(`Reload failed: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
+	private async handleDiscordCommand(text: string): Promise<void> {
+		const args = text.slice("/discord".length).trim();
+		const token = process.env.DISCORD_BOT_TOKEN;
+		const guildId = process.env.DISCORD_GUILD_ID;
+
+		if (!token) {
+			this.showError("Set DISCORD_BOT_TOKEN environment variable to use Discord bridge.");
+			return;
+		}
+		if (!guildId) {
+			this.showError("Set DISCORD_GUILD_ID environment variable to use Discord bridge.");
+			return;
+		}
+
+		if (args === "stop") {
+			const { stopDiscordBridge, getActiveSessionIds } = await import("../../core/discord-bridge.ts");
+			const ids = getActiveSessionIds();
+			if (ids.length === 0) {
+				this.showStatus("No active Discord bridge sessions.");
+				return;
+			}
+			for (const id of ids) {
+				await stopDiscordBridge(id);
+			}
+			this.showStatus("Discord bridge disconnected.");
+			return;
+		}
+
+		const { startDiscordBridge, isDiscordBridgeRunning } = await import("../../core/discord-bridge.ts");
+		if (isDiscordBridgeRunning()) {
+			this.showStatus("Discord bridge is already running. Use /discord stop to disconnect.");
+			return;
+		}
+
+		try {
+			const channelId = await startDiscordBridge(token, guildId, this.session, {
+				onStatus: (msg) => this.showStatus(msg),
+			});
+			this.showStatus(`Discord bridge connected! Channel: ${channelId}`);
+		} catch (error) {
+			this.showError(`Discord bridge failed: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
 
