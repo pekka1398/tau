@@ -23,8 +23,8 @@ export {
 
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { ToolDefinition } from "../extensions/types.ts";
-import { type BashToolOptions, createBashTool, createBashToolDefinition } from "./bash.ts";
 import { createSubagentToolDefinition, type SubagentToolOptions } from "../subagent/tool.ts";
+import { type BashToolOptions, createBashTool, createBashToolDefinition } from "./bash.ts";
 
 export type Tool = AgentTool<any>;
 export type ToolDef = ToolDefinition<any, any>;
@@ -65,10 +65,7 @@ export function createAllTools(cwd: string, options?: ToolsOptions): Record<Tool
 }
 
 export function createCodingTools(cwd: string, options?: ToolsOptions): Tool[] {
-	return [
-		createBashTool(cwd, options?.bash),
-		createSubagentToolDefinition(options?.subagent) as ToolDef as Tool,
-	];
+	return [createBashTool(cwd, options?.bash), createSubagentToolDefinition(options?.subagent) as ToolDef as Tool];
 }
 
 export function createReadOnlyTools(cwd: string, options?: ToolsOptions): Tool[] {
