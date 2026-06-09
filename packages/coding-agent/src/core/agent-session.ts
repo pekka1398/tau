@@ -85,12 +85,12 @@ import { CURRENT_SESSION_VERSION, getLatestCompactionEntry, type SessionHeader }
 import type { SettingsManager } from "./settings-manager.ts";
 import type { SlashCommandInfo } from "./slash-commands.ts";
 import { createSyntheticSourceInfo, type SourceInfo } from "./source-info.ts";
+import { formatTaskNotification, TaskRegistry } from "./subagent/task-registry.ts";
 import { type BuildSystemPromptOptions, buildSystemPrompt } from "./system-prompt.ts";
+import { TaskManager } from "./task-manager.ts";
 import { type BashOperations, createLocalBashOperations } from "./tools/bash.ts";
 import { createAllToolDefinitions } from "./tools/index.ts";
-import { TaskManager } from "./task-manager.ts";
 import { createToolDefinitionFromAgentTool } from "./tools/tool-definition-wrapper.ts";
-import { TaskRegistry, formatTaskNotification } from "./subagent/task-registry.ts";
 
 // ============================================================================
 // Skill Block Parsing
@@ -322,8 +322,6 @@ export class AgentSession {
 	// Tool registry for extension getTools/setTools
 	private _toolRegistry: Map<string, AgentTool> = new Map();
 	private _toolDefinitions: Map<string, ToolDefinitionEntry> = new Map();
-	private _toolPromptSnippets: Map<string, string> = new Map();
-	private _toolPromptGuidelines: Map<string, string[]> = new Map();
 
 	// Base system prompt (without extension appends) - used to apply fresh appends each turn
 	private _baseSystemPrompt = "";
@@ -359,10 +357,24 @@ export class AgentSession {
 
 		// Listen for background task completion and notify the agent
 		this._taskManager.on("task_completed", (event) => {
-			this._handleBackgroundTaskCompleted(event.task.id, event.task.command, event.task.exitCode, event.task.outputPath, true, event.task.pid);
+			this._handleBackgroundTaskCompleted(
+				event.task.id,
+				event.task.command,
+				event.task.exitCode,
+				event.task.outputPath,
+				true,
+				event.task.pid,
+			);
 		});
 		this._taskManager.on("task_failed", (event) => {
-			this._handleBackgroundTaskCompleted(event.task.id, event.task.command, event.task.exitCode, event.task.outputPath, false, event.task.pid);
+			this._handleBackgroundTaskCompleted(
+				event.task.id,
+				event.task.command,
+				event.task.exitCode,
+				event.task.outputPath,
+				false,
+				event.task.pid,
+			);
 		});
 
 		// Listen for subagent background task completion
@@ -382,7 +394,14 @@ export class AgentSession {
 		});
 	}
 
-	private _handleBackgroundTaskCompleted(taskId: string, command: string, exitCode: number | undefined, outputPath: string, success: boolean, pid?: number): void {
+	private _handleBackgroundTaskCompleted(
+		taskId: string,
+		command: string,
+		exitCode: number | undefined,
+		outputPath: string,
+		success: boolean,
+		pid?: number,
+	): void {
 		const status = success ? "completed" : `failed (exit code ${exitCode})`;
 		const outputNote = `\nFull output: ${outputPath}`;
 		const pidNote = pid ? `\nPID: ${pid}` : "";
@@ -954,46 +973,7 @@ export class AgentSession {
 		return this._resourceLoader.getPrompts().prompts;
 	}
 
-	private _normalizePromptSnippet(text: string | undefined): string | undefined {
-		if (!text) return undefined;
-		const oneLine = text
-			.replace(/[\r\n]+/g, " ")
-			.replace(/\s+/g, " ")
-			.trim();
-		return oneLine.length > 0 ? oneLine : undefined;
-	}
-
-	private _normalizePromptGuidelines(guidelines: string[] | undefined): string[] {
-		if (!guidelines || guidelines.length === 0) {
-			return [];
-		}
-
-		const unique = new Set<string>();
-		for (const guideline of guidelines) {
-			const normalized = guideline.trim();
-			if (normalized.length > 0) {
-				unique.add(normalized);
-			}
-		}
-		return Array.from(unique);
-	}
-
-	private _rebuildSystemPrompt(toolNames: string[]): string {
-		const validToolNames = toolNames.filter((name) => this._toolRegistry.has(name));
-		const toolSnippets: Record<string, string> = {};
-		const promptGuidelines: string[] = [];
-		for (const name of validToolNames) {
-			const snippet = this._toolPromptSnippets.get(name);
-			if (snippet) {
-				toolSnippets[name] = snippet;
-			}
-
-			const toolGuidelines = this._toolPromptGuidelines.get(name);
-			if (toolGuidelines) {
-				promptGuidelines.push(...toolGuidelines);
-			}
-		}
-
+	private _rebuildSystemPrompt(_toolNames: string[]): string {
 		const loadedSkills = this._resourceLoader.getSkills().skills;
 		const loadedContextFiles = this._resourceLoader.getAgentsFiles().agentsFiles;
 
@@ -1001,9 +981,6 @@ export class AgentSession {
 			cwd: this._cwd,
 			skills: loadedSkills,
 			contextFiles: loadedContextFiles,
-			selectedTools: validToolNames,
-			toolSnippets,
-			promptGuidelines,
 		};
 		return buildSystemPrompt(this._baseSystemPromptOptions);
 	}
@@ -2398,22 +2375,6 @@ export class AgentSession {
 			});
 		}
 		this._toolDefinitions = definitionRegistry;
-		this._toolPromptSnippets = new Map(
-			Array.from(definitionRegistry.values())
-				.map(({ definition }) => {
-					const snippet = this._normalizePromptSnippet(definition.promptSnippet);
-					return snippet ? ([definition.name, snippet] as const) : undefined;
-				})
-				.filter((entry): entry is readonly [string, string] => entry !== undefined),
-		);
-		this._toolPromptGuidelines = new Map(
-			Array.from(definitionRegistry.values())
-				.map(({ definition }) => {
-					const guidelines = this._normalizePromptGuidelines(definition.promptGuidelines);
-					return guidelines.length > 0 ? ([definition.name, guidelines] as const) : undefined;
-				})
-				.filter((entry): entry is readonly [string, string[]] => entry !== undefined),
-		);
 		const runner = this._extensionRunner;
 		const wrappedExtensionTools = wrapRegisteredTools(allCustomTools, runner);
 		const wrappedBuiltInTools = wrapRegisteredTools(
@@ -2472,7 +2433,12 @@ export class AgentSession {
 					]),
 				)
 			: createAllToolDefinitions(this._cwd, {
-					bash: { commandPrefix: shellCommandPrefix, shellPath, taskManager: this._taskManager, backgroundRegistry: this._backgroundRegistry },
+					bash: {
+						commandPrefix: shellCommandPrefix,
+						shellPath,
+						taskManager: this._taskManager,
+						backgroundRegistry: this._backgroundRegistry,
+					},
 					subagent: { taskRegistry: this._subagentTaskRegistry },
 				});
 
