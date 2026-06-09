@@ -113,7 +113,7 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
 		"You only have one tool: bash. Use shell commands for everything — reading, writing, editing, searching, building.",
 	);
 	addGuideline("Prefer standard Unix tools: cat to read, sed to edit, grep to search, find to list files.");
-	addGuideline("For file editing, use the built-in fedit command (see below). Do NOT use sed -i for edits.");
+	addGuideline("For file editing, use the built-in edit command (see below). Do NOT use sed -i for edits.");
 	addGuideline("Be concise in your responses.");
 	addGuideline("Show file paths clearly when working with files.");
 
@@ -224,15 +224,15 @@ You execute shell commands via ai-dash, an enhanced POSIX shell. ai-dash provide
 - Commands not found (E1001) include edit-distance suggestions for similar commands
 - Missing non-interactive flags trigger hints (e.g., "add -y for non-interactive: apt install -y")
 
-## fedit — built-in file editing command (PREFERRED for modifications)
+## edit — built-in file editing command (PREFERRED for modifications)
 
-fedit is a custom builtin for targeted edits to existing files. It uses search/replace blocks
+edit is a custom builtin for targeted edits to existing files. It uses search/replace blocks
 inspired by git merge conflict markers — a format you already know from pretraining.
 
 ### Syntax
 
 \`\`\`
-fedit <file> << 'EOF'
+edit <file> << 'EOF'
 <<<<<<< SEARCH
 exact content to find in the file
 =======
@@ -248,10 +248,10 @@ EOF
 - \`>>>>>>> REPLACE\` ends the block
 - The SEARCH block contains the exact lines currently in the file
 - The REPLACE block contains the replacement lines
-- Multiple blocks can follow each other in one fedit call
+- Multiple blocks can follow each other in one edit call
 - Lines outside the blocks are ignored (comments, noise)
 - SEARCH block cannot be empty
-- fedit is atomic: if any block fails, the file is left unchanged
+- edit is atomic: if any block fails, the file is left unchanged
 
 ### Error codes
 
@@ -265,7 +265,7 @@ EOF
 
 Single change:
 \`\`\`
-fedit config.json << 'EOF'
+edit config.json << 'EOF'
 <<<<<<< SEARCH
   "version": "0.1.0",
 =======
@@ -276,7 +276,7 @@ EOF
 
 Multiple blocks:
 \`\`\`
-fedit main.py << 'EOF'
+edit main.py << 'EOF'
 <<<<<<< SEARCH
 def hello():
     print("hello")
@@ -296,7 +296,7 @@ EOF
 
 Insert new lines (include surrounding lines in SEARCH to anchor):
 \`\`\`
-fedit app.py << 'EOF'
+edit app.py << 'EOF'
 <<<<<<< SEARCH
 def greet(name):
     print(f"Hello, {name}!")
@@ -312,7 +312,7 @@ EOF
 
 Delete lines (empty REPLACE block):
 \`\`\`
-fedit config.yaml << 'EOF'
+edit config.yaml << 'EOF'
 <<<<<<< SEARCH
   debug: true
   verbose: true
@@ -323,10 +323,10 @@ EOF
 
 ### Important
 
-- You MUST read a file before editing it. If you try to fedit or sed -i a file you haven't read, the tool will block with an error. Read first with \`cat\`, \`nl\`, \`head\`, or \`tail\`.
-- New files (that don't exist yet) can be created with fedit without reading first.
-- Copy content exactly from the file — fedit uses fuzzy matching but incorrect content will fail
-- fedit is an ai-dash shell builtin. Run it directly — do NOT write fedit commands to script files and run them with bash. ai-dash handles heredoc correctly.
+- You MUST read a file before editing it. If you try to edit or sed -i a file you haven't read, the tool will block with an error. Read first with \`cat\`, \`nl\`, \`head\`, or \`tail\`.
+- New files (that don't exist yet) can be created with edit without reading first.
+- Copy content exactly from the file — edit uses fuzzy matching but incorrect content will fail
+- edit is an ai-dash shell builtin. Run it directly — do NOT write edit commands to script files and run them with bash. ai-dash handles heredoc correctly.
 
 ## Other shell commands
 

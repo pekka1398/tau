@@ -49,6 +49,8 @@ export class FooterComponent implements Component {
 	private autoCompactEnabled = true;
 	private session: AgentSession;
 	private footerData: ReadonlyFooterDataProvider;
+	private thinkingHidden = false;
+	private toolsExpanded = false;
 
 	constructor(session: AgentSession, footerData: ReadonlyFooterDataProvider) {
 		this.session = session;
@@ -61,6 +63,14 @@ export class FooterComponent implements Component {
 
 	setAutoCompactEnabled(enabled: boolean): void {
 		this.autoCompactEnabled = enabled;
+	}
+
+	setThinkingHidden(hidden: boolean): void {
+		this.thinkingHidden = hidden;
+	}
+
+	setToolsExpanded(expanded: boolean): void {
+		this.toolsExpanded = expanded;
 	}
 
 	/**
@@ -112,8 +122,14 @@ export class FooterComponent implements Component {
 		const actualPart = actualCost !== undefined ? `(P:$${actualCost.toFixed(4)})` : "";
 		const statsLine = `in:${formatTokens(totalPrompt)}(${inParts.join("/")}) out:${formatTokens(output)} $${cost.toFixed(4)}${actualPart}`;
 
-		const padded = statsLine.length < width ? " ".repeat(width - statsLine.length) + statsLine : statsLine;
+		// Build left side: toggle state indicators
+		const thinkingLabel = this.thinkingHidden ? "[thinking:hidden]" : "[thinking:show]";
+		const toolsLabel = this.toolsExpanded ? "[toolresult:show]" : "[toolresult:hidden]";
+		const leftSide = `${toolsLabel} ${thinkingLabel}`;
 
-		return [theme.fg("dim", padded)];
+		// Combine left + right with padding
+		const combined = leftSide + " ".repeat(Math.max(1, width - leftSide.length - statsLine.length)) + statsLine;
+
+		return [theme.fg("dim", combined)];
 	}
 }

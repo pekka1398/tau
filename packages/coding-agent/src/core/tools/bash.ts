@@ -186,6 +186,8 @@ type BashResultRenderState = {
 	cachedWidth: number | undefined;
 	cachedLines: string[] | undefined;
 	cachedSkipped: number | undefined;
+	/** Full styled output for collapsed visual truncation (null = not collapsed) */
+	collapsedStyledOutput: string | null;
 };
 
 class BashResultRenderComponent extends Container {
@@ -193,7 +195,25 @@ class BashResultRenderComponent extends Container {
 		cachedWidth: undefined,
 		cachedLines: undefined,
 		cachedSkipped: undefined,
+		collapsedStyledOutput: null,
 	};
+
+	override render(width: number): string[] {
+		// If we have collapsed content, apply visual line truncation at render time
+		if (this.state.collapsedStyledOutput !== null) {
+			const { visualLines, skippedCount } = truncateToVisualLines(
+				this.state.collapsedStyledOutput,
+				BASH_PREVIEW_LINES,
+				width,
+				0,
+			);
+			this.state.cachedWidth = width;
+			this.state.cachedLines = visualLines;
+			this.state.cachedSkipped = skippedCount;
+			return visualLines;
+		}
+		return super.render(width);
+	}
 }
 
 function formatDuration(ms: number): string {
@@ -260,12 +280,11 @@ function rebuildBashResultRenderComponent(
 			.join("\n");
 
 		if (options.expanded) {
+			component.state.collapsedStyledOutput = null;
 			component.addChild(new Text(styledOutput, 0, 0));
 		} else {
-			// Collapsed: show first N lines directly
-			const lines = styledOutput.split("\n");
-			const preview = lines.slice(0, BASH_PREVIEW_LINES).join("\n");
-			component.addChild(new Text(preview, 0, 0));
+			// Collapsed: store full content, visual truncation applied at render time
+			component.state.collapsedStyledOutput = styledOutput;
 		}
 	}
 
@@ -311,7 +330,7 @@ export function createBashToolDefinition(
 	const readFileState = new Set<string>();
 
 	/**
-	 * Parse a command string to detect edit operations (fedit, sed -i, perl -i).
+	 * Parse a command string to detect edit operations (edit, sed -i, perl -i).
 	 * Returns the target file path if found, null otherwise.
 	 * This is a pre-execution check — we parse the command before running it.
 	 */
@@ -325,8 +344,8 @@ export function createBashToolDefinition(
 
 		const bin = parts[0];
 
-		// fedit [-a] <path>
-		if (bin === "fedit") {
+		// edit [-a] <path>
+		if (bin === "edit") {
 			for (let i = 1; i < parts.length; i++) {
 				if (parts[i]!.startsWith("-")) continue;
 				return parts[i]!;
@@ -358,8 +377,7 @@ export function createBashToolDefinition(
 		name: "bash",
 		label: "bash",
 		description: `Execute a bash command in the current working directory. Returns stdout and stderr. Output is truncated to last ${DEFAULT_MAX_LINES} lines or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). If truncated, full output is saved to a temp file. Optionally provide a timeout in seconds.`,
-		promptSnippet:
-			"Execute shell commands via ai-dash. Use cat to read, fedit to edit, grep to search, find to list.",
+		promptSnippet: "Execute shell commands via ai-dash. Use cat to read, edit to edit, grep to search, find to list.",
 		parameters: bashSchema,
 		async execute(
 			_toolCallId: string,

@@ -407,6 +407,7 @@ export class InteractiveMode {
 
 		// Load hide thinking block setting
 		this.hideThinkingBlock = this.settingsManager.getHideThinkingBlock();
+		this.footer.setThinkingHidden(this.hideThinkingBlock);
 
 		// Register themes from resource loader and initialize
 		setRegisteredThemes(this.session.resourceLoader.getThemes().themes);
@@ -1542,6 +1543,8 @@ export class InteractiveMode {
 		this.footer.setAutoCompactEnabled(this.session.autoCompactionEnabled);
 		this.footerDataProvider.setCwd(this.sessionManager.getCwd());
 		this.hideThinkingBlock = this.settingsManager.getHideThinkingBlock();
+		this.footer.setThinkingHidden(this.hideThinkingBlock);
+		this.footer.setToolsExpanded(this.toolOutputExpanded);
 		this.ui.setShowHardwareCursor(this.settingsManager.getShowHardwareCursor());
 		this.ui.setClearOnShrink(this.settingsManager.getClearOnShrink());
 		const editorPaddingX = this.settingsManager.getEditorPaddingX();
@@ -2785,18 +2788,37 @@ export class InteractiveMode {
 					this.streamingComponent.updateContent(this.streamingMessage);
 
 					// State machine: update status based on event type
+					// Guard uses pendingTools.size instead of loaderStatus so that
+					// after all tools finish (tool_execution_end sets size=0),
+					// the next thinking/text event can transition correctly.
 					const ev = event.assistantMessageEvent;
-					if (ev.type === "thinking_delta" || ev.type === "thinking_start") {
-						if (this.loaderStatus !== "executing") {
+					const toolsRunning = this.pendingTools.size > 0;
+					if (ev.type === "thinking_start" || ev.type === "thinking_delta") {
+						if (!toolsRunning) {
+							if (this.loaderStatus !== "thinking") {
+								this.streamingChars = 0; // Reset on phase transition
+							}
 							this.loaderStatus = "thinking";
 						}
 						this.streamingChars += ev.type === "thinking_delta" ? ev.delta.length : 0;
 						this.updateLoaderMessage();
-					} else if (ev.type === "text_delta") {
-						if (this.loaderStatus !== "executing") {
+					} else if (
+						ev.type === "thinking_end" ||
+						ev.type === "text_start" ||
+						ev.type === "text_delta" ||
+						ev.type === "toolcall_start" ||
+						ev.type === "toolcall_delta" ||
+						ev.type === "toolcall_end"
+					) {
+						if (!toolsRunning) {
+							if (this.loaderStatus !== "streaming") {
+								this.streamingChars = 0; // Reset on phase transition
+							}
 							this.loaderStatus = "streaming";
 						}
-						this.streamingChars += ev.delta.length;
+						if ("delta" in ev) {
+							this.streamingChars += ev.delta.length;
+						}
 						this.updateLoaderMessage();
 					}
 
@@ -2913,11 +2935,11 @@ export class InteractiveMode {
 				if (component) {
 					component.updateResult({ ...event.result, isError: event.isError });
 					this.pendingTools.delete(event.toolCallId);
-					// State machine: if no more pending tools, transition back
+					// State machine: if no more pending tools, stop tick but
+					// don't force "streaming" — let the next message_update event
+					// (thinking/text/toolcall) set the correct status, or agent_end → idle.
 					if (this.pendingTools.size === 0) {
-						this.loaderStatus = "streaming";
 						this.stopLoaderTick();
-						this.updateLoaderMessage();
 					}
 					this.ui.requestRender();
 				}
@@ -3621,6 +3643,7 @@ export class InteractiveMode {
 
 	private setToolsExpanded(expanded: boolean): void {
 		this.toolOutputExpanded = expanded;
+		this.footer.setToolsExpanded(expanded);
 		const activeHeader = this.customHeader ?? this.builtInHeader;
 		if (isExpandable(activeHeader)) {
 			activeHeader.setExpanded(expanded);
@@ -3648,7 +3671,8 @@ export class InteractiveMode {
 			this.chatContainer.addChild(this.streamingComponent);
 		}
 
-		this.showStatus(`Thinking blocks: ${this.hideThinkingBlock ? "hidden" : "visible"}`);
+		this.footer.setThinkingHidden(this.hideThinkingBlock);
+		this.ui.requestRender();
 	}
 
 	private async openExternalEditor(): Promise<void> {
