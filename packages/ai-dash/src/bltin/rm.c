@@ -25,6 +25,24 @@
 
 #define TRASH_BASE ".local/share/Trash"
 
+/* ── Recursive mkdir (like mkdir -p) ─────────────────────────── */
+
+static void mkdir_p(const char *path, mode_t mode)
+{
+	char tmp[2048];
+	char *p;
+
+	snprintf(tmp, sizeof(tmp), "%s", path);
+	for (p = tmp + 1; *p; p++) {
+		if (*p == '/') {
+			*p = '\0';
+			mkdir(tmp, mode);
+			*p = '/';
+		}
+	}
+	mkdir(tmp, mode);
+}
+
 /* ── Trash directory setup ───────────────────────────────────── */
 
 static int ensure_trash_dirs(char *files_dir, size_t files_len,
@@ -39,8 +57,8 @@ static int ensure_trash_dirs(char *files_dir, size_t files_len,
 	snprintf(files_dir, files_len, "%s/%s/files", home, TRASH_BASE);
 	snprintf(info_dir, info_len, "%s/%s/info", home, TRASH_BASE);
 
-	mkdir(files_dir, 0755);
-	mkdir(info_dir, 0755);
+	mkdir_p(files_dir, 0755);
+	mkdir_p(info_dir, 0755);
 
 	/* Check dirs exist */
 	struct stat st;
@@ -144,30 +162,7 @@ static int trash_entry(const char *path, int recursive, int force,
 			return 1;
 		}
 
-		/* Recursive: trash each entry inside the directory */
-		DIR *dh = opendir(path);
-		if (!dh) {
-			outfmt(out2, "rm: cannot open directory '%s': %s\n",
-			       path, strerror(errno));
-			return 1;
-		}
-
-		int errors = 0;
-		struct dirent *ent;
-		char child[2048];
-
-		while ((ent = readdir(dh)) != NULL) {
-			if (strcmp(ent->d_name, ".") == 0 ||
-			    strcmp(ent->d_name, "..") == 0)
-				continue;
-			snprintf(child, sizeof(child), "%s/%s",
-				 path, ent->d_name);
-			errors += trash_entry(child, 1, force,
-					      trash_files, trash_info, count);
-		}
-		closedir(dh);
-
-		/* Now trash the (empty) directory itself */
+		/* Recursive: move the whole directory into trash as a unit */
 		if (resolve_absolute(path, abs_path, sizeof(abs_path)) < 0) {
 			outfmt(out2, "rm: cannot resolve path '%s'\n", path);
 			return 1;
@@ -181,7 +176,6 @@ static int trash_entry(const char *path, int recursive, int force,
 			outfmt(out2, "rm: cannot trash '%s': name conflict\n", path);
 			return 1;
 		}
-		/* Extract just the basename part for trashinfo */
 		const char *dest_base = strrchr(dest_basename, '/');
 		dest_base = dest_base ? dest_base + 1 : dest_basename;
 
@@ -195,7 +189,7 @@ static int trash_entry(const char *path, int recursive, int force,
 
 		write_trashinfo(trash_info, dest_base, abs_path);
 		(*count)++;
-		return errors;
+		return 0;
 	}
 
 	/* Regular file (or symlink, etc.) */

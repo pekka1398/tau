@@ -1833,7 +1833,6 @@ static char *expmeta(char *name, unsigned name_len, size_t expdir_len)
 	size_t len;
 	DIR *dirp;
 	char *pat;
-	char *pattern_end;
 	char *cp;
 	char *p;
 	int c;
@@ -1882,7 +1881,6 @@ static char *expmeta(char *name, unsigned name_len, size_t expdir_len)
 	p = strchrnul(p + 1, '/');
 	zeroedp = p;
 	endname = p;
-	pattern_end = p;
 	if (*p) {
 		esc = mesclen(name, p, mesc) & 1;
 		zeroedp -= esc;

@@ -1,5 +1,6 @@
-import { constants } from "node:fs";
+import { constants, existsSync } from "node:fs";
 import { access as fsAccess } from "node:fs/promises";
+import { resolve as pathResolve } from "node:path";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import { AI_DASH } from "ai-dash";
 import { Container, Text, truncateToWidth } from "@earendil-works/pi-tui";
@@ -10,20 +11,14 @@ import { truncateToVisualLines } from "../../modes/interactive/components/visual
 import { theme } from "../../modes/interactive/theme/theme.ts";
 import { waitForChildProcess } from "../../utils/child-process.ts";
 import { getShellEnv, killProcessTree, trackDetachedChildPid, untrackDetachedChildPid } from "../../utils/shell.ts";
-import type { ToolDefinition, ToolRenderResultOptions } from "../extensions/types.ts";
+import type { AgentToolResult, ToolDefinition, ToolRenderResultOptions } from "../extensions/types.ts";
 import { OutputAccumulator } from "./output-accumulator.ts";
 import { getTextOutput, invalidArgText, str } from "./render-utils.ts";
 import { wrapToolDefinition } from "./tool-definition-wrapper.ts";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult } from "./truncate.ts";
 
 const bashSchema = Type.Object({
-	command: Type.Union(
-		[
-			Type.String({ description: "A single shell command to execute" }),
-			Type.Array(Type.String(), { description: "Multiple independent shell commands to run in parallel" }),
-		],
-		{ description: "The shell command(s) to execute" },
-	),
+	command: Type.String({ description: "A single shell command to execute" }),
 	timeout: Type.Optional(Type.Number({ description: "Timeout in seconds (optional, no default timeout)" })),
 });
 
@@ -33,6 +28,7 @@ export interface BashToolDetails {
 	truncation?: TruncationResult;
 	fullOutputPath?: string;
 	metadata?: BashIntent;
+	exitCode?: number | null;
 }
 
 export interface BashIntent {
@@ -40,6 +36,8 @@ export interface BashIntent {
 	cmd?: string;
 	path?: string;
 	compound?: boolean;
+	redirect?: "write" | "append";
+	heredoc?: boolean;
 }
 
 /**
@@ -198,15 +196,13 @@ function formatDuration(ms: number): string {
 	return `${(ms / 1000).toFixed(1)}s`;
 }
 
-function formatBashCall(args: { command?: string | string[]; timeout?: number } | undefined): string {
+function formatBashCall(args: { command?: string; timeout?: number } | undefined): string {
 	const rawCommand = args?.command;
 	const timeout = args?.timeout as number | undefined;
 	const timeoutSuffix = timeout ? theme.fg("muted", ` (timeout ${timeout}s)`) : "";
 	let commandDisplay: string;
 	if (rawCommand === undefined || rawCommand === null) {
 		commandDisplay = invalidArgText(theme);
-	} else if (Array.isArray(rawCommand)) {
-		commandDisplay = rawCommand.join(" && ");
 	} else {
 		commandDisplay = rawCommand || theme.fg("toolOutput", "...");
 	}
@@ -228,7 +224,14 @@ function rebuildBashResultRenderComponent(
 	component.clear();
 
 	if (!options.expanded && !options.isPartial) {
-		return;
+		// read/list/search intents: hide output in collapsed mode
+		// But always show if command failed (exitCode !== 0)
+		const intent = result.details?.metadata?.intent;
+		const exitCode = result.details?.exitCode;
+		const failed = exitCode != null && exitCode !== 0;
+		if (!failed && (intent === "read" || intent === "list" || intent === "search")) {
+			return;
+		}
 	}
 
 	let output = getTextOutput(result as any, showImages).trim();
@@ -248,54 +251,42 @@ function rebuildBashResultRenderComponent(
 			.join("\n");
 
 		if (options.expanded) {
-			component.addChild(new Text(`\n${styledOutput}`, 0, 0));
+			component.addChild(new Text(styledOutput, 0, 0));
 		} else {
-			component.addChild({
-				render: (width: number) => {
-					if (state.cachedLines === undefined || state.cachedWidth !== width) {
-						const preview = truncateToVisualLines(styledOutput, BASH_PREVIEW_LINES, width);
-						state.cachedLines = preview.visualLines;
-						state.cachedSkipped = preview.skippedCount;
-						state.cachedWidth = width;
-					}
-					if (state.cachedSkipped && state.cachedSkipped > 0) {
-						const hint =
-							theme.fg("muted", `... (${state.cachedSkipped} earlier lines,`) +
-							` ${keyHint("app.tools.expand", "to expand")}${theme.fg("muted", ")")}`;
-						return ["", truncateToWidth(hint, width, "..."), ...(state.cachedLines ?? [])];
-					}
-					return ["", ...(state.cachedLines ?? [])];
-				},
-				invalidate: () => {
-					state.cachedWidth = undefined;
-					state.cachedLines = undefined;
-					state.cachedSkipped = undefined;
-				},
-			});
+			// Collapsed: show first N lines directly
+			const lines = styledOutput.split("\n");
+			const preview = lines.slice(0, BASH_PREVIEW_LINES).join("\n");
+			component.addChild(new Text(preview, 0, 0));
 		}
 	}
 
-	if (truncation?.truncated || fullOutputPath) {
-		const warnings: string[] = [];
-		if (fullOutputPath) {
-			warnings.push(`Full output: ${fullOutputPath}`);
-		}
-		if (truncation?.truncated) {
-			if (truncation.truncatedBy === "lines") {
-				warnings.push(`Truncated: showing ${truncation.outputLines} of ${truncation.totalLines} lines`);
-			} else {
-				warnings.push(
-					`Truncated: ${truncation.outputLines} lines shown (${formatSize(truncation.maxBytes ?? DEFAULT_MAX_BYTES)} limit)`,
-				);
+	if (options.expanded) {
+		if (truncation?.truncated || fullOutputPath) {
+			const warnings: string[] = [];
+			if (fullOutputPath) {
+				warnings.push(`Full output: ${fullOutputPath}`);
 			}
+			if (truncation?.truncated) {
+				if (truncation.truncatedBy === "lines") {
+					warnings.push(`Truncated: showing ${truncation.outputLines} of ${truncation.totalLines} lines`);
+				} else {
+					warnings.push(
+						`Truncated: ${truncation.outputLines} lines shown (${formatSize(truncation.maxBytes ?? DEFAULT_MAX_BYTES)} limit)`,
+					);
+				}
+			}
+			component.addChild(new Text(`\n${theme.fg("warning", `[${warnings.join(". ")}]`)}`, 0, 0));
 		}
-		component.addChild(new Text(`\n${theme.fg("warning", `[${warnings.join(". ")}]`)}`, 0, 0));
-	}
 
-	if (startedAt !== undefined) {
-		const label = options.isPartial ? "Elapsed" : "Took";
-		const endTime = endedAt ?? Date.now();
-		component.addChild(new Text(`\n${theme.fg("muted", `${label} ${formatDuration(endTime - startedAt)}`)}`, 0, 0));
+		if (startedAt !== undefined) {
+			const label = options.isPartial ? "Elapsed" : "Took";
+			const endTime = endedAt ?? Date.now();
+			const exitCode = result.details?.exitCode;
+			const exitSuffix = exitCode != null && exitCode !== 0
+				? ` ${theme.fg("warning", `(exit ${exitCode})`)}`
+				: "";
+			component.addChild(new Text(`\n${theme.fg("muted", `${label} ${formatDuration(endTime - startedAt)}`)}${exitSuffix}`, 0, 0));
+		}
 	}
 }
 
@@ -306,6 +297,54 @@ export function createBashToolDefinition(
 	const ops = options?.operations ?? createLocalBashOperations();
 	const commandPrefix = options?.commandPrefix;
 	const spawnHook = options?.spawnHook;
+
+	// Read-before-write tracking: paths that have been fully read
+	const readFileState = new Set<string>();
+
+	/**
+	 * Parse a command string to detect edit operations (fedit, sed -i, perl -i).
+	 * Returns the target file path if found, null otherwise.
+	 * This is a pre-execution check — we parse the command before running it.
+	 */
+	function extractEditTarget(cmd: string): string | null {
+		const trimmed = cmd.trim();
+		// Skip compound commands (pipes, chains, subshells)
+		if (/[|;&]|\$\(|`/.test(trimmed)) return null;
+
+		const parts = trimmed.split(/\s+/);
+		if (parts.length < 2) return null;
+
+		const bin = parts[0];
+
+		// fedit [-a] <path>
+		if (bin === "fedit") {
+			for (let i = 1; i < parts.length; i++) {
+				if (parts[i]!.startsWith("-")) continue;
+				return parts[i]!;
+			}
+		}
+
+		// sed -i[BUFFIX] ... <path>  (last non-flag arg)
+		// perl -i[BUFFIX] ... <path> (last non-flag arg)
+		if (bin === "sed" || bin === "perl") {
+			let hasI = false;
+			for (let i = 1; i < parts.length; i++) {
+				if (parts[i] === "-i" || (parts[i]!.startsWith("-i") && parts[i]!.length > 2)) {
+					hasI = true;
+					break;
+				}
+			}
+			if (hasI) {
+				// Last arg that doesn't start with - and isn't a flag value
+				for (let i = parts.length - 1; i >= 1; i--) {
+					if (!parts[i]!.startsWith("-")) return parts[i]!;
+				}
+			}
+		}
+
+		return null;
+	}
+
 	return {
 		name: "bash",
 		label: "bash",
@@ -313,136 +352,153 @@ export function createBashToolDefinition(
 		promptSnippet: "Execute shell commands via ai-dash. Use cat to read, fedit to edit, grep to search, find to list.",
 		parameters: bashSchema,
 		async execute(
-			_toolCallId,
-			{ command, timeout }: { command: string | string[]; timeout?: number },
-			signal?: AbortSignal,
-			onUpdate?,
-			_ctx?,
+			_toolCallId: string,
+			{ command, timeout }: { command: string; timeout?: number },
+			signal: AbortSignal | undefined,
+			onUpdate: ((result: AgentToolResult<BashToolDetails | undefined>) => void) | undefined,
+			_ctx: unknown,
 		) {
-			// Normalize: array of commands → single command joined by newlines
-			const singleCommand = Array.isArray(command) ? command.join("\n") : command;
-			const resolvedCommand = commandPrefix ? `${commandPrefix}\n${singleCommand}` : singleCommand;
-			const spawnContext = resolveSpawnContext(resolvedCommand, cwd, spawnHook);
-			const output = new OutputAccumulator({ tempFilePrefix: "pi-bash" });
-			let updateTimer: NodeJS.Timeout | undefined;
-			let updateDirty = false;
-			let lastUpdateAt = 0;
+				const resolvedCommand = commandPrefix ? `${commandPrefix}\n${command}` : command;
+				const spawnContext = resolveSpawnContext(resolvedCommand, cwd, spawnHook);
+				const output = new OutputAccumulator({ tempFilePrefix: "pi-bash" });
+				let updateTimer: NodeJS.Timeout | undefined;
+				let updateDirty = false;
+				let lastUpdateAt = 0;
 
-			const emitOutputUpdate = () => {
-				if (!onUpdate || !updateDirty) return;
-				updateDirty = false;
-				lastUpdateAt = Date.now();
-				const snapshot = output.snapshot({ persistIfTruncated: true });
-				onUpdate({
-					content: [{ type: "text", text: snapshot.content || "" }],
-					details: {
-						truncation: snapshot.truncation.truncated ? snapshot.truncation : undefined,
-						fullOutputPath: snapshot.fullOutputPath,
-					},
-				});
-			};
+				const emitOutputUpdate = () => {
+					if (!onUpdate || !updateDirty) return;
+					updateDirty = false;
+					lastUpdateAt = Date.now();
+					const snapshot = output.snapshot({ persistIfTruncated: true });
+					onUpdate({
+						content: [{ type: "text", text: snapshot.content || "" }],
+						details: {
+							truncation: snapshot.truncation.truncated ? snapshot.truncation : undefined,
+							fullOutputPath: snapshot.fullOutputPath,
+						},
+					});
+				};
 
-			const clearUpdateTimer = () => {
-				if (updateTimer) {
-					clearTimeout(updateTimer);
-					updateTimer = undefined;
-				}
-			};
+				const clearUpdateTimer = () => {
+					if (updateTimer) {
+						clearTimeout(updateTimer);
+						updateTimer = undefined;
+					}
+				};
 
-			const scheduleOutputUpdate = () => {
-				if (!onUpdate) return;
-				updateDirty = true;
-				const delay = BASH_UPDATE_THROTTLE_MS - (Date.now() - lastUpdateAt);
-				if (delay <= 0) {
+				const scheduleOutputUpdate = () => {
+					if (!onUpdate) return;
+					updateDirty = true;
+					const delay = BASH_UPDATE_THROTTLE_MS - (Date.now() - lastUpdateAt);
+					if (delay <= 0) {
+						clearUpdateTimer();
+						emitOutputUpdate();
+						return;
+					}
+					updateTimer ??= setTimeout(() => {
+						updateTimer = undefined;
+						emitOutputUpdate();
+					}, delay);
+				};
+
+				const handleData = (data: Buffer) => {
+					output.append(data);
+					scheduleOutputUpdate();
+				};
+
+				const finishOutput = async () => {
+					output.finish();
 					clearUpdateTimer();
 					emitOutputUpdate();
-					return;
-				}
-				updateTimer ??= setTimeout(() => {
-					updateTimer = undefined;
-					emitOutputUpdate();
-				}, delay);
-			};
+					const snapshot = output.snapshot({ persistIfTruncated: true });
+					await output.closeTempFile();
+					return snapshot;
+				};
 
-			if (onUpdate) {
-				onUpdate({ content: [], details: undefined });
-			}
-
-			const handleData = (data: Buffer) => {
-				output.append(data);
-				scheduleOutputUpdate();
-			};
-
-			const finishOutput = async () => {
-				output.finish();
-				clearUpdateTimer();
-				emitOutputUpdate();
-				const snapshot = output.snapshot({ persistIfTruncated: true });
-				await output.closeTempFile();
-				return snapshot;
-			};
-
-			const formatOutput = (snapshot: Awaited<ReturnType<typeof finishOutput>>, emptyText = "(no output)") => {
-				const truncation = snapshot.truncation;
-				let text = snapshot.content || emptyText;
-				let details: BashToolDetails | undefined;
-				if (truncation.truncated) {
-					details = { truncation, fullOutputPath: snapshot.fullOutputPath };
-					const startLine = truncation.totalLines - truncation.outputLines + 1;
-					const endLine = truncation.totalLines;
-					if (truncation.lastLinePartial) {
-						const lastLineSize = formatSize(output.getLastLineBytes());
-						text += `\n\n[Showing last ${formatSize(truncation.outputBytes)} of line ${endLine} (line is ${lastLineSize}). Full output: ${snapshot.fullOutputPath}]`;
-					} else if (truncation.truncatedBy === "lines") {
-						text += `\n\n[Showing lines ${startLine}-${endLine} of ${truncation.totalLines}. Full output: ${snapshot.fullOutputPath}]`;
-					} else {
-						text += `\n\n[Showing lines ${startLine}-${endLine} of ${truncation.totalLines} (${formatSize(DEFAULT_MAX_BYTES)} limit). Full output: ${snapshot.fullOutputPath}]`;
+				const formatOutput = (snapshot: Awaited<ReturnType<typeof finishOutput>>, emptyText = "(no output)") => {
+					const truncation = snapshot.truncation;
+					let text = snapshot.content || emptyText;
+					let details: BashToolDetails | undefined;
+					if (truncation.truncated) {
+						details = { truncation, fullOutputPath: snapshot.fullOutputPath };
+						const startLine = truncation.totalLines - truncation.outputLines + 1;
+						const endLine = truncation.totalLines;
+						if (truncation.lastLinePartial) {
+							const lastLineSize = formatSize(output.getLastLineBytes());
+							text += `\n\n[Showing last ${formatSize(truncation.outputBytes)} of line ${endLine} (line is ${lastLineSize}). Full output: ${snapshot.fullOutputPath}]`;
+						} else if (truncation.truncatedBy === "lines") {
+							text += `\n\n[Showing lines ${startLine}-${endLine} of ${truncation.totalLines}. Full output: ${snapshot.fullOutputPath}]`;
+						} else {
+							text += `\n\n[Showing lines ${startLine}-${endLine} of ${truncation.totalLines} (${formatSize(DEFAULT_MAX_BYTES)} limit). Full output: ${snapshot.fullOutputPath}]`;
+						}
 					}
-				}
-				return { text, details };
-			};
+					return { text, details };
+				};
 
-			const appendStatus = (text: string, status: string) => `${text ? `${text}\n\n` : ""}${status}`;
+				const appendStatus = (text: string, status: string) => `${text ? `${text}\n\n` : ""}${status}`;
+				const cmdPrefix = `$ ${command}\n`;
 
-			try {
-				let exitCode: number | null;
-				let intent: BashIntent | undefined;
 				try {
-					const result = await ops.exec(spawnContext.command, spawnContext.cwd, {
-						onData: handleData,
-						signal,
-						timeout,
-						env: spawnContext.env,
-					});
-					exitCode = result.exitCode;
-					intent = result.metadata;
-				} catch (err) {
-					const snapshot = await finishOutput();
-					const { text } = formatOutput(snapshot, "");
-					if (err instanceof Error && err.message === "aborted") {
-						throw new Error(appendStatus(text, "Command aborted"));
+					// Read-before-write: pre-check edit commands
+					const editTarget = extractEditTarget(command);
+					if (editTarget) {
+						const fullPath = pathResolve(spawnContext.cwd, editTarget);
+						if (existsSync(fullPath) && !readFileState.has(fullPath)) {
+							throw new Error(
+								`File has not been read yet: ${editTarget}\n` +
+								`To avoid editing the wrong lines, read the file first:\n` +
+								`  cat ${editTarget}\n` +
+								`or\n` +
+								`  nl ${editTarget}`,
+							);
+						}
 					}
-					if (err instanceof Error && err.message.startsWith("timeout:")) {
-						const timeoutSecs = err.message.split(":")[1];
-						throw new Error(appendStatus(text, `Command timed out after ${timeoutSecs} seconds`));
-					}
-					throw err;
-				}
 
-				const snapshot = await finishOutput();
-				const { text: outputText, details } = formatOutput(snapshot);
-				if (exitCode !== 0 && exitCode !== null) {
-					throw new Error(appendStatus(outputText, `Command exited with code ${exitCode}`));
+					let exitCode: number | null;
+					let intent: BashIntent | undefined;
+					try {
+						const result = await ops.exec(spawnContext.command, spawnContext.cwd, {
+							onData: handleData,
+							signal,
+							timeout,
+							env: spawnContext.env,
+						});
+						exitCode = result.exitCode;
+						intent = result.metadata;
+
+						// Read-before-write: record successfully read files
+						if (intent?.intent === "read" && intent.path && !intent.compound) {
+							const fullPath = pathResolve(spawnContext.cwd, intent.path);
+							readFileState.add(fullPath);
+						}
+					} catch (err) {
+						const snapshot = await finishOutput();
+						const { text, details } = formatOutput(snapshot, "");
+						if (err instanceof Error && err.message === "aborted") {
+							return {
+								content: [{ type: "text", text: cmdPrefix + appendStatus(text, "Command aborted") }],
+								details: { ...details, metadata: intent, exitCode: null },
+							};
+						}
+						if (err instanceof Error && err.message.startsWith("timeout:")) {
+							const timeoutSecs = err.message.split(":")[1];
+							return {
+								content: [{ type: "text", text: cmdPrefix + appendStatus(text, `Command timed out after ${timeoutSecs} seconds`) }],
+								details: { ...details, metadata: intent, exitCode: null },
+							};
+						}
+						throw err;
+					}
+
+					const snapshot = await finishOutput();
+					const { text: outputText, details } = formatOutput(snapshot);
+					return {
+						content: [{ type: "text", text: cmdPrefix + outputText }],
+						details: { ...details, metadata: intent, exitCode },
+					};
+				} finally {
+					clearUpdateTimer();
 				}
-				const toolDetails: BashToolDetails | undefined = details
-					? { ...details, metadata: intent }
-					: intent
-						? { metadata: intent }
-						: undefined;
-				return { content: [{ type: "text", text: outputText }], details: toolDetails };
-			} finally {
-				clearUpdateTimer();
-			}
 		},
 		renderCall(args, _theme, context) {
 			const state = context.state;

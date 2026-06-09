@@ -26,7 +26,7 @@
  *   - Multiple SEARCH/REPLACE blocks can be chained in one call
  *   - The SEARCH block must contain the exact lines currently in the
  *     file (fuzzy matching is applied: exact → trim trailing ws →
- *     trim all ws → unicode normalize)
+ *     trim all ws)
  *   - The REPLACE block contains the replacement lines
  *   - Lines outside markers are ignored (comments, noise)
  *   - SEARCH block cannot be empty
@@ -418,6 +418,8 @@ static int parse_lines(char **lines, size_t count, struct patch *out) {
 		if (strcmp(lines[i], "<<<<<<< SEARCH") == 0) {
 			cur.search = malloc(INITIAL_LINES_CAP * sizeof(char *));
 			cur.search_count = 0;
+			cur.replace = NULL;
+			cur.replace_count = 0;
 			tmp_cap = INITIAL_LINES_CAP;
 			in_search = 1;
 			in_replace = 0;
@@ -435,6 +437,12 @@ static int parse_lines(char **lines, size_t count, struct patch *out) {
 				}
 
 				if (strcmp(lines[i], ">>>>>>> REPLACE") == 0) {
+					if (in_search) {
+						outfmt(out2, "fedit: missing ======= separator before REPLACE\n");
+						free(cur.search);
+						patch_free(out);
+						return -1;
+					}
 					in_replace = 0;
 					if (cur.search_count == 0) {
 						outfmt(out2, "fedit: empty SEARCH block\n");
@@ -503,6 +511,12 @@ static int read_file(const char *path, struct buf *out) {
 
 	buf_init(out);
 	if (st.st_size > 0) {
+		/* Ensure buffer is large enough for the entire file */
+		if ((size_t)st.st_size > out->cap) {
+			out->cap = (size_t)st.st_size;
+			out->data = realloc(out->data, out->cap);
+			if (!out->data) { close(fd); return -1; }
+		}
 		while (out->len < (size_t)st.st_size) {
 			n = read(fd, out->data + out->len, st.st_size - out->len);
 			if (n <= 0) break;
@@ -623,49 +637,117 @@ static void sort_chunks_desc(struct patch *patch) {
 
 static int apply_chunks(char **file_lines, size_t file_count,
 			struct patch *patch,
-			char ***out_lines, size_t *out_count) {
+			char ***out_lines, size_t *out_count,
+			int replace_all) {
 	size_t i, j;
 	struct chunk *c;
 
 	/*
 	 * Phase 1: Pre-flight — validate uniqueness, record match positions.
 	 * All blocks are matched against the ORIGINAL file, so order doesn't matter.
+	 *
+	 * With replace_all, a chunk that matches N times is expanded into N
+	 * chunks (one per match). Without replace_all, matches > 1 is an error.
 	 */
-	for (i = 0; i < patch->count; i++) {
-		int last_pos;
-		size_t matches;
-		c = &patch->chunks[i];
+	{
+		/* First pass: count total expanded chunks needed */
+		size_t total = 0;
+		for (i = 0; i < patch->count; i++) {
+			int last_pos;
+			size_t matches;
+			c = &patch->chunks[i];
 
-		matches = count_matches(file_lines, file_count,
-					c->search, c->search_count, 0, &last_pos);
+			matches = count_matches(file_lines, file_count,
+						c->search, c->search_count, 0, &last_pos);
 
-		if (matches == 0) {
-			outfmt(out2, "fedit: SEARCH block %zu not found in file\n", i + 1);
-			outfmt(out2, "       expected to find:\n");
-			for (j = 0; j < c->search_count && j < 5; j++)
-				outfmt(out2, "         | %s\n", c->search[j]);
-			if (c->search_count > 5)
-				outfmt(out2, "         | ... (%zu more lines)\n",
-				       c->search_count - 5);
-			outfmt(out2, "\n       nearby file content:\n");
-			print_match_context(file_lines, file_count, 0, 0, 5);
-			return -1;
+			if (matches == 0) {
+				outfmt(out2, "fedit: SEARCH block %zu not found in file\n", i + 1);
+				outfmt(out2, "       expected to find:\n");
+				for (j = 0; j < c->search_count && j < 5; j++)
+					outfmt(out2, "         | %s\n", c->search[j]);
+				if (c->search_count > 5)
+					outfmt(out2, "         | ... (%zu more lines)\n",
+					       c->search_count - 5);
+				outfmt(out2, "\n       nearby file content:\n");
+				print_match_context(file_lines, file_count, 0, 0, 5);
+				return -1;
+			}
+
+			if (matches > 1 && !replace_all) {
+				outfmt(out2, "fedit: SEARCH block %zu matches %zu times (must be unique)\n",
+				       i + 1, matches);
+				outfmt(out2, "       search text:\n");
+				for (j = 0; j < c->search_count && j < 3; j++)
+					outfmt(out2, "         | %s\n", c->search[j]);
+				if (c->search_count > 3)
+					outfmt(out2, "         | ... (%zu more lines)\n",
+					       c->search_count - 3);
+				outfmt(out2, "\n       add more surrounding lines to your SEARCH block to make it unique\n");
+				return -1;
+			}
+
+			total += matches > 0 ? matches : 1;
 		}
 
-		if (matches > 1) {
-			outfmt(out2, "fedit: SEARCH block %zu matches %zu times (must be unique)\n",
-			       i + 1, matches);
-			outfmt(out2, "       search text:\n");
-			for (j = 0; j < c->search_count && j < 3; j++)
-				outfmt(out2, "         | %s\n", c->search[j]);
-			if (c->search_count > 3)
-				outfmt(out2, "         | ... (%zu more lines)\n",
-				       c->search_count - 3);
-			outfmt(out2, "\n       add more surrounding lines to your SEARCH block to make it unique\n");
-			return -1;
-		}
+		/* Second pass: fill match_pos, expand for replace_all */
+		if (total > patch->count) {
+			/* replace_all: expand multi-match chunks into N single-match chunks.
+			 * Expanded chunks borrow search/replace pointers from the original
+			 * (patch_free only frees the original; expanded chunks have NULL). */
+			struct chunk *new_chunks = malloc(total * sizeof(struct chunk));
+			size_t ni = 0;
+			for (i = 0; i < patch->count; i++) {
+				int last_pos;
+				size_t matches;
+				c = &patch->chunks[i];
 
-		c->match_pos = last_pos;
+				matches = count_matches(file_lines, file_count,
+							c->search, c->search_count, 0, &last_pos);
+
+				if (matches <= 1) {
+					c->match_pos = last_pos;
+					new_chunks[ni++] = *c;
+				} else {
+					/* Expand: one chunk per match position.
+					 * Each expanded chunk gets its own malloc'd
+					 * arrays of line pointers (shallow copy).
+					 * patch_free frees the arrays but NOT the
+					 * line strings themselves (those point into
+					 * the patch buffer or file buffer). */
+					int scan_pos = 0;
+					size_t m;
+					for (m = 0; m < matches; m++) {
+						scan_pos = seek_sequence(file_lines, file_count,
+									c->search, c->search_count,
+									(size_t)scan_pos);
+						new_chunks[ni].search = malloc(c->search_count * sizeof(char *));
+						memcpy(new_chunks[ni].search, c->search,
+						       c->search_count * sizeof(char *));
+						new_chunks[ni].search_count = c->search_count;
+						new_chunks[ni].replace = malloc(c->replace_count * sizeof(char *));
+						memcpy(new_chunks[ni].replace, c->replace,
+						       c->replace_count * sizeof(char *));
+						new_chunks[ni].replace_count = c->replace_count;
+						new_chunks[ni].match_pos = scan_pos;
+						ni++;
+						scan_pos += (int)c->search_count;
+					}
+				}
+			}
+			free(patch->chunks);
+			patch->chunks = new_chunks;
+			patch->count = ni;
+			patch->cap = total;
+		} else {
+			/* No expansion needed — just fill in match_pos */
+			for (i = 0; i < patch->count; i++) {
+				int last_pos;
+				c = &patch->chunks[i];
+				count_matches(file_lines, file_count,
+					      c->search, c->search_count, 0, &last_pos);
+				c->match_pos = last_pos;
+			}
+		}
 	}
 
 	/*
@@ -745,13 +827,26 @@ int feditcmd(int argc, char **argv) {
 	struct patch patch;
 	char **result_lines;
 	size_t result_count;
+	int replace_all = 0;
+	int argi = 1;
 
-	if (argc < 2) {
+	/* Parse flags */
+	while (argi < argc && argv[argi][0] == '-') {
+		if (strcmp(argv[argi], "-a") == 0) {
+			replace_all = 1;
+			argi++;
+		} else {
+			outfmt(out2, "fedit: unknown option: %s\n", argv[argi]);
+			return 2;
+		}
+	}
+
+	if (argi >= argc) {
 		outfmt(out2, "fedit: missing file argument\n");
 		return 2;
 	}
 
-	filepath = argv[1];
+	filepath = argv[argi];
 
 	/* Read target file */
 	if (read_file(filepath, &file_buf) < 0) {
@@ -818,7 +913,7 @@ int feditcmd(int argc, char **argv) {
 
 	/* Apply patches */
 	if (apply_chunks(file_lines.items, file_lines.count, &patch,
-			 &result_lines, &result_count) < 0) {
+			 &result_lines, &result_count, replace_all) < 0) {
 		buf_free(&file_buf);
 		buf_free(&patch_buf);
 		lines_free(&file_lines);

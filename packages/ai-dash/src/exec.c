@@ -321,7 +321,7 @@ shellexec(char **argv, const char *path, int idx)
 	exitstatus = exerrno;
 	TRACE(("shellexec failed for %s, errno %d, suppressint %d\n",
 		argv[0], e, suppressint ));
-	exerror(EXEND, "%s: %s", argv[0], errmsg(e, E_EXEC));
+	exraise(EXEND);
 	/* NOTREACHED */
 }
 

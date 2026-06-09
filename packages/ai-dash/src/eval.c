@@ -56,6 +56,8 @@ static int argv_has_flag(int argc, char **argv, const char *flag)
  * Check if a command is missing common flags and print a hint.
  * This does NOT modify the command — just warns the user/AI.
  */
+void sh_warnx(const char *, ...);
+
 static void check_missing_flags(int argc, char **argv)
 {
 	const char *cmd;
@@ -155,18 +157,6 @@ static int targets_system_path(int argc, char **argv)
 				return 1;
 			home = getenv("HOME");
 			if (home && strcmp(a, home) == 0)
-				return 1;
-		}
-	}
-	return 0;
-}
-
-static int argv_has_any_flag(int argc, char **argv, const char *flags[])
-{
-	int i, f;
-	for (i = 1; i < argc; i++) {
-		for (f = 0; flags[f]; f++) {
-			if (strcmp(argv[i], flags[f]) == 0)
 				return 1;
 		}
 	}
@@ -289,6 +279,33 @@ static int check_blacklist(int argc, char **argv)
 	    targets_system_path(argc - cmdidx, argv + cmdidx)) {
 		sh_warnx("ai-dash: blocked: %s on system paths", base);
 		return 1;
+	}
+
+	/* curl/wget upload: block data/form/upload flags, allow downloads */
+	if (strcmp(base, "curl") == 0 || strcmp(base, "wget") == 0) {
+		int ai;
+		int ac = argc - cmdidx;
+		char **av = argv + cmdidx;
+		for (ai = 1; ai < ac; ai++) {
+			const char *a = av[ai];
+			/* curl upload flags (exact or with = value) */
+			if (strcmp(a, "-d") == 0 || strcmp(a, "-F") == 0 ||
+			    strncmp(a, "--data", 6) == 0 ||
+			    strncmp(a, "--form", 6) == 0 ||
+			    strncmp(a, "--upload-file", 13) == 0 ||
+			    (strncmp(a, "-T", 2) == 0 && strcmp(base, "curl") == 0)) {
+				sh_warnx("ai-dash: blocked: %s upload not allowed (use download only)", base);
+				return 1;
+			}
+			/* wget upload flags */
+			if (strcmp(base, "wget") == 0 &&
+			    (strncmp(a, "--post-file", 11) == 0 ||
+			     strncmp(a, "--post-data", 11) == 0 ||
+			     strncmp(a, "--post-string", 13) == 0)) {
+				sh_warnx("ai-dash: blocked: wget upload not allowed (use download only)");
+				return 1;
+			}
+		}
 	}
 
 	return 0;
@@ -1014,7 +1031,7 @@ evalcommand(union node *cmd, int flags)
 {
 	struct localvar_list *localvar_stop;
 	struct parsefile *file_stop;
-	struct redirtab *redir_stop;
+	struct redirtab *redir_stop = NULL;
 	union node *argp;
 	struct arglist arglist;
 	struct arglist varlist;
@@ -1128,6 +1145,30 @@ evalcommand(union node *cmd, int flags)
 
 	preverrout.fd = 2;
 	expredir(cmd->ncmd.redirect);
+
+	/* ai-dash: block redirects to system paths */
+	{
+		static const char *blocked_paths[] = {
+			"/etc/", "/usr/", "/bin/", "/sbin/",
+			"/boot/", "/lib/", "/lib64/", "/root/",
+			NULL
+		};
+		union node *rp;
+		for (rp = cmd->ncmd.redirect; rp; rp = rp->nfile.next) {
+			if (rp->type != NTO && rp->type != NAPPEND)
+				continue;
+			const char *fname = rp->nfile.expfname;
+			if (!fname) continue;
+			int bi;
+			for (bi = 0; blocked_paths[bi]; bi++) {
+				if (strncmp(fname, blocked_paths[bi], strlen(blocked_paths[bi])) == 0) {
+					sh_warnx("ai-dash: blocked: redirect to system path %s", fname);
+					return 1;
+				}
+			}
+		}
+	}
+
 	redir_stop = pushredir(cmd->ncmd.redirect);
 	status = redirectsafe(cmd->ncmd.redirect, REDIR_PUSH|REDIR_SAVEFD2);
 
@@ -1187,7 +1228,7 @@ bail:
 	/* ai-dash: emit semantic metadata to fd 3 (only for top-level simple commands) */
 	if (meta_simple_pending) {
 		int cmdidx = skip_wrappers(argc, argv);
-		meta_emit_argv_intent(argc, argv, cmdidx);
+		meta_emit_argv_intent(argc, argv, cmdidx, cmd->ncmd.redirect);
 		meta_simple_pending = 0;
 	}
 

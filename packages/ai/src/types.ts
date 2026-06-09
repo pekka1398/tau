@@ -231,6 +231,8 @@ export interface Usage {
 		cacheWrite: number;
 		total: number;
 	};
+	/** Actual cost returned by provider API (e.g., OpenRouter), if available. */
+	actualCost?: number;
 }
 
 export type StopReason = "stop" | "length" | "toolUse" | "error" | "aborted";

@@ -266,6 +266,7 @@ export class Editor implements Component, Focusable {
 	// Prompt history for up/down navigation
 	private history: string[] = [];
 	private historyIndex: number = -1; // -1 = not browsing, 0 = most recent, 1 = older, etc.
+	private historySavedText: string | null = null; // text saved when entering history mode
 
 	// Kill ring for Emacs-style kill/yank operations
 	private killRing = new KillRing();
@@ -379,16 +380,18 @@ export class Editor implements Component, Focusable {
 		const newIndex = this.historyIndex - direction; // Up(-1) increases index, Down(1) decreases
 		if (newIndex < -1 || newIndex >= this.history.length) return;
 
-		// Capture state when first entering history browsing mode
+		// Save current text when first entering history browsing mode
 		if (this.historyIndex === -1 && newIndex >= 0) {
+			this.historySavedText = this.getText();
 			this.pushUndoSnapshot();
 		}
 
 		this.historyIndex = newIndex;
 
 		if (this.historyIndex === -1) {
-			// Returned to "current" state - clear editor
-			this.setTextInternal("");
+			// Returned to "current" state - restore saved text
+			this.setTextInternal(this.historySavedText ?? "");
+			this.historySavedText = null;
 		} else {
 			this.setTextInternal(this.history[this.historyIndex] || "", direction === -1 ? "start" : "end");
 		}
@@ -947,6 +950,7 @@ export class Editor implements Component, Focusable {
 		this.cancelAutocomplete();
 		this.lastAction = null;
 		this.historyIndex = -1; // Exit history browsing mode
+		this.historySavedText = null;
 		const normalized = this.normalizeText(text);
 		// Push undo snapshot if content differs (makes programmatic changes undoable)
 		if (this.getText() !== normalized) {
@@ -1199,6 +1203,7 @@ export class Editor implements Component, Focusable {
 		this.pastes.clear();
 		this.pasteCounter = 0;
 		this.historyIndex = -1;
+		this.historySavedText = null;
 		this.scrollOffset = 0;
 		this.undoStack.clear();
 		this.lastAction = null;

@@ -162,7 +162,7 @@ When you encounter an obstacle, do not use destructive actions as a shortcut to 
 
 # Using your tools
 
- - Your primary tool is bash. You can pass a single command string or an array of independent commands to run them in one call.
+ - Your primary tool is bash.
  - You can call multiple tools in a single response. If you intend to call multiple tools and there are no dependencies between them, make all independent tool calls in parallel. Maximize use of parallel tool calls where possible to increase efficiency. However, if some tool calls depend on previous calls to inform dependent values, do NOT call these tools in parallel and instead call them sequentially.
 
 # Tone and style
@@ -321,7 +321,8 @@ EOF
 
 ### Important
 
-- Always read the file first with \`cat\` before writing a fedit command
+- You MUST read a file before editing it. If you try to fedit or sed -i a file you haven't read, the tool will block with an error. Read first with \`cat\`, \`nl\`, \`head\`, or \`tail\`.
+- New files (that don't exist yet) can be created with fedit without reading first.
 - Copy content exactly from the file — fedit uses fuzzy matching but incorrect content will fail
 
 ## Other shell commands

@@ -74,7 +74,6 @@ import { configureHttpDispatcher, formatHttpIdleTimeoutMs } from "../../core/htt
 import { type AppKeybinding, KeybindingsManager } from "../../core/keybindings.ts";
 import { createCompactionSummaryMessage } from "../../core/messages.ts";
 import { defaultModelPerProvider, findExactModelReferenceMatch, resolveModelScope } from "../../core/model-resolver.ts";
-import { DefaultPackageManager } from "../../core/package-manager.ts";
 import { BUILT_IN_PROVIDER_DISPLAY_NAMES } from "../../core/provider-display-names.ts";
 import type { ResourceDiagnostic } from "../../core/resource-loader.ts";
 import { formatMissingSessionCwdPrompt, MissingSessionCwdError } from "../../core/session-cwd.ts";
@@ -91,7 +90,6 @@ import { getCwdRelativePath } from "../../utils/paths.ts";
 import { getPiUserAgent } from "../../utils/pi-user-agent.ts";
 import { killTrackedDetachedChildren } from "../../utils/shell.ts";
 import { ensureTool } from "../../utils/tools-manager.ts";
-import { checkForNewPiVersion, type LatestPiRelease } from "../../utils/version-check.ts";
 import { ArminComponent } from "./components/armin.ts";
 import { AssistantMessageComponent } from "./components/assistant-message.ts";
 import { BashExecutionComponent } from "./components/bash-execution.ts";
@@ -266,6 +264,17 @@ export class InteractiveMode {
 	private workingVisible = true;
 	private workingIndicatorOptions: LoaderIndicatorOptions | undefined = undefined;
 	private readonly defaultWorkingMessage = "Working...";
+
+	// Last submitted text for restore-on-abort
+	private lastSubmittedText = "";
+
+	// Loader state machine
+	private loaderStatus: "idle" | "waiting" | "thinking" | "streaming" | "executing" = "idle";
+	private streamingChars = 0;
+	private runningToolName = "";
+	private toolStartTime = 0;
+	private waitingStartTime = 0;
+	private loaderTickTimer: ReturnType<typeof setInterval> | undefined;
 	private readonly defaultHiddenThinkingLabel = "Thinking...";
 	private hiddenThinkingLabel = this.defaultHiddenThinkingLabel;
 
@@ -723,19 +732,6 @@ export class InteractiveMode {
 	async run(): Promise<void> {
 		await this.init();
 
-		// Start version check asynchronously
-		checkForNewPiVersion(this.version).then((newRelease) => {
-			if (newRelease) {
-				this.showNewVersionNotification(newRelease);
-			}
-		});
-
-		// Start package update check asynchronously
-		this.checkForPackageUpdates().then((updates) => {
-			if (updates.length > 0) {
-				this.showPackageUpdateNotification(updates);
-			}
-		});
 
 		// Check tmux keyboard setup asynchronously
 		this.checkTmuxKeyboardSetup().then((warning) => {
@@ -792,24 +788,6 @@ export class InteractiveMode {
 				const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
 				this.showError(errorMessage);
 			}
-		}
-	}
-
-	private async checkForPackageUpdates(): Promise<string[]> {
-		if (process.env.PI_OFFLINE) {
-			return [];
-		}
-
-		try {
-			const packageManager = new DefaultPackageManager({
-				cwd: this.sessionManager.getCwd(),
-				agentDir: getAgentDir(),
-				settingsManager: this.settingsManager,
-			});
-			const updates = await packageManager.checkForAvailableUpdates();
-			return updates.map((update) => update.displayName);
-		} catch {
-			return [];
 		}
 	}
 
@@ -1681,6 +1659,49 @@ export class InteractiveMode {
 		return this.workingMessage ?? this.defaultWorkingMessage;
 	}
 
+	/** Update loader message based on current state machine status. */
+	private updateLoaderMessage(): void {
+		if (!this.loadingAnimation) return;
+		let label: string;
+		switch (this.loaderStatus) {
+			case "waiting": {
+				const elapsed = ((Date.now() - this.waitingStartTime) / 1000).toFixed(0);
+				label = `waiting (${elapsed}s)`;
+				break;
+			}
+			case "thinking":
+				label = `thinking (${this.streamingChars} chars)`;
+				break;
+			case "streaming":
+				label = `streaming (${this.streamingChars} chars)`;
+				break;
+			case "executing": {
+				const elapsed = ((Date.now() - this.toolStartTime) / 1000).toFixed(0);
+				label = `exec: ${this.runningToolName} (${elapsed}s)`;
+				break;
+			}
+			default:
+				return;
+		}
+		this.loadingAnimation.setMessage(label);
+	}
+
+	/** Start a 1s interval to tick the loader message (for elapsed time in executing state). */
+	private startLoaderTick(): void {
+		this.stopLoaderTick();
+		this.loaderTickTimer = setInterval(() => {
+			this.updateLoaderMessage();
+			this.ui.requestRender();
+		}, 1000);
+	}
+
+	private stopLoaderTick(): void {
+		if (this.loaderTickTimer) {
+			clearInterval(this.loaderTickTimer);
+			this.loaderTickTimer = undefined;
+		}
+	}
+
 	private createWorkingLoader(): Loader {
 		return new Loader(
 			this.ui,
@@ -2371,7 +2392,30 @@ export class InteractiveMode {
 		// Set up handlers on defaultEditor - they use this.editor for text access
 		// so they work correctly regardless of which editor is active
 		this.defaultEditor.onEscape = () => {
-			if (this.session.isStreaming) {
+			if (this.loaderStatus === "waiting") {
+				// Waiting: abort and restore text to editor for re-editing
+				this.agent.abort();
+				this.restoreQueuedMessagesToEditor({ abort: false });
+				if (this.lastSubmittedText) {
+					const current = this.editor.getText().trim();
+					const restored = current
+						? `${this.lastSubmittedText}\n\n${current}`
+						: this.lastSubmittedText;
+					this.editor.setText(restored);
+					this.lastSubmittedText = "";
+				}
+				this.loaderStatus = "idle";
+				this.stopLoaderTick();
+				if (this.loadingAnimation) {
+					this.loadingAnimation.stop();
+					this.loadingAnimation = undefined;
+					this.statusContainer.clear();
+				}
+				this.ui.requestRender();
+			} else if (this.loaderStatus === "thinking" || this.loaderStatus === "streaming" || this.loaderStatus === "executing") {
+				// Thinking/streaming/executing: abort with abort message
+				this.restoreQueuedMessagesToEditor({ abort: true });
+			} else if (this.session.isStreaming) {
 				this.restoreQueuedMessagesToEditor({ abort: true });
 			} else if (this.session.isBashRunning) {
 				this.session.abortBash();
@@ -2634,6 +2678,9 @@ export class InteractiveMode {
 			// First, move any pending bash components to chat
 			this.flushPendingBashComponents();
 
+			// Store text for restore-on-abort
+			this.lastSubmittedText = text;
+
 			if (this.onInputCallback) {
 				this.onInputCallback(text);
 			} else {
@@ -2677,10 +2724,17 @@ export class InteractiveMode {
 					this.retryLoader = undefined;
 				}
 				this.stopWorkingLoader();
+				// State machine: idle → waiting
+				this.loaderStatus = "waiting";
+				this.streamingChars = 0;
+				this.runningToolName = "";
+				this.waitingStartTime = Date.now();
 				if (this.workingVisible) {
 					this.loadingAnimation = this.createWorkingLoader();
+					this.updateLoaderMessage();
 					this.statusContainer.addChild(this.loadingAnimation);
 				}
+				this.startLoaderTick();
 				this.ui.requestRender();
 				break;
 
@@ -2718,6 +2772,8 @@ export class InteractiveMode {
 					this.streamingMessage = event.message;
 					this.chatContainer.addChild(this.streamingComponent);
 					this.streamingComponent.updateContent(this.streamingMessage);
+					// State machine: reset chars for new assistant message
+					this.streamingChars = 0;
 					this.ui.requestRender();
 				}
 				break;
@@ -2726,6 +2782,22 @@ export class InteractiveMode {
 				if (this.streamingComponent && event.message.role === "assistant") {
 					this.streamingMessage = event.message;
 					this.streamingComponent.updateContent(this.streamingMessage);
+
+					// State machine: update status based on event type
+					const ev = event.assistantMessageEvent;
+					if (ev.type === "thinking_delta" || ev.type === "thinking_start") {
+						if (this.loaderStatus !== "executing") {
+							this.loaderStatus = "thinking";
+						}
+						this.streamingChars += ev.type === "thinking_delta" ? ev.delta.length : 0;
+						this.updateLoaderMessage();
+					} else if (ev.type === "text_delta") {
+						if (this.loaderStatus !== "executing") {
+							this.loaderStatus = "streaming";
+						}
+						this.streamingChars += ev.delta.length;
+						this.updateLoaderMessage();
+					}
 
 					for (const content of this.streamingMessage.content) {
 						if (content.type === "toolCall") {
@@ -2816,6 +2888,12 @@ export class InteractiveMode {
 					this.pendingTools.set(event.toolCallId, component);
 				}
 				component.markExecutionStarted();
+				// State machine: → executing
+				this.loaderStatus = "executing";
+				this.runningToolName = event.toolName;
+				this.toolStartTime = Date.now();
+				this.updateLoaderMessage();
+				this.startLoaderTick();
 				this.ui.requestRender();
 				break;
 			}
@@ -2834,6 +2912,12 @@ export class InteractiveMode {
 				if (component) {
 					component.updateResult({ ...event.result, isError: event.isError });
 					this.pendingTools.delete(event.toolCallId);
+					// State machine: if no more pending tools, transition back
+					if (this.pendingTools.size === 0) {
+						this.loaderStatus = "streaming";
+						this.stopLoaderTick();
+						this.updateLoaderMessage();
+					}
 					this.ui.requestRender();
 				}
 				break;
@@ -2843,6 +2927,11 @@ export class InteractiveMode {
 				if (this.settingsManager.getShowTerminalProgress()) {
 					this.ui.terminal.setProgress(false);
 				}
+				// State machine: → idle
+				this.loaderStatus = "idle";
+				this.runningToolName = "";
+				this.lastSubmittedText = "";
+				this.stopLoaderTick();
 				if (this.loadingAnimation) {
 					this.loadingAnimation.stop();
 					this.loadingAnimation = undefined;
@@ -3639,52 +3728,6 @@ export class InteractiveMode {
 		this.ui.requestRender();
 	}
 
-	showNewVersionNotification(release: LatestPiRelease): void {
-		const action = theme.fg("accent", `${APP_NAME} update`);
-		const updateInstruction = theme.fg("muted", `New version ${release.version} is available. Run `) + action;
-		const changelogUrl = "https://pi.dev/changelog";
-		const changelogLink = getCapabilities().hyperlinks
-			? hyperlink(theme.fg("accent", "open changelog"), changelogUrl)
-			: theme.fg("accent", changelogUrl);
-		const changelogLine = theme.fg("muted", "Changelog: ") + changelogLink;
-		const note = release.note?.trim();
-
-		this.chatContainer.addChild(new Spacer(1));
-		this.chatContainer.addChild(new DynamicBorder((text) => theme.fg("warning", text)));
-		this.chatContainer.addChild(
-			new Text(`${theme.bold(theme.fg("warning", "Update Available"))}\n${updateInstruction}`, 1, 0),
-		);
-		if (note) {
-			this.chatContainer.addChild(new Spacer(1));
-			this.chatContainer.addChild(
-				new Markdown(note, 1, 0, this.getMarkdownThemeWithSettings(), {
-					color: (text) => theme.fg("muted", text),
-				}),
-			);
-			this.chatContainer.addChild(new Spacer(1));
-		}
-		this.chatContainer.addChild(new Text(changelogLine, 1, 0));
-		this.chatContainer.addChild(new DynamicBorder((text) => theme.fg("warning", text)));
-		this.ui.requestRender();
-	}
-
-	showPackageUpdateNotification(packages: string[]): void {
-		const action = theme.fg("accent", `${APP_NAME} update`);
-		const updateInstruction = theme.fg("muted", "Package updates are available. Run ") + action;
-		const packageLines = packages.map((pkg) => `- ${pkg}`).join("\n");
-
-		this.chatContainer.addChild(new Spacer(1));
-		this.chatContainer.addChild(new DynamicBorder((text) => theme.fg("warning", text)));
-		this.chatContainer.addChild(
-			new Text(
-				`${theme.bold(theme.fg("warning", "Package Updates Available"))}\n${updateInstruction}\n${theme.fg("muted", "Packages:")}\n${packageLines}`,
-				1,
-				0,
-			),
-		);
-		this.chatContainer.addChild(new DynamicBorder((text) => theme.fg("warning", text)));
-		this.ui.requestRender();
-	}
 
 	/**
 	 * Get all queued messages (read-only).

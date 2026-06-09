@@ -1,3 +1,4 @@
+import { appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { Agent, type AgentMessage, type ThinkingLevel } from "@earendil-works/pi-agent-core";
 import { clampThinkingLevel, type Message, type Model, streamSimple } from "@earendil-works/pi-ai";
@@ -106,6 +107,42 @@ export {
 
 function getDefaultAgentDir(): string {
 	return getAgentDir();
+}
+
+// ── Dump-prompts logger ──────────────────────────────────────────────
+// Logs complete API request payloads to ~/.pi/agent/dump-prompts/<session>.jsonl
+
+class DumpLogger {
+	#file: string;
+	#initialized = false;
+	#dir: string;
+
+	constructor(dir: string, sessionId: string) {
+		this.#dir = dir;
+		this.#file = join(dir, `${sessionId}.jsonl`);
+	}
+
+	#ensureDir(): void {
+		if (this.#initialized) return;
+		mkdirSync(this.#dir, { recursive: true });
+		this.#initialized = true;
+	}
+
+	log(type: string, data: unknown): void {
+		try {
+			this.#ensureDir();
+			const entry = JSON.stringify({ type, timestamp: new Date().toISOString(), data });
+			appendFileSync(this.#file, entry + "\n");
+		} catch { /* silent */ }
+	}
+}
+
+let dumpLogger: DumpLogger | undefined;
+
+function initDumpLogger(agentDir: string, sessionId: string): void {
+	if (process.env.PI_NO_DUMP === "1") return;
+	const dir = join(agentDir, "dump-prompts");
+	dumpLogger = new DumpLogger(dir, sessionId);
 }
 
 /**
@@ -270,6 +307,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 	const extensionRunnerRef: { current?: ExtensionRunner } = {};
 
+	// Initialize dump-prompts logger
+	initDumpLogger(agentDir, sessionManager.getSessionId());
+
 	agent = new Agent({
 		initialState: {
 			systemPrompt: "",
@@ -301,14 +341,26 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				headers: mergeProviderAttributionHeaders(model, auth.headers, options?.headers),
 			});
 		},
-		onPayload: async (payload, _model) => {
+		onPayload: async (payload, model) => {
+			// Dump full API request
+			dumpLogger?.log("request", {
+				model: model.id,
+				provider: model.provider,
+				payload,
+			});
 			const runner = extensionRunnerRef.current;
 			if (!runner?.hasHandlers("before_provider_request")) {
 				return payload;
 			}
 			return runner.emitBeforeProviderRequest(payload);
 		},
-		onResponse: async (response, _model) => {
+		onResponse: async (response, model) => {
+			// Dump API response metadata
+			dumpLogger?.log("response", {
+				model: model.id,
+				status: response.status,
+				headers: response.headers,
+			});
 			const runner = extensionRunnerRef.current;
 			if (!runner?.hasHandlers("after_provider_response")) {
 				return;
