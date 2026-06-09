@@ -112,9 +112,7 @@ export class FooterComponent implements Component {
 		const actualPart = actualCost !== undefined ? `(P:$${actualCost.toFixed(4)})` : "";
 		const statsLine = `in:${formatTokens(totalPrompt)}(${inParts.join("/")}) out:${formatTokens(output)} $${cost.toFixed(4)}${actualPart}`;
 
-		const padded = statsLine.length < width
-			? " ".repeat(width - statsLine.length) + statsLine
-			: statsLine;
+		const padded = statsLine.length < width ? " ".repeat(width - statsLine.length) + statsLine : statsLine;
 
 		return [theme.fg("dim", padded)];
 	}

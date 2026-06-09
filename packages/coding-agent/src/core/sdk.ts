@@ -17,10 +17,7 @@ import { DefaultResourceLoader } from "./resource-loader.ts";
 import { getDefaultSessionDir, SessionManager } from "./session-manager.ts";
 import { SettingsManager } from "./settings-manager.ts";
 import { time } from "./timings.ts";
-import {
-	createBashTool,
-	type ToolName,
-} from "./tools/index.ts";
+import { createBashTool, type ToolName } from "./tools/index.ts";
 
 export interface CreateAgentSessionOptions {
 	/** Working directory for project-local discovery. Default: process.cwd() */
@@ -99,9 +96,7 @@ export type { PromptTemplate } from "./prompt-templates.ts";
 export type { Skill } from "./skills.ts";
 export type { Tool } from "./tools/index.ts";
 
-export {
-	createBashTool,
-};
+export { createBashTool };
 
 // Helper Functions
 
@@ -116,6 +111,7 @@ class DumpLogger {
 	#file: string;
 	#initialized = false;
 	#dir: string;
+	#lastMessageCount = 0;
 
 	constructor(dir: string, sessionId: string) {
 		this.#dir = dir;
@@ -133,7 +129,26 @@ class DumpLogger {
 			this.#ensureDir();
 			const entry = JSON.stringify({ type, timestamp: new Date().toISOString(), data });
 			appendFileSync(this.#file, entry + "\n");
-		} catch { /* silent */ }
+		} catch {
+			/* silent */
+		}
+	}
+
+	/** Log request but only include messages newer than last dump. */
+	logRequest(model: string, provider: string, payload: Record<string, unknown>): void {
+		const messages = payload.messages as unknown[] | undefined;
+		const msgCount = messages?.length ?? 0;
+		const newMessages = messages?.slice(this.#lastMessageCount) ?? [];
+		this.#lastMessageCount = msgCount;
+
+		this.log("request", {
+			model,
+			provider,
+			messageCount: msgCount,
+			newMessages,
+			// Only include tools on first request (they don't change)
+			...(this.#lastMessageCount === newMessages.length ? { tools: payload.tools } : {}),
+		});
 	}
 }
 
@@ -342,12 +357,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			});
 		},
 		onPayload: async (payload, model) => {
-			// Dump full API request
-			dumpLogger?.log("request", {
-				model: model.id,
-				provider: model.provider,
-				payload,
-			});
+			// Dump API request (only new messages, not full history)
+			dumpLogger?.logRequest(model.id, model.provider, payload as Record<string, unknown>);
 			const runner = extensionRunnerRef.current;
 			if (!runner?.hasHandlers("before_provider_request")) {
 				return payload;

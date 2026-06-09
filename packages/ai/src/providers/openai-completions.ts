@@ -530,6 +530,8 @@ function buildParams(
 		applyAnthropicCacheControl(messages, params.tools, cacheControl);
 	}
 
+	params.parallel_tool_calls = true;
+
 	if (options?.toolChoice) {
 		params.tool_choice = options.toolChoice;
 	}

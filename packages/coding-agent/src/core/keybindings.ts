@@ -96,7 +96,7 @@ export const KEYBINDINGS = {
 		description: "Open external editor",
 	},
 	"app.message.followUp": {
-		defaultKeys: "alt+enter",
+		defaultKeys: "ctrl+j",
 		description: "Queue follow-up message",
 	},
 	"app.message.dequeue": {

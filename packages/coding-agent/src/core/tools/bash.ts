@@ -2,8 +2,8 @@ import { constants, existsSync } from "node:fs";
 import { access as fsAccess } from "node:fs/promises";
 import { resolve as pathResolve } from "node:path";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import { AI_DASH } from "ai-dash";
 import { Container, Text, truncateToWidth } from "@earendil-works/pi-tui";
+import { AI_DASH } from "ai-dash";
 import { spawn } from "child_process";
 import { type Static, Type } from "typebox";
 import { keyHint } from "../../modes/interactive/components/keybinding-hints.ts";
@@ -61,7 +61,7 @@ export interface BashOperations {
 			timeout?: number;
 			env?: NodeJS.ProcessEnv;
 		},
-	) => Promise<{ exitCode: number | null; metadata?: BashIntent }>;
+	) => Promise<{ exitCode: number | null; metadata?: BashIntent; stderr?: string }>;
 }
 
 /**
@@ -111,7 +111,11 @@ export function createLocalBashOperations(): BashOperations {
 					}, timeout * 1000);
 				}
 				child.stdout?.on("data", onData);
-				child.stderr?.on("data", onData);
+				// Collect stderr separately
+				let stderrBuf = "";
+				child.stderr?.on("data", (chunk: Buffer) => {
+					stderrBuf += chunk.toString("utf-8");
+				});
 				if (signal) {
 					if (signal.aborted) onAbort();
 					else signal.addEventListener("abort", onAbort, { once: true });
@@ -135,7 +139,7 @@ export function createLocalBashOperations(): BashOperations {
 					}
 				}
 
-				return { exitCode, metadata };
+				return { exitCode, metadata, stderr: stderrBuf || undefined };
 			} finally {
 				if (child.pid) untrackDetachedChildPid(child.pid);
 				if (timeoutHandle) clearTimeout(timeoutHandle);
@@ -205,6 +209,11 @@ function formatBashCall(args: { command?: string; timeout?: number } | undefined
 		commandDisplay = invalidArgText(theme);
 	} else {
 		commandDisplay = rawCommand || theme.fg("toolOutput", "...");
+	}
+	// Truncate long commands to BASH_PREVIEW_LINES
+	const lines = commandDisplay.split("\n");
+	if (lines.length > BASH_PREVIEW_LINES) {
+		commandDisplay = lines.slice(0, BASH_PREVIEW_LINES).join("\n");
 	}
 	return theme.fg("toolTitle", theme.bold(`$ ${commandDisplay}`)) + timeoutSuffix;
 }
@@ -282,10 +291,10 @@ function rebuildBashResultRenderComponent(
 			const label = options.isPartial ? "Elapsed" : "Took";
 			const endTime = endedAt ?? Date.now();
 			const exitCode = result.details?.exitCode;
-			const exitSuffix = exitCode != null && exitCode !== 0
-				? ` ${theme.fg("warning", `(exit ${exitCode})`)}`
-				: "";
-			component.addChild(new Text(`\n${theme.fg("muted", `${label} ${formatDuration(endTime - startedAt)}`)}${exitSuffix}`, 0, 0));
+			const exitSuffix = exitCode != null && exitCode !== 0 ? ` ${theme.fg("warning", `(exit ${exitCode})`)}` : "";
+			component.addChild(
+				new Text(`\n${theme.fg("muted", `${label} ${formatDuration(endTime - startedAt)}`)}${exitSuffix}`, 0, 0),
+			);
 		}
 	}
 }
@@ -349,7 +358,8 @@ export function createBashToolDefinition(
 		name: "bash",
 		label: "bash",
 		description: `Execute a bash command in the current working directory. Returns stdout and stderr. Output is truncated to last ${DEFAULT_MAX_LINES} lines or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). If truncated, full output is saved to a temp file. Optionally provide a timeout in seconds.`,
-		promptSnippet: "Execute shell commands via ai-dash. Use cat to read, fedit to edit, grep to search, find to list.",
+		promptSnippet:
+			"Execute shell commands via ai-dash. Use cat to read, fedit to edit, grep to search, find to list.",
 		parameters: bashSchema,
 		async execute(
 			_toolCallId: string,
@@ -358,147 +368,159 @@ export function createBashToolDefinition(
 			onUpdate: ((result: AgentToolResult<BashToolDetails | undefined>) => void) | undefined,
 			_ctx: unknown,
 		) {
-				const resolvedCommand = commandPrefix ? `${commandPrefix}\n${command}` : command;
-				const spawnContext = resolveSpawnContext(resolvedCommand, cwd, spawnHook);
-				const output = new OutputAccumulator({ tempFilePrefix: "pi-bash" });
-				let updateTimer: NodeJS.Timeout | undefined;
-				let updateDirty = false;
-				let lastUpdateAt = 0;
+			const resolvedCommand = commandPrefix ? `${commandPrefix}\n${command}` : command;
+			const spawnContext = resolveSpawnContext(resolvedCommand, cwd, spawnHook);
+			const output = new OutputAccumulator({ tempFilePrefix: "pi-bash" });
+			let updateTimer: NodeJS.Timeout | undefined;
+			let updateDirty = false;
+			let lastUpdateAt = 0;
 
-				const emitOutputUpdate = () => {
-					if (!onUpdate || !updateDirty) return;
-					updateDirty = false;
-					lastUpdateAt = Date.now();
-					const snapshot = output.snapshot({ persistIfTruncated: true });
-					onUpdate({
-						content: [{ type: "text", text: snapshot.content || "" }],
-						details: {
-							truncation: snapshot.truncation.truncated ? snapshot.truncation : undefined,
-							fullOutputPath: snapshot.fullOutputPath,
-						},
-					});
-				};
+			const emitOutputUpdate = () => {
+				if (!onUpdate || !updateDirty) return;
+				updateDirty = false;
+				lastUpdateAt = Date.now();
+				const snapshot = output.snapshot({ persistIfTruncated: true });
+				onUpdate({
+					content: [{ type: "text", text: snapshot.content || "" }],
+					details: {
+						truncation: snapshot.truncation.truncated ? snapshot.truncation : undefined,
+						fullOutputPath: snapshot.fullOutputPath,
+					},
+				});
+			};
 
-				const clearUpdateTimer = () => {
-					if (updateTimer) {
-						clearTimeout(updateTimer);
-						updateTimer = undefined;
-					}
-				};
+			const clearUpdateTimer = () => {
+				if (updateTimer) {
+					clearTimeout(updateTimer);
+					updateTimer = undefined;
+				}
+			};
 
-				const scheduleOutputUpdate = () => {
-					if (!onUpdate) return;
-					updateDirty = true;
-					const delay = BASH_UPDATE_THROTTLE_MS - (Date.now() - lastUpdateAt);
-					if (delay <= 0) {
-						clearUpdateTimer();
-						emitOutputUpdate();
-						return;
-					}
-					updateTimer ??= setTimeout(() => {
-						updateTimer = undefined;
-						emitOutputUpdate();
-					}, delay);
-				};
-
-				const handleData = (data: Buffer) => {
-					output.append(data);
-					scheduleOutputUpdate();
-				};
-
-				const finishOutput = async () => {
-					output.finish();
+			const scheduleOutputUpdate = () => {
+				if (!onUpdate) return;
+				updateDirty = true;
+				const delay = BASH_UPDATE_THROTTLE_MS - (Date.now() - lastUpdateAt);
+				if (delay <= 0) {
 					clearUpdateTimer();
 					emitOutputUpdate();
-					const snapshot = output.snapshot({ persistIfTruncated: true });
-					await output.closeTempFile();
-					return snapshot;
-				};
+					return;
+				}
+				updateTimer ??= setTimeout(() => {
+					updateTimer = undefined;
+					emitOutputUpdate();
+				}, delay);
+			};
 
-				const formatOutput = (snapshot: Awaited<ReturnType<typeof finishOutput>>, emptyText = "(no output)") => {
-					const truncation = snapshot.truncation;
-					let text = snapshot.content || emptyText;
-					let details: BashToolDetails | undefined;
-					if (truncation.truncated) {
-						details = { truncation, fullOutputPath: snapshot.fullOutputPath };
-						const startLine = truncation.totalLines - truncation.outputLines + 1;
-						const endLine = truncation.totalLines;
-						if (truncation.lastLinePartial) {
-							const lastLineSize = formatSize(output.getLastLineBytes());
-							text += `\n\n[Showing last ${formatSize(truncation.outputBytes)} of line ${endLine} (line is ${lastLineSize}). Full output: ${snapshot.fullOutputPath}]`;
-						} else if (truncation.truncatedBy === "lines") {
-							text += `\n\n[Showing lines ${startLine}-${endLine} of ${truncation.totalLines}. Full output: ${snapshot.fullOutputPath}]`;
-						} else {
-							text += `\n\n[Showing lines ${startLine}-${endLine} of ${truncation.totalLines} (${formatSize(DEFAULT_MAX_BYTES)} limit). Full output: ${snapshot.fullOutputPath}]`;
-						}
+			const handleData = (data: Buffer) => {
+				output.append(data);
+				scheduleOutputUpdate();
+			};
+
+			const finishOutput = async () => {
+				output.finish();
+				clearUpdateTimer();
+				emitOutputUpdate();
+				const snapshot = output.snapshot({ persistIfTruncated: true });
+				await output.closeTempFile();
+				return snapshot;
+			};
+
+			const formatOutput = (snapshot: Awaited<ReturnType<typeof finishOutput>>, emptyText = "(no output)") => {
+				const truncation = snapshot.truncation;
+				let text = snapshot.content || emptyText;
+				let details: BashToolDetails | undefined;
+				if (truncation.truncated) {
+					details = { truncation, fullOutputPath: snapshot.fullOutputPath };
+					const startLine = truncation.totalLines - truncation.outputLines + 1;
+					const endLine = truncation.totalLines;
+					if (truncation.lastLinePartial) {
+						const lastLineSize = formatSize(output.getLastLineBytes());
+						text += `\n\n[Showing last ${formatSize(truncation.outputBytes)} of line ${endLine} (line is ${lastLineSize}). Full output: ${snapshot.fullOutputPath}]`;
+					} else if (truncation.truncatedBy === "lines") {
+						text += `\n\n[Showing lines ${startLine}-${endLine} of ${truncation.totalLines}. Full output: ${snapshot.fullOutputPath}]`;
+					} else {
+						text += `\n\n[Showing lines ${startLine}-${endLine} of ${truncation.totalLines} (${formatSize(DEFAULT_MAX_BYTES)} limit). Full output: ${snapshot.fullOutputPath}]`;
 					}
-					return { text, details };
-				};
+				}
+				return { text, details };
+			};
 
-				const appendStatus = (text: string, status: string) => `${text ? `${text}\n\n` : ""}${status}`;
-				const cmdPrefix = `$ ${command}\n`;
+			const appendStatus = (text: string, status: string) => `${text ? `${text}\n\n` : ""}${status}`;
 
-				try {
-					// Read-before-write: pre-check edit commands
-					const editTarget = extractEditTarget(command);
-					if (editTarget) {
-						const fullPath = pathResolve(spawnContext.cwd, editTarget);
-						if (existsSync(fullPath) && !readFileState.has(fullPath)) {
-							throw new Error(
-								`File has not been read yet: ${editTarget}\n` +
+			try {
+				// Read-before-write: pre-check edit commands
+				const editTarget = extractEditTarget(command);
+				if (editTarget) {
+					const fullPath = pathResolve(spawnContext.cwd, editTarget);
+					if (existsSync(fullPath) && !readFileState.has(fullPath)) {
+						throw new Error(
+							`File has not been read yet: ${editTarget}\n` +
 								`To avoid editing the wrong lines, read the file first:\n` +
 								`  cat ${editTarget}\n` +
 								`or\n` +
 								`  nl ${editTarget}`,
-							);
-						}
+						);
 					}
-
-					let exitCode: number | null;
-					let intent: BashIntent | undefined;
-					try {
-						const result = await ops.exec(spawnContext.command, spawnContext.cwd, {
-							onData: handleData,
-							signal,
-							timeout,
-							env: spawnContext.env,
-						});
-						exitCode = result.exitCode;
-						intent = result.metadata;
-
-						// Read-before-write: record successfully read files
-						if (intent?.intent === "read" && intent.path && !intent.compound) {
-							const fullPath = pathResolve(spawnContext.cwd, intent.path);
-							readFileState.add(fullPath);
-						}
-					} catch (err) {
-						const snapshot = await finishOutput();
-						const { text, details } = formatOutput(snapshot, "");
-						if (err instanceof Error && err.message === "aborted") {
-							return {
-								content: [{ type: "text", text: cmdPrefix + appendStatus(text, "Command aborted") }],
-								details: { ...details, metadata: intent, exitCode: null },
-							};
-						}
-						if (err instanceof Error && err.message.startsWith("timeout:")) {
-							const timeoutSecs = err.message.split(":")[1];
-							return {
-								content: [{ type: "text", text: cmdPrefix + appendStatus(text, `Command timed out after ${timeoutSecs} seconds`) }],
-								details: { ...details, metadata: intent, exitCode: null },
-							};
-						}
-						throw err;
-					}
-
-					const snapshot = await finishOutput();
-					const { text: outputText, details } = formatOutput(snapshot);
-					return {
-						content: [{ type: "text", text: cmdPrefix + outputText }],
-						details: { ...details, metadata: intent, exitCode },
-					};
-				} finally {
-					clearUpdateTimer();
 				}
+
+				let exitCode: number | null;
+				let intent: BashIntent | undefined;
+				let stderrOutput: string | undefined;
+				try {
+					const result = await ops.exec(spawnContext.command, spawnContext.cwd, {
+						onData: handleData,
+						signal,
+						timeout,
+						env: spawnContext.env,
+					});
+					exitCode = result.exitCode;
+					intent = result.metadata;
+					stderrOutput = result.stderr;
+
+					// Read-before-write: record successfully read files
+					if (intent?.intent === "read" && intent.path && !intent.compound) {
+						const fullPath = pathResolve(spawnContext.cwd, intent.path);
+						readFileState.add(fullPath);
+					}
+				} catch (err) {
+					const snapshot = await finishOutput();
+					const { text, details } = formatOutput(snapshot, "");
+					if (err instanceof Error && err.message === "aborted") {
+						return {
+							content: [{ type: "text", text: appendStatus(text, "Command aborted") }],
+							details: { ...details, metadata: intent, exitCode: null },
+						};
+					}
+					if (err instanceof Error && err.message.startsWith("timeout:")) {
+						const timeoutSecs = err.message.split(":")[1];
+						return {
+							content: [
+								{
+									type: "text",
+									text: appendStatus(text, `Command timed out after ${timeoutSecs} seconds`),
+								},
+							],
+							details: { ...details, metadata: intent, exitCode: null },
+						};
+					}
+					throw err;
+				}
+
+				const snapshot = await finishOutput();
+				const { text: rawOutput, details } = formatOutput(snapshot);
+
+				// Append stderr with label if present
+				const outputText = stderrOutput?.trim()
+					? `${rawOutput}\n---\n[stderr]\n${stderrOutput.trimEnd()}`
+					: rawOutput;
+
+				return {
+					content: [{ type: "text", text: outputText }],
+					details: { ...details, metadata: intent, exitCode },
+				};
+			} finally {
+				clearUpdateTimer();
+			}
 		},
 		renderCall(args, _theme, context) {
 			const state = context.state;

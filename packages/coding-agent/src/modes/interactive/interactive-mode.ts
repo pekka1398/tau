@@ -732,7 +732,6 @@ export class InteractiveMode {
 	async run(): Promise<void> {
 		await this.init();
 
-
 		// Check tmux keyboard setup asynchronously
 		this.checkTmuxKeyboardSetup().then((warning) => {
 			if (warning) {
@@ -2398,9 +2397,7 @@ export class InteractiveMode {
 				this.restoreQueuedMessagesToEditor({ abort: false });
 				if (this.lastSubmittedText) {
 					const current = this.editor.getText().trim();
-					const restored = current
-						? `${this.lastSubmittedText}\n\n${current}`
-						: this.lastSubmittedText;
+					const restored = current ? `${this.lastSubmittedText}\n\n${current}` : this.lastSubmittedText;
 					this.editor.setText(restored);
 					this.lastSubmittedText = "";
 				}
@@ -2412,7 +2409,11 @@ export class InteractiveMode {
 					this.statusContainer.clear();
 				}
 				this.ui.requestRender();
-			} else if (this.loaderStatus === "thinking" || this.loaderStatus === "streaming" || this.loaderStatus === "executing") {
+			} else if (
+				this.loaderStatus === "thinking" ||
+				this.loaderStatus === "streaming" ||
+				this.loaderStatus === "executing"
+			) {
 				// Thinking/streaming/executing: abort with abort message
 				this.restoreQueuedMessagesToEditor({ abort: true });
 			} else if (this.session.isStreaming) {
@@ -3727,7 +3728,6 @@ export class InteractiveMode {
 		this.chatContainer.addChild(new Text(theme.fg("warning", `Warning: ${warningMessage}`), 1, 0));
 		this.ui.requestRender();
 	}
-
 
 	/**
 	 * Get all queued messages (read-only).

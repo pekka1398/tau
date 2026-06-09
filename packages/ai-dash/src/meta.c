@@ -164,9 +164,38 @@ static const char *classify_intent(const char *cmd)
 }
 
 /*
+ * Check if a command name is a "passthrough" filter — these commands
+ * just select/limit output without changing the nature of the operation.
+ * cat file | head -5 is still a "read", grep x file | head is still "search".
+ */
+static int is_passthrough(const char *cmd)
+{
+	return strcmp(cmd, "head") == 0 || strcmp(cmd, "tail") == 0 ||
+	       strcmp(cmd, "less") == 0 || strcmp(cmd, "more") == 0 ||
+	       strcmp(cmd, "nl") == 0 || strcmp(cmd, "column") == 0 ||
+	       strcmp(cmd, "fold") == 0 || strcmp(cmd, "fmt") == 0 ||
+	       strcmp(cmd, "pr") == 0;
+}
+
+/*
+ * Get the command name (first argv[0]) from an NCMD node.
+ * Returns NULL if not an NCMD or no args.
+ */
+static const char *get_cmd_name(union node *n)
+{
+	if (!n || n->type != NCMD || !n->ncmd.args)
+		return NULL;
+	return n->ncmd.args->narg.text;
+}
+
+/*
  * Emit compound intent from evaltree() when the top-level AST node
  * is a pipeline, chain, or control structure.
  * For NCMD (simple command), does nothing — deferred to evalcommand().
+ *
+ * Special case: for pipes where all commands after the first are
+ * passthrough filters (head, tail, less, more), use the first
+ * command's intent instead of "bash".
  */
 void meta_emit_intent(union node *n)
 {
@@ -174,7 +203,40 @@ void meta_emit_intent(union node *n)
 		return;
 
 	switch (n->type) {
-	case NPIPE:
+	case NPIPE: {
+		/* Check if this is a passthrough pipe: first cmd + only filters */
+		struct nodelist *nl = n->npipe.cmdlist;
+		if (!nl || !nl->n) break;
+
+		const char *first_cmd = get_cmd_name(nl->n);
+		if (!first_cmd) break;
+
+		/* Check all remaining commands are passthrough */
+		int all_passthrough = 1;
+		struct nodelist *p;
+		for (p = nl->next; p; p = p->next) {
+			const char *cmd = get_cmd_name(p->n);
+			if (!cmd || !is_passthrough(cmd)) {
+				all_passthrough = 0;
+				break;
+			}
+		}
+
+		if (all_passthrough) {
+			/* Use first command's intent */
+			const char *intent = classify_intent(first_cmd);
+			char esc[256];
+			json_escape(esc, sizeof(esc), first_cmd);
+			char buf[512];
+			snprintf(buf, sizeof(buf),
+				 "{\"v\":1,\"event\":\"intent\",\"intent\":\"%s\",\"cmd\":\"%s\",\"compound\":true}\n",
+				 intent, esc);
+			meta_write(buf);
+		} else {
+			meta_write("{\"v\":1,\"event\":\"intent\",\"intent\":\"bash\",\"compound\":true}\n");
+		}
+		break;
+	}
 	case NAND:
 	case NOR:
 	case NSEMI:
