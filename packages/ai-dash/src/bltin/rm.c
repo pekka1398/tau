@@ -140,7 +140,7 @@ static int resolve_absolute(const char *path, char *out, size_t outlen)
 
 static int trash_entry(const char *path, int recursive, int force,
 		       const char *trash_files, const char *trash_info,
-		       int *count)
+		       int *count, int verbose)
 {
 	struct stat st;
 	char abs_path[2048];
@@ -155,46 +155,22 @@ static int trash_entry(const char *path, int recursive, int force,
 		return 1;
 	}
 
-	if (S_ISDIR(st.st_mode)) {
-		if (!recursive) {
-			outfmt(out2, "rm: cannot remove '%s': Is a directory\n",
-			       path);
-			return 1;
-		}
-
-		/* Recursive: move the whole directory into trash as a unit */
-		if (resolve_absolute(path, abs_path, sizeof(abs_path)) < 0) {
-			outfmt(out2, "rm: cannot resolve path '%s'\n", path);
-			return 1;
-		}
-
-		basename = strrchr(path, '/');
-		basename = basename ? basename + 1 : path;
-
-		if (unique_trash_path(trash_files, basename,
-				      dest_basename, sizeof(dest_basename)) < 0) {
-			outfmt(out2, "rm: cannot trash '%s': name conflict\n", path);
-			return 1;
-		}
-		const char *dest_base = strrchr(dest_basename, '/');
-		dest_base = dest_base ? dest_base + 1 : dest_basename;
-
-		snprintf(dest, sizeof(dest), "%s/%s", trash_files, dest_base);
-
-		if (rename(path, dest) < 0) {
-			outfmt(out2, "rm: cannot trash '%s': %s\n",
-			       path, strerror(errno));
-			return 1;
-		}
-
-		write_trashinfo(trash_info, dest_base, abs_path);
-		(*count)++;
-		return 0;
-	}
-
-	/* Regular file (or symlink, etc.) */
 	if (resolve_absolute(path, abs_path, sizeof(abs_path)) < 0) {
 		outfmt(out2, "rm: cannot resolve path '%s'\n", path);
+		return 1;
+	}
+
+	/* Safety check: block trashing root and HOME */
+	const char *home = bltinlookup("HOME");
+	if (strcmp(abs_path, "/") == 0 ||
+	    (home && strcmp(abs_path, home) == 0)) {
+		outfmt(out2, "rm: blocked: trashing '%s'\n", abs_path);
+		return 1;
+	}
+
+	if (S_ISDIR(st.st_mode) && !recursive) {
+		outfmt(out2, "rm: cannot remove '%s': Is a directory\n",
+		       path);
 		return 1;
 	}
 
@@ -218,6 +194,10 @@ static int trash_entry(const char *path, int recursive, int force,
 	}
 
 	write_trashinfo(trash_info, dest_base, abs_path);
+
+	if (verbose)
+		outfmt(out1, "rm: trashed '%s' -> '%s'\n", path, dest);
+
 	(*count)++;
 	return 0;
 }
@@ -228,6 +208,7 @@ int rmcmd(int argc, char **argv)
 {
 	int recursive = 0;
 	int force = 0;
+	int verbose = 0;
 	int i, errors = 0, count = 0;
 	char trash_files[2048], trash_info[2048];
 
@@ -239,6 +220,7 @@ int rmcmd(int argc, char **argv)
 			switch (argv[i][j]) {
 			case 'r': case 'R': recursive = 1; break;
 			case 'f': force = 1; break;
+			case 'v': verbose = 1; break;
 			default:
 				outfmt(out2, "rm: unknown option: -%c\n",
 				       argv[i][j]);
@@ -261,7 +243,7 @@ int rmcmd(int argc, char **argv)
 
 	for (; i < argc; i++)
 		errors += trash_entry(argv[i], recursive, force,
-				      trash_files, trash_info, &count);
+				      trash_files, trash_info, &count, verbose);
 
 	if (count > 0)
 		outfmt(out1, "trashed %d item(s)\n", count);

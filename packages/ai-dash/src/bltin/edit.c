@@ -1,13 +1,13 @@
 /*
- * fedit — file edit builtin for AI-assisted shell (ai-dash)
+ * edit — file edit builtin for AI-assisted shell (ai-dash)
  *
- * fedit performs targeted text replacements in files using a
+ * edit performs targeted text replacements in files using a
  * SEARCH/REPLACE patch format inspired by git merge conflict markers.
  * It is the primary file editing interface for AI coding agents.
  *
  * ── Syntax ──────────────────────────────────────────────────────
  *
- *   fedit <file> << 'EOF'
+ *   edit <file> << 'EOF'
  *   <<<<<<< SEARCH
  *   exact content to find in the file
  *   =======
@@ -30,7 +30,7 @@
  *   - The REPLACE block contains the replacement lines
  *   - Lines outside markers are ignored (comments, noise)
  *   - SEARCH block cannot be empty
- *   - fedit is atomic: if any block fails, the file is unchanged
+ *   - edit is atomic: if any block fails, the file is unchanged
  *   - Each SEARCH must match exactly once in the file (uniqueness)
  *
  * ── Deletion ────────────────────────────────────────────────────
@@ -60,9 +60,9 @@
  *
  * ── Output ──────────────────────────────────────────────────────
  *
- *   On success, fedit prints:
+ *   On success, edit prints:
  *   - A unified diff of each change (with 3 lines of context)
- *   - "fedit: applied N block(s) to <file>"
+ *   - "edit: applied N block(s) to <file>"
  *
  * ── Error codes ─────────────────────────────────────────────────
  *
@@ -81,7 +81,7 @@
  *   - Blacklisted commands (vim, vi, nano, etc.) are blocked
  *   - rm is intercepted and moves to trash
  *   - rm -rf on system paths is blocked
- *   - fedit itself is safe: atomic write, no partial corruption
+ *   - edit itself is safe: atomic write, no partial corruption
  */
 
 #include <sys/stat.h>
@@ -100,7 +100,7 @@
 
 /* ── Cargo-style diagnostic ──────────────────────────────────── */
 
-static void fedit_diag(const char *code, const char *title,
+static void edit_diag(const char *code, const char *title,
 		       const char *location, const char *detail,
 		       const char *suggestion)
 {
@@ -438,14 +438,14 @@ static int parse_lines(char **lines, size_t count, struct patch *out) {
 
 				if (strcmp(lines[i], ">>>>>>> REPLACE") == 0) {
 					if (in_search) {
-						outfmt(out2, "fedit: missing ======= separator before REPLACE\n");
+						outfmt(out2, "edit: missing ======= separator before REPLACE\n");
 						free(cur.search);
 						patch_free(out);
 						return -1;
 					}
 					in_replace = 0;
 					if (cur.search_count == 0) {
-						outfmt(out2, "fedit: empty SEARCH block\n");
+						outfmt(out2, "edit: empty SEARCH block\n");
 						free(cur.search);
 						free(cur.replace);
 						patch_free(out);
@@ -475,7 +475,7 @@ static int parse_lines(char **lines, size_t count, struct patch *out) {
 			}
 
 			if (in_search || in_replace) {
-				outfmt(out2, "fedit: unterminated SEARCH/REPLACE block\n");
+				outfmt(out2, "edit: unterminated SEARCH/REPLACE block\n");
 				free(cur.search);
 				free(cur.replace);
 				patch_free(out);
@@ -533,10 +533,10 @@ static int write_file(const char *path, const char *data, size_t len) {
 	int fd;
 	size_t pathlen = strlen(path);
 
-	/* Build temp path: <path>.fedit.XXXXXX */
+	/* Build temp path: <path>.edit.XXXXXX */
 	if (pathlen + 16 >= sizeof(tmppath)) return -1;
 	memcpy(tmppath, path, pathlen);
-	memcpy(tmppath + pathlen, ".fedit.XXXXXX", 14);
+	memcpy(tmppath + pathlen, ".edit.XXXXXX", 14);
 
 	fd = mkstemp(tmppath);
 	if (fd < 0) return -1;
@@ -661,7 +661,7 @@ static int apply_chunks(char **file_lines, size_t file_count,
 						c->search, c->search_count, 0, &last_pos);
 
 			if (matches == 0) {
-				outfmt(out2, "fedit: SEARCH block %zu not found in file\n", i + 1);
+				outfmt(out2, "edit: SEARCH block %zu not found in file\n", i + 1);
 				outfmt(out2, "       expected to find:\n");
 				for (j = 0; j < c->search_count && j < 5; j++)
 					outfmt(out2, "         | %s\n", c->search[j]);
@@ -674,7 +674,7 @@ static int apply_chunks(char **file_lines, size_t file_count,
 			}
 
 			if (matches > 1 && !replace_all) {
-				outfmt(out2, "fedit: SEARCH block %zu matches %zu times (must be unique)\n",
+				outfmt(out2, "edit: SEARCH block %zu matches %zu times (must be unique)\n",
 				       i + 1, matches);
 				outfmt(out2, "       search text:\n");
 				for (j = 0; j < c->search_count && j < 3; j++)
@@ -820,7 +820,7 @@ static void join_lines(char **lines, size_t count, struct buf *out) {
 
 /* ── Main ───────────────────────────────────────────────────── */
 
-int feditcmd(int argc, char **argv) {
+int editcmd(int argc, char **argv) {
 	const char *filepath;
 	struct buf file_buf, patch_buf, result_buf;
 	struct lines file_lines;
@@ -836,13 +836,13 @@ int feditcmd(int argc, char **argv) {
 			replace_all = 1;
 			argi++;
 		} else {
-			outfmt(out2, "fedit: unknown option: %s\n", argv[argi]);
+			outfmt(out2, "edit: unknown option: %s\n", argv[argi]);
 			return 2;
 		}
 	}
 
 	if (argi >= argc) {
-		outfmt(out2, "fedit: missing file argument\n");
+		outfmt(out2, "edit: missing file argument\n");
 		return 2;
 	}
 
@@ -852,16 +852,16 @@ int feditcmd(int argc, char **argv) {
 	if (read_file(filepath, &file_buf) < 0) {
 		struct stat st;
 		if (stat(filepath, &st) < 0) {
-			fedit_diag("E2003", "File Not Found", filepath,
+			edit_diag("E2003", "File Not Found", filepath,
 				   "file does not exist",
 				   "check the path, or create the file first");
 			suggest_nearby_file(filepath);
 		} else if (S_ISDIR(st.st_mode)) {
-			fedit_diag("E2004", "Is a Directory", filepath,
+			edit_diag("E2004", "Is a Directory", filepath,
 				   "cannot edit a directory",
 				   "use 'ls' to list directory contents");
 		} else {
-			fedit_diag("E2002", "Read Error", filepath,
+			edit_diag("E2002", "Read Error", filepath,
 				   "permission denied or other error",
 				   "check file permissions");
 		}
@@ -870,7 +870,7 @@ int feditcmd(int argc, char **argv) {
 
 	/* File too large warning */
 	if (file_buf.len > MAX_FILE_SIZE) {
-		fedit_diag("E2005", "File Too Large", filepath,
+		edit_diag("E2005", "File Too Large", filepath,
 			   "file exceeds 10MB limit",
 			   "use 'sed -n 1,100p file' to read a range, or 'head -n file'");
 		buf_free(&file_buf);
@@ -880,7 +880,7 @@ int feditcmd(int argc, char **argv) {
 	/* Read patch from stdin */
 	read_stdin(&patch_buf);
 	if (patch_buf.len == 0) {
-		outfmt(out2, "fedit: no patch on stdin\n");
+		outfmt(out2, "edit: no patch on stdin\n");
 		buf_free(&file_buf);
 		return 1;
 	}
@@ -903,7 +903,7 @@ int feditcmd(int argc, char **argv) {
 	}
 
 	if (patch.count == 0) {
-		outfmt(out2, "fedit: no SEARCH/REPLACE blocks found\n");
+		outfmt(out2, "edit: no SEARCH/REPLACE blocks found\n");
 		buf_free(&file_buf);
 		buf_free(&patch_buf);
 		lines_free(&file_lines);
@@ -966,7 +966,7 @@ int feditcmd(int argc, char **argv) {
 	join_lines(result_lines, result_count, &result_buf);
 
 	if (write_file(filepath, result_buf.data, result_buf.len) < 0) {
-		outfmt(out2, "fedit: cannot write %s\n", filepath);
+		outfmt(out2, "edit: cannot write %s\n", filepath);
 		free(result_lines);
 		buf_free(&file_buf);
 		buf_free(&patch_buf);
@@ -976,7 +976,7 @@ int feditcmd(int argc, char **argv) {
 		return 1;
 	}
 
-	outfmt(out1, "fedit: applied %zu block(s) to %s\n", patch.count, filepath);
+	outfmt(out1, "edit: applied %zu block(s) to %s\n", patch.count, filepath);
 
 	free(result_lines);
 	buf_free(&file_buf);

@@ -256,6 +256,7 @@ static int check_blacklist(int argc, char **argv)
 	/* Always-blocked commands */
 	static const char *blocked[] = {
 		"vim", "vi", "nano", "emacs", "ne", "micro",
+		"bash", "zsh", "sh",
 		"reboot", "shutdown", "halt", "poweroff",
 		"mkfs", "dd", "wipefs",
 		NULL

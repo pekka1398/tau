@@ -20,7 +20,7 @@ dash_CFILES = \
 	alias.c arith_yacc.c arith_yylex.c cd.c error.c eval.c exec.c expand.c \
 	histedit.c input.c jobs.c mail.c main.c memalloc.c miscbltin.c \
 	mystring.c options.c parser.c redir.c show.c trap.c output.c \
-	bltin/printf.c system.c bltin/test.c bltin/times.c bltin/fedit.c bltin/rm.c \
+	bltin/printf.c system.c bltin/test.c bltin/times.c bltin/edit.c bltin/rm.c \
 	meta.c var.c
 dash_SOURCES = \
 	$(dash_CFILES) \

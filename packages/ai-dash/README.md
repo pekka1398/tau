@@ -19,12 +19,12 @@ ai-dash is the **sole command execution channel** for the AI agent. Every comman
 
 ## What's modified
 
-### 1. `fedit` builtin — `src/bltin/fedit.c`
+### 1. `edit` builtin — `src/bltin/edit.c`
 
 File editing command using SEARCH/REPLACE patch format.
 
 ```
-fedit [-a] <file> << 'EOF'
+edit [-a] <file> << 'EOF'
 <<<<<<< SEARCH
 old content
 =======
@@ -54,7 +54,7 @@ EOF
 Without `-a`, if SEARCH matches multiple times → E2007 error.
 With `-a`, all matches are replaced. Useful for renaming variables.
 
-**Registration:** `builtins.def.in` → `feditcmd fedit`
+**Registration:** `builtins.def.in` → `editcmd edit`
 
 ### 2. `rm` builtin — `src/bltin/rm.c`
 
@@ -195,7 +195,7 @@ ai-dash emits a single-line JSON to **fd 3** before executing each command. The 
 | Intent | Commands |
 |--------|----------|
 | read | cat, head, tail, tac, less, more, wc, sed, nl, bat |
-| edit | fedit, sed -i, perl -i, awk -i inplace |
+| edit | edit, sed -i, perl -i, awk -i inplace |
 | list | ls, tree, dir, lsblk, lscpu, lsmod, lspci, lsusb |
 | search | grep, rg, ag, ack, find, fd, which, whereis, diff, comm, sort, uniq, cut, awk, xargs, locate |
 | fs | cp, mv, mkdir, touch, ln, chmod, chown, rm, stat, file, tar, gzip, gunzip, zip, unzip, truncate, split, dd, shred, tee |
@@ -235,7 +235,7 @@ The TypeScript bash tool spawns `ai-dash -c <command>` and reads fd 3 for metada
 - **No throw on error**: non-zero exit returns result (not tool error), so the model sees full output
 - **exitCode in details**: UI shows `(exit N)` for failed commands
 - **Collapsed mode**: read/list/search output hidden when collapsed; failed commands always shown
-- **Read-before-write**: blocks fedit/sed -i on files not yet read (pre-check before execution)
+- **Read-before-write**: blocks edit/sed -i on files not yet read (pre-check before execution)
 - **readFileState**: tracks read files via fd 3 metadata (intent=read with path)
 
 ## Design philosophy
@@ -274,15 +274,15 @@ The blacklist is "prevent mistakes, not malice." The model is cooperative.
 
 | File | Change |
 |------|--------|
-| `src/builtins.def.in` | Added `feditcmd fedit` and `rmcmd rm` |
-| `src/bltin/fedit.c` | **New** — fedit builtin |
+| `src/builtins.def.in` | Added `editcmd edit` and `rmcmd rm` |
+| `src/bltin/edit.c` | **New** — edit builtin |
 | `src/bltin/rm.c` | **New** — rm → trash builtin |
 | `src/exec.c` | Added `ai_diag()`, `edit_distance()`, `suggest_similar_command()`, `suggest_nearby_file()`; enhanced `shellexec()` and `find_command()` error handling |
 | `src/eval.c` | Added `check_blacklist()`, `check_missing_flags()`, redirect system path blocking, curl/wget upload blocking |
 | `src/meta.c` | **New** — fd 3 semantic metadata emission |
 | `src/meta.h` | **New** — metadata function declarations |
 | `src/expand.c` | Added `**` glob support (`has_doublestar`, `expand_doublestar`, `collect_dirs`) |
-| `src/Makefile.am` | Added `bltin/fedit.c`, `bltin/rm.c`, `meta.c` to `dash_CFILES`; added `meta.h` to `dash_SOURCES` |
+| `src/Makefile.am` | Added `bltin/edit.c`, `bltin/rm.c`, `meta.c` to `dash_CFILES`; added `meta.h` to `dash_SOURCES` |
 
 ## Building
 
@@ -299,9 +299,9 @@ cp src/dash ../bin/ai-dash
 ```bash
 A=packages/ai-dash/bin/ai-dash
 
-# fedit basic
+# edit basic
 echo "hello" > /tmp/test.txt
-$A -c 'fedit /tmp/test.txt << EOF
+$A -c 'edit /tmp/test.txt << EOF
 <<<<<<< SEARCH
 hello
 =======
@@ -310,9 +310,9 @@ world
 EOF'
 cat /tmp/test.txt  # → "world"
 
-# fedit -a (replace all)
+# edit -a (replace all)
 printf "dup\ndup\ndup\n" > /tmp/dup.txt
-$A -c 'fedit -a /tmp/dup.txt << EOF
+$A -c 'edit -a /tmp/dup.txt << EOF
 <<<<<<< SEARCH
 dup
 =======
@@ -328,7 +328,7 @@ ls ~/.local/share/Trash/files/delme.txt  # exists
 
 # diagnostics
 $A -c 'xyznonexistent'  # E1001 + suggestion
-$A -c 'fedit /tmp/nonexistent'  # E2003 + suggestion
+$A -c 'edit /tmp/nonexistent'  # E2003 + suggestion
 $A -c 'git commit'  # hint: add -m
 
 # blacklist

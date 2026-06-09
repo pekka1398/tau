@@ -104,7 +104,7 @@ static const char *classify_intent(const char *cmd)
 		return "read";
 
 	/* edit */
-	if (strcmp(cmd, "fedit") == 0)
+	if (strcmp(cmd, "edit") == 0)
 		return "edit";
 
 	/* list */
@@ -334,7 +334,7 @@ void meta_emit_argv_intent(int argc, char **argv, int cmdidx,
 	/* Other commands: last non-flag arg is the path */
 	else if (strcmp(base, "cat") == 0 || strcmp(base, "head") == 0 ||
 	    strcmp(base, "tail") == 0 || strcmp(base, "bat") == 0 ||
-	    strcmp(base, "fedit") == 0 || strcmp(base, "ls") == 0 ||
+	    strcmp(base, "edit") == 0 || strcmp(base, "ls") == 0 ||
 	    strcmp(base, "tree") == 0 ||
 	    strcmp(base, "nl") == 0 || strcmp(base, "sed") == 0 ||
 	    strcmp(base, "wc") == 0 || strcmp(base, "file") == 0) {

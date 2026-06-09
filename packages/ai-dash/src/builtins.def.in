@@ -92,5 +92,5 @@ ulimitcmd	-u ulimit
 #endif
 testcmd		test [
 killcmd		-u kill
-feditcmd	fedit
+editcmd	edit
 rmcmd		rm

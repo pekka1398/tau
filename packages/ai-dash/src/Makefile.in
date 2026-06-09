@@ -109,7 +109,7 @@ am__objects_1 = alias.$(OBJEXT) arith_yacc.$(OBJEXT) \
 	parser.$(OBJEXT) redir.$(OBJEXT) show.$(OBJEXT) trap.$(OBJEXT) \
 	output.$(OBJEXT) bltin/printf.$(OBJEXT) system.$(OBJEXT) \
 	bltin/test.$(OBJEXT) bltin/times.$(OBJEXT) \
-	bltin/fedit.$(OBJEXT) bltin/rm.$(OBJEXT) meta.$(OBJEXT) \
+	bltin/edit.$(OBJEXT) bltin/rm.$(OBJEXT) meta.$(OBJEXT) \
 	var.$(OBJEXT)
 am_dash_OBJECTS = $(am__objects_1)
 dash_OBJECTS = $(am_dash_OBJECTS)
@@ -140,7 +140,7 @@ am__depfiles_remade = ./$(DEPDIR)/alias.Po ./$(DEPDIR)/arith_yacc.Po \
 	./$(DEPDIR)/output.Po ./$(DEPDIR)/parser.Po \
 	./$(DEPDIR)/redir.Po ./$(DEPDIR)/show.Po ./$(DEPDIR)/system.Po \
 	./$(DEPDIR)/trap.Po ./$(DEPDIR)/var.Po \
-	bltin/$(DEPDIR)/fedit.Po bltin/$(DEPDIR)/printf.Po \
+	bltin/$(DEPDIR)/edit.Po bltin/$(DEPDIR)/printf.Po \
 	bltin/$(DEPDIR)/rm.Po bltin/$(DEPDIR)/test.Po \
 	bltin/$(DEPDIR)/times.Po
 am__mv = mv -f
@@ -319,7 +319,7 @@ dash_CFILES = \
 	alias.c arith_yacc.c arith_yylex.c cd.c error.c eval.c exec.c expand.c \
 	histedit.c input.c jobs.c mail.c main.c memalloc.c miscbltin.c \
 	mystring.c options.c parser.c redir.c show.c trap.c output.c \
-	bltin/printf.c system.c bltin/test.c bltin/times.c bltin/fedit.c bltin/rm.c \
+	bltin/printf.c system.c bltin/test.c bltin/times.c bltin/edit.c bltin/rm.c \
 	meta.c var.c
 
 dash_SOURCES = \
@@ -432,7 +432,7 @@ bltin/test.$(OBJEXT): bltin/$(am__dirstamp) \
 	bltin/$(DEPDIR)/$(am__dirstamp)
 bltin/times.$(OBJEXT): bltin/$(am__dirstamp) \
 	bltin/$(DEPDIR)/$(am__dirstamp)
-bltin/fedit.$(OBJEXT): bltin/$(am__dirstamp) \
+bltin/edit.$(OBJEXT): bltin/$(am__dirstamp) \
 	bltin/$(DEPDIR)/$(am__dirstamp)
 bltin/rm.$(OBJEXT): bltin/$(am__dirstamp) \
 	bltin/$(DEPDIR)/$(am__dirstamp)
@@ -473,7 +473,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/system.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/trap.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/var.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@bltin/$(DEPDIR)/fedit.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@bltin/$(DEPDIR)/edit.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@bltin/$(DEPDIR)/printf.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@bltin/$(DEPDIR)/rm.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@bltin/$(DEPDIR)/test.Po@am__quote@ # am--include-marker
@@ -702,7 +702,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/system.Po
 	-rm -f ./$(DEPDIR)/trap.Po
 	-rm -f ./$(DEPDIR)/var.Po
-	-rm -f bltin/$(DEPDIR)/fedit.Po
+	-rm -f bltin/$(DEPDIR)/edit.Po
 	-rm -f bltin/$(DEPDIR)/printf.Po
 	-rm -f bltin/$(DEPDIR)/rm.Po
 	-rm -f bltin/$(DEPDIR)/test.Po
@@ -777,7 +777,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/system.Po
 	-rm -f ./$(DEPDIR)/trap.Po
 	-rm -f ./$(DEPDIR)/var.Po
-	-rm -f bltin/$(DEPDIR)/fedit.Po
+	-rm -f bltin/$(DEPDIR)/edit.Po
 	-rm -f bltin/$(DEPDIR)/printf.Po
 	-rm -f bltin/$(DEPDIR)/rm.Po
 	-rm -f bltin/$(DEPDIR)/test.Po
