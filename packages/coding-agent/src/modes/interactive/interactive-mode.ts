@@ -267,6 +267,8 @@ export class InteractiveMode {
 
 	// Last submitted text for restore-on-abort
 	private lastSubmittedText = "";
+	/** chatContainer.children.length before user message was added. Used to rewind on ESC. */
+	private chatChildrenBeforeUserMessage = -1;
 
 	// Loader state machine
 	private loaderStatus: "idle" | "waiting" | "thinking" | "streaming" | "executing" = "idle";
@@ -2395,15 +2397,7 @@ export class InteractiveMode {
 		// so they work correctly regardless of which editor is active
 		this.defaultEditor.onEscape = () => {
 			if (this.loaderStatus === "waiting") {
-				// Waiting: abort and restore text to editor for re-editing
 				this.agent.abort();
-				this.restoreQueuedMessagesToEditor({ abort: false });
-				if (this.lastSubmittedText) {
-					const current = this.editor.getText().trim();
-					const restored = current ? `${this.lastSubmittedText}\n\n${current}` : this.lastSubmittedText;
-					this.editor.setText(restored);
-					this.lastSubmittedText = "";
-				}
 				this.loaderStatus = "idle";
 				this.stopLoaderTick();
 				if (this.loadingAnimation) {
@@ -2411,6 +2405,17 @@ export class InteractiveMode {
 					this.loadingAnimation = undefined;
 					this.statusContainer.clear();
 				}
+				if (this.lastSubmittedText) {
+					// First waiting: fully revert to state before Enter
+					this.clearAllQueues();
+					this.editor.setText(this.lastSubmittedText);
+					this.lastSubmittedText = "";
+					if (this.chatChildrenBeforeUserMessage >= 0) {
+						this.chatContainer.children.length = this.chatChildrenBeforeUserMessage;
+						this.chatChildrenBeforeUserMessage = -1;
+					}
+				}
+				// else: second waiting (after tool execution) — just abort, keep chat as-is
 				this.ui.requestRender();
 			} else if (
 				this.loaderStatus === "thinking" ||
@@ -2443,6 +2448,22 @@ export class InteractiveMode {
 						this.lastEscapeTime = now;
 					}
 				}
+			} else {
+				// Non-empty editor: double-escape to clear input
+				const now = Date.now();
+				if (now - this.lastEscapeTime < 500) {
+					// Second press within 500ms: save to history and clear
+					const text = this.editor.getText();
+					if (text.trim()) {
+						this.editor.addToHistory?.(text);
+					}
+					this.editor.setText("");
+					this.lastEscapeTime = 0;
+				} else {
+					// First press: show hint
+					this.lastEscapeTime = now;
+					this.showStatus("Esc again to clear");
+				}
 			}
 		};
 
@@ -2459,6 +2480,7 @@ export class InteractiveMode {
 		this.defaultEditor.onAction("app.model.select", () => this.showModelSelector());
 		this.defaultEditor.onAction("app.tools.expand", () => this.toggleToolOutputExpansion());
 		this.defaultEditor.onAction("app.thinking.toggle", () => this.toggleThinkingBlockVisibility());
+		this.defaultEditor.onAction("app.bash.background", () => this.handleBackgroundBash());
 		this.defaultEditor.onAction("app.editor.external", () => this.openExternalEditor());
 		this.defaultEditor.onAction("app.message.followUp", () => this.handleFollowUp());
 		this.defaultEditor.onAction("app.message.dequeue", () => this.handleDequeue());
@@ -2762,7 +2784,8 @@ export class InteractiveMode {
 				if (event.message.role === "custom") {
 					this.addMessageToChat(event.message);
 					this.ui.requestRender();
-				} else if (event.message.role === "user") {
+			} else if (event.message.role === "user") {
+					this.chatChildrenBeforeUserMessage = this.chatContainer.children.length;
 					this.addMessageToChat(event.message);
 					this.updatePendingMessagesDisplay();
 					this.ui.requestRender();
@@ -2935,11 +2958,13 @@ export class InteractiveMode {
 				if (component) {
 					component.updateResult({ ...event.result, isError: event.isError });
 					this.pendingTools.delete(event.toolCallId);
-					// State machine: if no more pending tools, stop tick but
-					// don't force "streaming" — let the next message_update event
-					// (thinking/text/toolcall) set the correct status, or agent_end → idle.
+					// State machine: if no more pending tools, transition to waiting
+					// to show LLM latency for the next API call.
 					if (this.pendingTools.size === 0) {
-						this.stopLoaderTick();
+						this.loaderStatus = "waiting";
+						this.waitingStartTime = Date.now();
+						this.updateLoaderMessage();
+						this.startLoaderTick();
 					}
 					this.ui.requestRender();
 				}
@@ -2954,6 +2979,7 @@ export class InteractiveMode {
 				this.loaderStatus = "idle";
 				this.runningToolName = "";
 				this.lastSubmittedText = "";
+				this.chatChildrenBeforeUserMessage = -1;
 				this.stopLoaderTick();
 				if (this.loadingAnimation) {
 					this.loadingAnimation.stop();
@@ -3594,6 +3620,15 @@ export class InteractiveMode {
 			this.showStatus("No queued messages to restore");
 		} else {
 			this.showStatus(`Restored ${restored} queued message${restored > 1 ? "s" : ""} to editor`);
+		}
+	}
+
+	private handleBackgroundBash(): void {
+		const taskId = this.session.backgroundActiveBash();
+		if (taskId) {
+			this.showStatus(`Moved to background (task ${taskId})`);
+		} else {
+			this.showStatus("No running bash command to background");
 		}
 	}
 

@@ -6,16 +6,12 @@ import { getDocsPath, getExamplesPath, getReadmePath } from "../config.ts";
 import { formatSkillsForPrompt, type Skill } from "./skills.ts";
 
 export interface BuildSystemPromptOptions {
-	/** Custom system prompt (replaces default). */
-	customPrompt?: string;
 	/** Tools to include in prompt. Default: [bash] */
 	selectedTools?: string[];
 	/** Optional one-line tool snippets keyed by tool name. */
 	toolSnippets?: Record<string, string>;
 	/** Additional guideline bullets appended to the default system prompt guidelines. */
 	promptGuidelines?: string[];
-	/** Text to append to system prompt. */
-	appendSystemPrompt?: string;
 	/** Working directory. */
 	cwd: string;
 	/** Pre-loaded context files. */
@@ -27,11 +23,9 @@ export interface BuildSystemPromptOptions {
 /** Build the system prompt with tools, guidelines, and context */
 export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
 	const {
-		customPrompt,
 		selectedTools,
 		toolSnippets,
 		promptGuidelines,
-		appendSystemPrompt,
 		cwd,
 		contextFiles: providedContextFiles,
 		skills: providedSkills,
@@ -45,39 +39,8 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
 	const day = String(now.getDate()).padStart(2, "0");
 	const date = `${year}-${month}-${day}`;
 
-	const appendSection = appendSystemPrompt ? `\n\n${appendSystemPrompt}` : "";
-
 	const contextFiles = providedContextFiles ?? [];
 	const skills = providedSkills ?? [];
-
-	if (customPrompt) {
-		let prompt = customPrompt;
-
-		if (appendSection) {
-			prompt += appendSection;
-		}
-
-		// Append project context files
-		if (contextFiles.length > 0) {
-			prompt += "\n\n<project_context>\n\n";
-			prompt += "Project-specific instructions and guidelines:\n\n";
-			for (const { path: filePath, content } of contextFiles) {
-				prompt += `<project_instructions path="${filePath}">\n${content}\n</project_instructions>\n\n`;
-			}
-			prompt += "</project_context>\n";
-		}
-
-		// Append skills section
-		if (skills.length > 0) {
-			prompt += formatSkillsForPrompt(skills);
-		}
-
-		// Add date and working directory last
-		prompt += `\nCurrent date: ${date}`;
-		prompt += `\nCurrent working directory: ${promptCwd}`;
-
-		return prompt;
-	}
 
 	// Get absolute paths to documentation and examples
 	const readmePath = getReadmePath();
@@ -164,8 +127,33 @@ When you encounter an obstacle, do not use destructive actions as a shortcut to 
 
 # Using your tools
 
- - Your primary tool is bash.
- - You can call multiple tools in a single response. If you intend to call multiple tools and there are no dependencies between them, make all independent tool calls in parallel. Maximize use of parallel tool calls where possible to increase efficiency. However, if some tool calls depend on previous calls to inform dependent values, do NOT call these tools in parallel and instead call them sequentially.
+You have exactly ONE tool: bash. There is no separate read, write, edit, grep, ls, or any other tool. Everything — reading files, editing code, searching, listing, building, running tests — is done through bash by running shell commands.
+
+## How each bash call works
+
+- Each bash call spawns a **new, independent shell process**. There is no persistent session between calls.
+- The working directory is **automatically set** to the project root. You do NOT need to \`cd\` before running commands.
+- \`cd\` only affects that single call. It does not persist to the next bash call.
+- If you need to run a command in a different directory, use \`cd /absolute/path && your-command\` within that one call.
+- Do NOT prefix commands with \`cd /path/to/project && ...\` — the working directory is already there.
+
+## How to do common tasks
+
+- **Read files**: \`cat file.py\`, \`sed -n '10,20p' file.py\`, \`head -50 file.py\`, \`nl file.py\`
+- **Edit files**: \`edit file.py << 'EOF'\` (see the edit section below for full syntax)
+- **Write new files**: \`cat << 'EOF' > new.py\` ... \`EOF\`
+- **Search**: \`grep -rn "pattern" src/\`, \`rg pattern src/\`
+- **List files**: \`ls -la src/\`, \`find . -maxdepth 3 -name "*.ts"\`
+- **Run programs**: \`python3 script.py\`, \`cargo build\`, \`npm test\`
+- **Git**: \`git status\`, \`git diff\`, \`git log\`
+
+## Background commands
+
+Use \`run_in_background: true\` for long-running commands (builds, tests, servers). The command starts immediately and you get a task ID back. You will be automatically notified when it completes — do NOT poll or check on it. Continue with other work or respond to the user instead.
+
+## Parallel calls
+
+You can call multiple bash commands in a single response. If calls are independent (no data dependency), run them in parallel. If one call's output informs another, run them sequentially.
 
 # Tone and style
  - Only use emojis if the user explicitly requests it. Avoid using emojis in all communication unless asked.
@@ -328,17 +316,6 @@ EOF
 - Copy content exactly from the file — edit uses fuzzy matching but incorrect content will fail
 - edit is an ai-dash shell builtin. Run it directly — do NOT write edit commands to script files and run them with bash. ai-dash handles heredoc correctly.
 
-## Other shell commands
-
-Use standard Unix tools for everything else:
-- Read files: cat file.py, sed -n '10,20p' file.py, head -50 file.py
-- Write new files: cat << 'EOF' > new.py ... EOF
-- Append to files: cat << 'EOF' >> new.py ... EOF
-- Search: grep -rn "pattern" src/, rg pattern src/
-- List files: ls -la src/, find . -name "*.ts" -maxdepth 3
-- Run programs: python3 script.py, cargo build, npm test
-- Git: git status, git diff, git log
-
 IMPORTANT — bound your output:
 - Always use -maxdepth with find (e.g., find . -maxdepth 3 -name "*.ts")
 - Exclude large dirs: find . -not -path '*/node_modules/*' -not -path '*/.git/*'
@@ -392,10 +369,6 @@ Pi documentation (read only when the user asks about pi itself):
 - Examples: ${examplesPath}
 
 `;
-
-	if (appendSection) {
-		prompt += appendSection;
-	}
 
 	// Append project context files
 	if (contextFiles.length > 0) {

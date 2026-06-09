@@ -11,6 +11,7 @@ import { join } from "path";
 import { getAgentDir } from "../config.ts";
 
 export interface AppKeybindings {
+	"app.bash.background": true;
 	"app.interrupt": true;
 	"app.clear": true;
 	"app.exit": true;
@@ -62,6 +63,7 @@ declare module "@earendil-works/pi-tui" {
 
 export const KEYBINDINGS = {
 	...TUI_KEYBINDINGS,
+	"app.bash.background": { defaultKeys: "ctrl+b", description: "Move running bash to background" },
 	"app.interrupt": { defaultKeys: "escape", description: "Cancel or abort" },
 	"app.clear": { defaultKeys: "ctrl+c", description: "Clear editor" },
 	"app.exit": { defaultKeys: "ctrl+d", description: "Exit when editor is empty" },

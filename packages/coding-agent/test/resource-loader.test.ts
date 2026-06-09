@@ -318,17 +318,6 @@ Content`,
 			expect(agentsFiles).toEqual([]);
 		});
 
-		it("should discover SYSTEM.md from cwd/.pi", async () => {
-			const piDir = join(cwd, ".pi");
-			mkdirSync(piDir, { recursive: true });
-			writeFileSync(join(piDir, "SYSTEM.md"), "You are a helpful assistant.");
-
-			const loader = new DefaultResourceLoader({ cwd, agentDir });
-			await loader.reload();
-
-			expect(loader.getSystemPrompt()).toBe("You are a helpful assistant.");
-		});
-
 		it("should skip project resources when project is not trusted", async () => {
 			const piDir = join(cwd, ".pi");
 			const extensionsDir = join(piDir, "extensions");
@@ -339,8 +328,6 @@ Content`,
 			mkdirSync(skillDir, { recursive: true });
 			mkdirSync(promptsDir, { recursive: true });
 			mkdirSync(themesDir, { recursive: true });
-			writeFileSync(join(piDir, "SYSTEM.md"), "Project system prompt.");
-			writeFileSync(join(agentDir, "SYSTEM.md"), "Global system prompt.");
 			writeFileSync(join(agentDir, "AGENTS.md"), "Global instructions");
 			writeFileSync(join(cwd, "AGENTS.md"), "Project instructions");
 			writeFileSync(join(extensionsDir, "project.ts"), `throw new Error("should not load");`);
@@ -363,7 +350,6 @@ Project skill content`,
 			const loader = new DefaultResourceLoader({ cwd, agentDir, settingsManager });
 			await loader.reload();
 
-			expect(loader.getSystemPrompt()).toBe("Global system prompt.");
 			expect(loader.getAgentsFiles().agentsFiles.some((file) => file.path === join(agentDir, "AGENTS.md"))).toBe(
 				true,
 			);
@@ -373,17 +359,6 @@ Project skill content`,
 			expect(loader.getSkills().skills.some((skill) => skill.name === "project-skill")).toBe(false);
 			expect(loader.getPrompts().prompts.some((prompt) => prompt.name === "project")).toBe(false);
 			expect(loader.getThemes().themes.some((theme) => theme.name === "project-theme")).toBe(false);
-		});
-
-		it("should discover APPEND_SYSTEM.md", async () => {
-			const piDir = join(cwd, ".pi");
-			mkdirSync(piDir, { recursive: true });
-			writeFileSync(join(piDir, "APPEND_SYSTEM.md"), "Additional instructions.");
-
-			const loader = new DefaultResourceLoader({ cwd, agentDir });
-			await loader.reload();
-
-			expect(loader.getAppendSystemPrompt()).toContain("Additional instructions.");
 		});
 	});
 
@@ -560,17 +535,6 @@ Content`,
 			const { skills } = loader.getSkills();
 			expect(skills).toHaveLength(1);
 			expect(skills[0].name).toBe("injected");
-		});
-
-		it("should apply systemPromptOverride", async () => {
-			const loader = new DefaultResourceLoader({
-				cwd,
-				agentDir,
-				systemPromptOverride: () => "Custom system prompt",
-			});
-			await loader.reload();
-
-			expect(loader.getSystemPrompt()).toBe("Custom system prompt");
 		});
 	});
 

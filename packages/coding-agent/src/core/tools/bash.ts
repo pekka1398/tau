@@ -20,6 +20,7 @@ import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult
 const bashSchema = Type.Object({
 	command: Type.String({ description: "A single shell command to execute" }),
 	timeout: Type.Optional(Type.Number({ description: "Timeout in seconds (optional, no default timeout)" })),
+	run_in_background: Type.Optional(Type.Boolean({ description: "Set to true to run this command in the background. You will be notified when it completes. Use this for long-running commands (builds, tests, servers) so you can continue with other work." })),
 });
 
 export type BashToolInput = Static<typeof bashSchema>;
@@ -60,6 +61,8 @@ export interface BashOperations {
 			signal?: AbortSignal;
 			timeout?: number;
 			env?: NodeJS.ProcessEnv;
+			/** Called when the child process is spawned, before awaiting completion. */
+			onSpawn?: (child: import("child_process").ChildProcess) => void;
 		},
 	) => Promise<{ exitCode: number | null; metadata?: BashIntent; stderr?: string }>;
 }
@@ -70,7 +73,7 @@ export interface BashOperations {
  */
 export function createLocalBashOperations(): BashOperations {
 	return {
-		exec: async (command, cwd, { onData, signal, timeout, env }) => {
+		exec: async (command, cwd, { onData, signal, timeout, env, onSpawn }) => {
 			try {
 				await fsAccess(cwd, constants.F_OK);
 			} catch {
@@ -89,6 +92,7 @@ export function createLocalBashOperations(): BashOperations {
 				windowsHide: true,
 			});
 			if (child.pid) trackDetachedChildPid(child.pid);
+			onSpawn?.(child);
 			let timedOut = false;
 			let timeoutHandle: NodeJS.Timeout | undefined;
 			const onAbort = () => {
@@ -171,6 +175,14 @@ export interface BashToolOptions {
 	shellPath?: string;
 	/** Hook to adjust command, cwd, or env before execution */
 	spawnHook?: BashSpawnHook;
+	/** Task manager for background command execution */
+	taskManager?: import("../task-manager.ts").TaskManager;
+	/**
+	 * Registry for mid-execution background requests.
+	 * Key: toolCallId, Value: resolve function that backgrounds the running command.
+	 * When resolve is called, the execute() stops waiting and moves the process to TaskManager.
+	 */
+	backgroundRegistry?: Map<string, (taskId: string) => void>;
 }
 
 const BASH_PREVIEW_LINES = 5;
@@ -220,7 +232,7 @@ function formatDuration(ms: number): string {
 	return `${(ms / 1000).toFixed(1)}s`;
 }
 
-function formatBashCall(args: { command?: string; timeout?: number } | undefined): string {
+function formatBashCall(args: { command?: string; timeout?: number } | undefined, expanded = false): string {
 	const rawCommand = args?.command;
 	const timeout = args?.timeout as number | undefined;
 	const timeoutSuffix = timeout ? theme.fg("muted", ` (timeout ${timeout}s)`) : "";
@@ -230,10 +242,12 @@ function formatBashCall(args: { command?: string; timeout?: number } | undefined
 	} else {
 		commandDisplay = rawCommand || theme.fg("toolOutput", "...");
 	}
-	// Truncate long commands to BASH_PREVIEW_LINES
-	const lines = commandDisplay.split("\n");
-	if (lines.length > BASH_PREVIEW_LINES) {
-		commandDisplay = lines.slice(0, BASH_PREVIEW_LINES).join("\n");
+	// Truncate long commands to BASH_PREVIEW_LINES when collapsed
+	if (!expanded) {
+		const lines = commandDisplay.split("\n");
+		if (lines.length > BASH_PREVIEW_LINES) {
+			commandDisplay = lines.slice(0, BASH_PREVIEW_LINES).join("\n");
+		}
 	}
 	return theme.fg("toolTitle", theme.bold(`$ ${commandDisplay}`)) + timeoutSuffix;
 }
@@ -381,13 +395,38 @@ export function createBashToolDefinition(
 		parameters: bashSchema,
 		async execute(
 			_toolCallId: string,
-			{ command, timeout }: { command: string; timeout?: number },
+			{ command, timeout, run_in_background }: { command: string; timeout?: number; run_in_background?: boolean },
 			signal: AbortSignal | undefined,
 			onUpdate: ((result: AgentToolResult<BashToolDetails | undefined>) => void) | undefined,
 			_ctx: unknown,
 		) {
 			const resolvedCommand = commandPrefix ? `${commandPrefix}\n${command}` : command;
 			const spawnContext = resolveSpawnContext(resolvedCommand, cwd, spawnHook);
+			const taskManager = options?.taskManager;
+
+			// Background execution: spawn process, register with TaskManager, return immediately
+			if (run_in_background && taskManager) {
+				const child = spawn(AI_DASH, ["-c", spawnContext.command], {
+					cwd: spawnContext.cwd,
+					detached: process.platform !== "win32",
+					env: { ...spawnContext.env, PYTHONUNBUFFERED: "1" },
+					stdio: ["ignore", "pipe", "pipe"],
+					windowsHide: true,
+				});
+				const taskId = taskManager.register({
+					command,
+					description: command,
+					process: child,
+				});
+				const task = taskManager.getTask(taskId);
+				const outputNote = task ? `\nOutput: ${task.outputPath}` : "";
+				const pidNote = child.pid ? `\nPID: ${child.pid}` : "";
+				return {
+					content: [{ type: "text", text: `Background task started (id: ${taskId})${pidNote}${outputNote}` }],
+					details: { metadata: { intent: "bash" as const } },
+				};
+			}
+
 			const output = new OutputAccumulator({ tempFilePrefix: "pi-bash" });
 			let updateTimer: NodeJS.Timeout | undefined;
 			let updateDirty = false;
@@ -429,7 +468,9 @@ export function createBashToolDefinition(
 				}, delay);
 			};
 
+			let isBackgrounded = false;
 			const handleData = (data: Buffer) => {
+				if (isBackgrounded) return;
 				output.append(data);
 				scheduleOutputUpdate();
 			};
@@ -465,7 +506,7 @@ export function createBashToolDefinition(
 
 			const appendStatus = (text: string, status: string) => `${text ? `${text}\n\n` : ""}${status}`;
 
-			try {
+		try {
 				// Read-before-write: pre-check edit commands
 				const editTarget = extractEditTarget(command);
 				if (editTarget) {
@@ -484,16 +525,59 @@ export function createBashToolDefinition(
 				let exitCode: number | null;
 				let intent: BashIntent | undefined;
 				let stderrOutput: string | undefined;
+
+				// Set up background support: capture child process via onSpawn,
+				// create a promise that resolves when Ctrl+B is pressed.
+				let childProcess: import("child_process").ChildProcess | undefined;
+				let backgroundResolve: ((taskId: string) => void) | undefined;
+				const backgroundPromise = new Promise<{ backgrounded: true; taskId: string }>((resolve) => {
+					backgroundResolve = (taskId: string) => resolve({ backgrounded: true, taskId });
+				});
+
+				// Register in backgroundRegistry so Ctrl+B can trigger it
+				const bgRegistry = options?.backgroundRegistry;
+				if (bgRegistry && backgroundResolve) {
+					bgRegistry.set(_toolCallId, backgroundResolve);
+				}
+
 				try {
-					const result = await ops.exec(spawnContext.command, spawnContext.cwd, {
+					// Race between normal execution and background signal
+					const execPromise = ops.exec(spawnContext.command, spawnContext.cwd, {
 						onData: handleData,
 						signal,
 						timeout,
 						env: spawnContext.env,
-					});
-					exitCode = result.exitCode;
-					intent = result.metadata;
-					stderrOutput = result.stderr;
+						onSpawn: (child) => { childProcess = child; },
+					}).then((result) => ({ backgrounded: false as const, ...result }));
+
+					const raceResult = await Promise.race([execPromise, backgroundPromise]);
+
+					// Unregister from backgroundRegistry
+					if (bgRegistry) {
+						bgRegistry.delete(_toolCallId);
+					}
+
+				if (raceResult.backgrounded) {
+						// Ctrl+B was pressed — stop onData callbacks and move process to TaskManager
+						isBackgrounded = true;
+						clearUpdateTimer();
+						if (childProcess && taskManager) {
+							taskManager.register({
+								command,
+								description: command,
+								process: childProcess,
+							});
+						}
+						return {
+							content: [{ type: "text", text: `Command moved to background (task ${raceResult.taskId})` }],
+							details: { metadata: { intent: "bash" as const } },
+						};
+					}
+
+					// Normal completion
+					exitCode = raceResult.exitCode;
+					intent = raceResult.metadata;
+					stderrOutput = raceResult.stderr;
 
 					// Read-before-write: record successfully read files
 					if (intent?.intent === "read" && intent.path && !intent.compound) {
@@ -501,6 +585,11 @@ export function createBashToolDefinition(
 						readFileState.add(fullPath);
 					}
 				} catch (err) {
+					// Unregister from backgroundRegistry on error
+					if (bgRegistry) {
+						bgRegistry.delete(_toolCallId);
+					}
+
 					const snapshot = await finishOutput();
 					const { text, details } = formatOutput(snapshot, "");
 					if (err instanceof Error && err.message === "aborted") {
@@ -547,7 +636,7 @@ export function createBashToolDefinition(
 				state.endedAt = undefined;
 			}
 			const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
-			text.setText(formatBashCall(args));
+			text.setText(formatBashCall(args, context.expanded));
 			return text;
 		},
 		renderResult(result, options, _theme, context) {

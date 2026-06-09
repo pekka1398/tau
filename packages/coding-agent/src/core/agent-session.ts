@@ -88,7 +88,9 @@ import { createSyntheticSourceInfo, type SourceInfo } from "./source-info.ts";
 import { type BuildSystemPromptOptions, buildSystemPrompt } from "./system-prompt.ts";
 import { type BashOperations, createLocalBashOperations } from "./tools/bash.ts";
 import { createAllToolDefinitions } from "./tools/index.ts";
+import { TaskManager } from "./task-manager.ts";
 import { createToolDefinitionFromAgentTool } from "./tools/tool-definition-wrapper.ts";
+import { TaskRegistry, formatTaskNotification } from "./subagent/task-registry.ts";
 
 // ============================================================================
 // Skill Block Parsing
@@ -164,7 +166,7 @@ export interface AgentSessionConfig {
 	customTools?: ToolDefinition[];
 	/** Model registry for API key resolution and model discovery */
 	modelRegistry: ModelRegistry;
-	/** Initial active built-in tool names. Default: [read, bash, edit, write] */
+	/** Initial active built-in tool names. Default: [bash, subagent] */
 	initialActiveToolNames?: string[];
 	/** Optional allowlist of tool names. When provided, only these tool names are exposed. */
 	allowedToolNames?: string[];
@@ -306,6 +308,14 @@ export class AgentSession {
 	private _extensionErrorListener?: ExtensionErrorListener;
 	private _extensionErrorUnsubscriber?: () => void;
 
+	// Task manager for background bash commands
+	private _taskManager: TaskManager;
+	// Registry for mid-execution background requests (toolCallId → resolve)
+	private _backgroundRegistry = new Map<string, (taskId: string) => void>();
+
+	// Subagent task registry for background agents
+	private _subagentTaskRegistry: TaskRegistry;
+
 	// Model registry for API key resolution
 	private _modelRegistry: ModelRegistry;
 
@@ -328,6 +338,8 @@ export class AgentSession {
 		this._customTools = config.customTools ?? [];
 		this._cwd = config.cwd;
 		this._modelRegistry = config.modelRegistry;
+		this._taskManager = new TaskManager();
+		this._subagentTaskRegistry = new TaskRegistry();
 		this._extensionRunnerRef = config.extensionRunnerRef;
 		this._initialActiveToolNames = config.initialActiveToolNames;
 		this._allowedToolNames = config.allowedToolNames ? new Set(config.allowedToolNames) : undefined;
@@ -344,11 +356,60 @@ export class AgentSession {
 			activeToolNames: this._initialActiveToolNames,
 			includeAllExtensionTools: true,
 		});
+
+		// Listen for background task completion and notify the agent
+		this._taskManager.on("task_completed", (event) => {
+			this._handleBackgroundTaskCompleted(event.task.id, event.task.command, event.task.exitCode, event.task.outputPath, true, event.task.pid);
+		});
+		this._taskManager.on("task_failed", (event) => {
+			this._handleBackgroundTaskCompleted(event.task.id, event.task.command, event.task.exitCode, event.task.outputPath, false, event.task.pid);
+		});
+
+		// Listen for subagent background task completion
+		this._subagentTaskRegistry.setNotificationCallback((task, result) => {
+			const message = formatTaskNotification(task, result);
+			if (this.isStreaming) {
+				this.agent.followUp({
+					role: "user",
+					content: [{ type: "text", text: message }],
+					timestamp: Date.now(),
+				});
+			} else {
+				this.sendUserMessage(message).catch((err) => {
+					console.error("Failed to send subagent notification:", err);
+				});
+			}
+		});
+	}
+
+	private _handleBackgroundTaskCompleted(taskId: string, command: string, exitCode: number | undefined, outputPath: string, success: boolean, pid?: number): void {
+		const status = success ? "completed" : `failed (exit code ${exitCode})`;
+		const outputNote = `\nFull output: ${outputPath}`;
+		const pidNote = pid ? `\nPID: ${pid}` : "";
+		const message = `Background bash task ${taskId} ${status}.\nCommand: ${command}${pidNote}${outputNote}\n\nYou can read the output with: cat ${outputPath}\nYou can kill it with: kill ${pid ?? "<pid>"}`;
+
+		// If idle, trigger a new turn. If streaming, queue as follow-up.
+		if (this.isStreaming) {
+			this.agent.followUp({
+				role: "user",
+				content: [{ type: "text", text: message }],
+				timestamp: Date.now(),
+			});
+		} else {
+			this.sendUserMessage(message).catch((err) => {
+				console.error("Failed to send background task notification:", err);
+			});
+		}
 	}
 
 	/** Model registry for API key resolution and model discovery */
 	get modelRegistry(): ModelRegistry {
 		return this._modelRegistry;
+	}
+
+	/** Access the subagent task registry for background agent tracking. */
+	get subagentTaskRegistry(): TaskRegistry {
+		return this._subagentTaskRegistry;
 	}
 
 	private async _getRequiredRequestAuth(model: Model<any>): Promise<{
@@ -718,6 +779,7 @@ export class AgentSession {
 			this.abortBranchSummary();
 			this.abortBash();
 			this.agent.abort();
+			this._taskManager.dispose();
 		} catch {
 			// Dispose must succeed even if an abort hook throws.
 		}
@@ -733,6 +795,32 @@ export class AgentSession {
 	// =========================================================================
 	// Read-only State Access
 	// =========================================================================
+
+	/** Background task manager */
+	get taskManager(): TaskManager {
+		return this._taskManager;
+	}
+
+	/**
+	 * Background the most recently started running bash command.
+	 * Returns the task ID if a command was backgrounded, undefined otherwise.
+	 */
+	backgroundActiveBash(): string | undefined {
+		// Find the most recent entry in the backgroundRegistry
+		// (entries are added when bash execute() starts, removed when it ends)
+		const entries = Array.from(this._backgroundRegistry.entries());
+		if (entries.length === 0) return undefined;
+
+		// Take the last entry (most recently started)
+		const [toolCallId, resolve] = entries[entries.length - 1]!;
+
+		// Generate a task ID and resolve the background promise
+		const taskId = Math.random().toString(36).slice(2, 10);
+		resolve(taskId);
+		this._backgroundRegistry.delete(toolCallId);
+
+		return taskId;
+	}
 
 	/** Full agent state */
 	get state(): AgentState {
@@ -906,10 +994,6 @@ export class AgentSession {
 			}
 		}
 
-		const loaderSystemPrompt = this._resourceLoader.getSystemPrompt();
-		const loaderAppendSystemPrompt = this._resourceLoader.getAppendSystemPrompt();
-		const appendSystemPrompt =
-			loaderAppendSystemPrompt.length > 0 ? loaderAppendSystemPrompt.join("\n\n") : undefined;
 		const loadedSkills = this._resourceLoader.getSkills().skills;
 		const loadedContextFiles = this._resourceLoader.getAgentsFiles().agentsFiles;
 
@@ -917,8 +1001,6 @@ export class AgentSession {
 			cwd: this._cwd,
 			skills: loadedSkills,
 			contextFiles: loadedContextFiles,
-			customPrompt: loaderSystemPrompt,
-			appendSystemPrompt,
 			selectedTools: validToolNames,
 			toolSnippets,
 			promptGuidelines,
@@ -2390,7 +2472,8 @@ export class AgentSession {
 					]),
 				)
 			: createAllToolDefinitions(this._cwd, {
-					bash: { commandPrefix: shellCommandPrefix, shellPath },
+					bash: { commandPrefix: shellCommandPrefix, shellPath, taskManager: this._taskManager, backgroundRegistry: this._backgroundRegistry },
+					subagent: { taskRegistry: this._subagentTaskRegistry },
 				});
 
 		this._baseToolDefinitions = new Map(
@@ -2419,7 +2502,7 @@ export class AgentSession {
 
 		const defaultActiveToolNames = this._baseToolsOverride
 			? Object.keys(this._baseToolsOverride)
-			: ["read", "bash", "edit", "write"];
+			: ["bash", "subagent"];
 		const baseActiveToolNames = options.activeToolNames ?? defaultActiveToolNames;
 		this._refreshToolRegistry({
 			activeToolNames: baseActiveToolNames,

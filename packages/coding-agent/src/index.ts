@@ -15,6 +15,8 @@ export {
 	parseSkillBlock,
 	type SessionStats,
 } from "./core/agent-session.ts";
+// Background task management
+export { type BackgroundTask, TaskManager, type TaskStatus } from "./core/task-manager.ts";
 // Auth and model registry
 export {
 	type ApiKeyCredential,
