@@ -188,6 +188,17 @@ static int is_readlike(const char *cmd)
 	       strcmp(intent, "search") == 0;
 }
 
+/* Check if a command can potentially write to files (even if usually read-like).
+ * These commands have -i flags or redirect capabilities that make them
+ * unsafe to classify as "read" in compound pipes. */
+static int is_potentially_write(const char *cmd)
+{
+	return strcmp(cmd, "sed") == 0 ||
+	       strcmp(cmd, "perl") == 0 ||
+	       strcmp(cmd, "awk") == 0 ||
+	       strcmp(cmd, "tee") == 0;
+}
+
 /*
  * Get the command name (first argv[0]) from an NCMD node.
  * Returns NULL if not an NCMD or no args.
@@ -233,12 +244,14 @@ void meta_emit_intent(union node *n)
 			}
 		}
 
-		/* Check if all commands in the pipe are read-like */
-		int all_readlike = is_readlike(first_cmd);
+		/* Check if all commands in the pipe are read-like.
+		 * Commands that can potentially write (sed -i, perl -i, etc.)
+		 * disqualify the pipe from being treated as read-only. */
+		int all_readlike = is_readlike(first_cmd) && !is_potentially_write(first_cmd);
 		if (all_readlike) {
 			for (p = nl->next; p; p = p->next) {
 				const char *cmd = get_cmd_name(p->n);
-				if (!cmd || !is_readlike(cmd)) {
+				if (!cmd || !is_readlike(cmd) || is_potentially_write(cmd)) {
 					all_readlike = 0;
 					break;
 				}

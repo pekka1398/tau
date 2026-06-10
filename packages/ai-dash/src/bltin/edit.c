@@ -474,8 +474,15 @@ static int parse_lines(char **lines, size_t count, struct patch *out) {
 				i++;
 			}
 
-			if (in_search || in_replace) {
-				outfmt(out2, "edit: unterminated SEARCH/REPLACE block\n");
+		if (in_search || in_replace) {
+				edit_diag("E2008", "Unterminated Block",
+					"search/replace block",
+					in_search
+						? "reached end of input while collecting SEARCH lines (missing ======= or >>>>>>> REPLACE)"
+						: "reached end of input while collecting REPLACE lines (missing >>>>>>> REPLACE)",
+					in_search
+						? "add ======= to separate search from replace, then >>>>>>> REPLACE to close the block"
+						: "add >>>>>>> REPLACE to close the block");
 				free(cur.search);
 				free(cur.replace);
 				patch_free(out);
