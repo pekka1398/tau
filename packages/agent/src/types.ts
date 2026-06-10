@@ -352,6 +352,8 @@ export interface AgentToolResult<T> {
 	 * Early termination only happens when every finalized tool result in the batch sets this to true.
 	 */
 	terminate?: boolean;
+	/** If true, the tool execution is treated as an error (e.g. non-zero exit code). Used for UI rendering (red background). */
+	isError?: boolean;
 }
 
 /** Callback used by tools to stream partial execution updates. */

@@ -60,7 +60,7 @@
 	],
 	"scripts": {
 		"clean": "shx rm -rf dist",
-		"generate-models": "node scripts/generate-models.ts",
+		"generate-models": "tsx scripts/generate-models.ts",
 		"build": "npm run generate-models && tsgo -p tsconfig.build.json",
 		"test": "vitest --run",
 		"prepublishOnly": "npm run clean && npm run build"

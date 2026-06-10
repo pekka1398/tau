@@ -1683,13 +1683,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
-				input: 0.35,
-				output: 1.89,
-				cacheRead: 0,
+				input: 0.39999999999999997,
+				output: 1.9,
+				cacheRead: 0.09,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 4096,
+			maxTokens: 262144,
 		} satisfies Model<"openai-completions">,
 		"moonshotai/kimi-k2.6": {
 			id: "moonshotai/kimi-k2.6",

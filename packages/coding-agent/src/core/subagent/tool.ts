@@ -108,6 +108,7 @@ async function runSingleAgent(
 	signal: AbortSignal | undefined,
 	onUpdate: OnUpdateCallback | undefined,
 	makeDetails: (results: SingleResult[]) => SubagentDetails,
+	parentTools?: import("@earendil-works/pi-agent-core").AgentTool<any>[],
 ): Promise<SingleResult> {
 	const agent = agents.find((a) => a.name === agentName);
 
@@ -130,7 +131,7 @@ async function runSingleAgent(
 		},
 	];
 
-	const tools: import("@earendil-works/pi-agent-core").AgentTool<any>[] = [];
+	const tools = parentTools ?? [];
 	const resolvedModel = model;
 	const allMessages: import("@earendil-works/pi-agent-core").AgentMessage[] = [];
 
@@ -209,6 +210,7 @@ function runSingleAgentAsync(
 	model: import("@earendil-works/pi-ai").Model<any> | undefined,
 	getApiKey: ((provider: string) => Promise<string | undefined> | string | undefined) | undefined,
 	streamFn: import("@earendil-works/pi-agent-core").StreamFn | undefined,
+	parentTools?: import("@earendil-works/pi-agent-core").AgentTool<any>[],
 ): string {
 	const taskId = randomUUID();
 	const abortController = new AbortController();
@@ -234,6 +236,7 @@ function runSingleAgentAsync(
 				abortController.signal,
 				undefined, // no onUpdate for background tasks (could add later)
 				(results) => ({ mode: "single", agentScope: "user", projectAgentsDir: null, results, isAsync: true }),
+				parentTools,
 			);
 
 			if (result.errorMessage) {
@@ -297,6 +300,8 @@ interface SubagentToolParams {
 export interface SubagentToolOptions {
 	/** Task registry for background execution. Enables run_in_background mode. */
 	taskRegistry?: TaskRegistry;
+	/** Get the current set of tools available to the parent agent. Passed to subagents. */
+	getTools?: () => import("@earendil-works/pi-agent-core").AgentTool<any>[];
 }
 
 /**
@@ -311,6 +316,7 @@ export function createSubagentToolDefinition(
 	options?: SubagentToolOptions,
 ): ToolDefinition<typeof SubagentParams, SubagentDetails> {
 	const taskRegistry = options?.taskRegistry;
+	const getTools = options?.getTools;
 	return {
 		name: "subagent",
 		label: "Subagent",
@@ -375,7 +381,7 @@ export function createSubagentToolDefinition(
 			if (isAsync) {
 				// Single async
 				if (p.agent && p.task) {
-					const taskId = runSingleAgentAsync(taskRegistry, agents, p.agent, p.task, model, getApiKey, undefined);
+					const taskId = runSingleAgentAsync(taskRegistry, agents, p.agent, p.task, model, getApiKey, undefined, getTools?.());
 					return {
 						content: [
 							{
@@ -390,7 +396,7 @@ export function createSubagentToolDefinition(
 				// Parallel async
 				if (p.tasks && p.tasks.length > 0) {
 					const taskIds = p.tasks.map((t) =>
-						runSingleAgentAsync(taskRegistry, agents, t.agent, t.task, model, getApiKey, undefined),
+						runSingleAgentAsync(taskRegistry, agents, t.agent, t.task, model, getApiKey, undefined, getTools?.()),
 					);
 					return {
 						content: [
@@ -442,6 +448,7 @@ export function createSubagentToolDefinition(
 								}
 							: undefined,
 						makeDetails("chain"),
+						getTools?.(),
 					);
 					result.step = i + 1;
 					results.push(result);
@@ -507,6 +514,7 @@ export function createSubagentToolDefinition(
 								}
 							: undefined,
 						makeDetails("parallel"),
+						getTools?.(),
 					);
 					allResults[index] = result;
 					return result;
@@ -541,6 +549,7 @@ export function createSubagentToolDefinition(
 					signal,
 					onUpdate,
 					makeDetails("single"),
+					getTools?.(),
 				);
 				if (result.errorMessage) {
 					return {

@@ -2467,7 +2467,10 @@ export class AgentSession {
 						taskManager: this._taskManager,
 						backgroundRegistry: this._backgroundRegistry,
 					},
-					subagent: { taskRegistry: this._subagentTaskRegistry },
+					subagent: {
+						taskRegistry: this._subagentTaskRegistry,
+						getTools: () => Array.from(this._toolRegistry.values()),
+					},
 				});
 
 		this._baseToolDefinitions = new Map(
