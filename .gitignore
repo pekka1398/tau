@@ -18,6 +18,8 @@ dist-firefox/
 .claude/
 *.swp
 *.swo
+test
+note
 *~
 
 # Logs

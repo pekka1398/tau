@@ -321,6 +321,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	};
 
 	const extensionRunnerRef: { current?: ExtensionRunner } = {};
+	const providerErrorCallbackRef: { current?: (status: number, errorMessage: string) => void } = {};
+	const setHttpStageRef: { current?: (stage: string) => void } = {};
 
 	// Initialize dump-prompts logger
 	initDumpLogger(agentDir, sessionManager.getSessionId());
@@ -334,6 +336,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		},
 		convertToLlm: convertToLlmWithBlockImages,
 		streamFn: async (model, context, options) => {
+			const requestStart = Date.now();
+			const httpDebugEnabled = process.env.PI_DEBUG_HTTP === "1";
+			let responseReceivedAt = 0;
+
+			setHttpStageRef.current?.("resolving auth");
 			const auth = await modelRegistry.getApiKeyAndHeaders(model);
 			if (!auth.ok) {
 				throw new Error(auth.error);
@@ -346,8 +353,44 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			const timeoutMs = options?.timeoutMs ?? providerRetrySettings.timeoutMs ?? effectiveTimeoutMs;
 			const websocketConnectTimeoutMs =
 				options?.websocketConnectTimeoutMs ?? settingsManager.getWebSocketConnectTimeoutMs();
-			return streamSimple(model, context, {
+
+			setHttpStageRef.current?.("connecting");
+
+			if (httpDebugEnabled) {
+				const payloadBytes = Buffer.byteLength(JSON.stringify(context), "utf-8");
+				appendFileSync(
+					"/tmp/pi-http-debug.log",
+					`[${new Date().toISOString()}] streamFn: model=${model.id} ` +
+						`provider=${model.provider} payload=${(payloadBytes / 1024).toFixed(0)}KB ` +
+						`messages=${context.messages.length} tools=${context.tools?.length ?? 0}\n`,
+				);
+			}
+
+			// Wrap onResponse to record timing and update stage
+			const originalOnResponse = options?.onResponse;
+			const wrappedOptions = {
 				...options,
+				onResponse: async (response: { status: number; headers: Record<string, string> }, m: typeof model) => {
+					responseReceivedAt = Date.now();
+					const elapsed = responseReceivedAt - requestStart;
+					if (response.status >= 400) {
+						setHttpStageRef.current?.(`HTTP ${response.status} (${elapsed}ms)`);
+					} else {
+						setHttpStageRef.current?.(`headers received (${elapsed}ms)`);
+					}
+					if (httpDebugEnabled) {
+						appendFileSync(
+							"/tmp/pi-http-debug.log",
+							`[${new Date().toISOString()}] onResponse: status=${response.status} ` +
+								`since_request_start=${elapsed}ms model=${m.id} provider=${m.provider}\n`,
+						);
+					}
+					await originalOnResponse?.(response, m);
+				},
+			};
+
+			const stream = streamSimple(model, context, {
+				...wrappedOptions,
 				apiKey: auth.apiKey,
 				timeoutMs,
 				websocketConnectTimeoutMs,
@@ -355,6 +398,16 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				maxRetryDelayMs: options?.maxRetryDelayMs ?? providerRetrySettings.maxRetryDelayMs,
 				headers: mergeProviderAttributionHeaders(model, auth.headers, options?.headers),
 			});
+
+			if (httpDebugEnabled) {
+				appendFileSync(
+					"/tmp/pi-http-debug.log",
+					`[${new Date().toISOString()}] streamFn: model=${model.id} ` +
+						`provider=${model.provider} payload_chars=${JSON.stringify(context).length}\n`,
+				);
+			}
+
+			return stream;
 		},
 		onPayload: async (payload, model) => {
 			// Dump API request (only new messages, not full history)
@@ -372,6 +425,10 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				status: response.status,
 				headers: response.headers,
 			});
+			// Report HTTP errors to the TUI
+			if (response.status >= 400) {
+				providerErrorCallbackRef.current?.(response.status, `Provider returned HTTP ${response.status}`);
+			}
 			const runner = extensionRunnerRef.current;
 			if (!runner?.hasHandlers("after_provider_response")) {
 				return;
@@ -425,6 +482,12 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		sessionStartEvent: options.sessionStartEvent,
 	});
 	const extensionsResult = resourceLoader.getExtensions();
+
+	// Connect provider error callback to session
+	providerErrorCallbackRef.current = (status, errorMessage) => {
+		session.reportProviderError(status, errorMessage);
+	};
+	setHttpStageRef.current = (stage) => session.setHttpStage(stage);
 
 	return {
 		session,

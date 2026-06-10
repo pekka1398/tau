@@ -144,7 +144,8 @@ export type AgentSessionEvent =
 			errorMessage?: string;
 	  }
 	| { type: "auto_retry_start"; attempt: number; maxAttempts: number; delayMs: number; errorMessage: string }
-	| { type: "auto_retry_end"; success: boolean; attempt: number; finalError?: string };
+	| { type: "auto_retry_end"; success: boolean; attempt: number; finalError?: string }
+	| { type: "provider_error"; status: number; errorMessage: string };
 
 /** Listener function for agent session events */
 export type AgentSessionEventListener = (event: AgentSessionEvent) => void;
@@ -262,6 +263,9 @@ export class AgentSession {
 	// Event subscription state
 	private _unsubscribeAgent?: () => void;
 	private _eventListeners: AgentSessionEventListener[] = [];
+
+	/** Current HTTP request stage for display in loader. Reset on agent_start. */
+	private _httpStage = "";
 
 	/** Tracks pending steering messages for UI display. Removed when delivered. */
 	private _steeringMessages: string[] = [];
@@ -576,6 +580,11 @@ export class AgentSession {
 		// Emit to extensions first
 		await this._emitExtensionEvent(event);
 
+		// Reset HTTP stage on new agent turn
+		if (event.type === "agent_start") {
+			this._httpStage = "";
+		}
+
 		// Notify all listeners
 		this._emit(event.type === "agent_end" ? { ...event, willRetry: this._willRetryAfterAgentEnd(event) } : event);
 
@@ -747,6 +756,25 @@ export class AgentSession {
 			};
 			await this._extensionRunner.emit(extensionEvent);
 		}
+	}
+
+	/** Get the current HTTP request stage (for display in loader). */
+	get httpStage(): string {
+		return this._httpStage;
+	}
+
+	/** Update the HTTP request stage. Called from the streamFn. */
+	setHttpStage(stage: string): void {
+		this._httpStage = stage;
+	}
+
+	/**
+	 * Report a provider HTTP error. Emits a provider_error event to subscribers.
+	 * Called by the streamFn when the provider returns a non-2xx response.
+	 */
+	reportProviderError(status: number, errorMessage: string): void {
+		this._httpStage = `HTTP ${status}`;
+		this._emit({ type: "provider_error", status, errorMessage });
 	}
 
 	/**

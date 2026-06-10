@@ -2,8 +2,8 @@
  * Background task manager for tracking async bash commands.
  */
 
+import type { ChildProcess } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { type ChildProcess } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { createWriteStream, type WriteStream } from "node:fs";
 import { tmpdir } from "node:os";

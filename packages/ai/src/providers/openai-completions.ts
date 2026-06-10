@@ -484,6 +484,8 @@ function buildParams(
 	const messages = convertMessages(model, context, compat);
 	const cacheControl = getCompatCacheControl(compat, cacheRetention);
 
+	const isOpenRouter = model.baseUrl.includes("openrouter.ai");
+
 	const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
 		model: model.id,
 		messages,
@@ -494,6 +496,8 @@ function buildParams(
 				? clampOpenAIPromptCacheKey(options?.sessionId)
 				: undefined,
 		prompt_cache_retention: cacheRetention === "long" && compat.supportsLongCacheRetention ? "24h" : undefined,
+		// OpenRouter sticky routing: send session_id in request body for provider affinity
+		...(isOpenRouter && options?.sessionId ? { session_id: options.sessionId } : {}),
 	};
 
 	if (compat.supportsUsageInStreaming !== false) {

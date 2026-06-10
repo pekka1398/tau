@@ -15,8 +15,6 @@ export {
 	parseSkillBlock,
 	type SessionStats,
 } from "./core/agent-session.ts";
-// Background task management
-export { type BackgroundTask, TaskManager, type TaskStatus } from "./core/task-manager.ts";
 // Auth and model registry
 export {
 	type ApiKeyCredential,
@@ -212,6 +210,8 @@ export {
 	type SkillFrontmatter,
 } from "./core/skills.ts";
 export { createSyntheticSourceInfo } from "./core/source-info.ts";
+// Background task management
+export { type BackgroundTask, TaskManager, type TaskStatus } from "./core/task-manager.ts";
 // Tools
 export {
 	type BashOperations,
