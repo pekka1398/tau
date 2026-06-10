@@ -102,8 +102,19 @@ export function createTranscribeToolDefinition(): ToolDefinition<typeof transcri
 				return result.text;
 			};
 
+			const callApiBatch = async (
+				prompt: string,
+				images: Array<{ label: string; data: Buffer; mimeType: string }>,
+			): Promise<string> => {
+				if (!apiKey) {
+					throw new Error("No API key available for multimodal transcription. Configure an OpenRouter API key.");
+				}
+				const { transcribeImageBatch } = await import("./transcribe/api.ts");
+				return transcribeImageBatch(images, prompt, { apiKey });
+			};
+
 			try {
-				const result = await transcribe(paths, { language, sheet, pageRange: page_range, mode }, ctx.cwd, callApi);
+				const result = await transcribe(paths, { language, sheet, pageRange: page_range, mode }, ctx.cwd, callApi, callApiBatch);
 
 				const pathList = result.outputPaths.join("\n");
 				const meta = [

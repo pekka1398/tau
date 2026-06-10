@@ -106,6 +106,43 @@ export async function transcribeImageChunk(
 }
 
 /**
+ * Transcribe multiple images in a single API call (for PDF page batching).
+ * detail:"high" is injected by onPayload hook.
+ */
+export async function transcribeImageBatch(
+	images: Array<{ label: string; data: Buffer; mimeType: string }>,
+	prompt: string,
+	config: ApiConfig,
+): Promise<string> {
+	const content: Array<Record<string, unknown>> = [{ type: "text", text: prompt }];
+
+	for (const img of images) {
+		content.push({
+			type: "image",
+			data: img.data.toString("base64"),
+			mimeType: img.mimeType,
+		});
+	}
+
+	const response = await completeSimple(
+		TRANSCRIBE_MODEL!,
+		{
+			systemPrompt: TRANSCRIBE_SYSTEM_PROMPT,
+			messages: [
+				{
+					role: "user",
+					content,
+					timestamp: Date.now(),
+				},
+			],
+		},
+		{ apiKey: config.apiKey, onPayload: injectHighResolution },
+	);
+
+	return extractText(response);
+}
+
+/**
  * Transcribe audio via raw fetch.
  * pi-ai has no AudioContent type, so we build the request manually.
  */

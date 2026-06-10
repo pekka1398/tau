@@ -52,6 +52,7 @@ export async function transcribe(
 	options: TranscribeOptions,
 	cwd: string,
 	callApi: (prompt: string, data?: Buffer, mimeType?: string) => Promise<string>,
+	callApiBatch?: (prompt: string, images: Array<{ label: string; data: Buffer; mimeType: string }>) => Promise<string>,
 ): Promise<TranscribeOutput> {
 	const filePaths = Array.isArray(paths) ? paths : [paths];
 
@@ -66,7 +67,7 @@ export async function transcribe(
 
 	for (const filePath of filePaths) {
 		try {
-			const result = await transcribeSingle(filePath, options, cwd, callApi);
+			const result = await transcribeSingle(filePath, options, cwd, callApi, callApiBatch);
 			totalChunks += result.chunks;
 			if (result.usedApi) anyUsedApi = true;
 			allWarnings.push(...result.warnings);
@@ -98,6 +99,7 @@ async function transcribeSingle(
 	options: TranscribeOptions,
 	cwd: string,
 	callApi: (prompt: string, data?: Buffer, mimeType?: string) => Promise<string>,
+	callApiBatch?: (prompt: string, images: Array<{ label: string; data: Buffer; mimeType: string }>) => Promise<string>,
 ): Promise<TranscribeResult> {
 	const absPath = resolve(cwd, filePath);
 	const format = detectFormat(absPath);
@@ -125,6 +127,6 @@ async function transcribeSingle(
 		};
 	}
 
-	const ctx: ConverterContext = { cwd, options, callApi };
+	const ctx: ConverterContext = { cwd, options, callApi, callApiBatch };
 	return converter.convert(absPath, ctx);
 }
