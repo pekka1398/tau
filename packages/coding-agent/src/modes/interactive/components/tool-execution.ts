@@ -249,11 +249,14 @@ export class ToolExecutionComponent extends Container {
 	}
 
 	private updateDisplay(): void {
+		const isBackground = this.result?.details?.isBackground === true;
 		const bgFn = this.isPartial
 			? (text: string) => theme.bg("toolPendingBg", text)
 			: this.result?.isError
 				? (text: string) => theme.bg("toolErrorBg", text)
-				: (text: string) => theme.bg("toolSuccessBg", text);
+				: isBackground
+					? (text: string) => theme.bg("toolBackgroundBg", text)
+					: (text: string) => theme.bg("toolSuccessBg", text);
 
 		let hasContent = false;
 		this.hideComponent = false;

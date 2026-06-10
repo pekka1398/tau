@@ -35,6 +35,7 @@ export interface TerminalSettings {
 	imageWidthCells?: number; // default: 60 (preferred inline image width in terminal cells)
 	clearOnShrink?: boolean; // default: false (clear empty rows when content shrinks)
 	showTerminalProgress?: boolean; // default: false (OSC 9;4 terminal progress indicators)
+	showSemanticZones?: boolean; // default: false (OSC 133 semantic markers 2014 some terminals use these for sticky scroll)
 }
 
 export interface ImageSettings {
@@ -1044,6 +1045,19 @@ export class SettingsManager {
 		}
 		this.globalSettings.terminal.showTerminalProgress = enabled;
 		this.markModified("terminal", "showTerminalProgress");
+		this.save();
+	}
+
+	getShowSemanticZones(): boolean {
+		return this.settings.terminal?.showSemanticZones ?? false;
+	}
+
+	setShowSemanticZones(enabled: boolean): void {
+		if (!this.globalSettings.terminal) {
+			this.globalSettings.terminal = {};
+		}
+		this.globalSettings.terminal.showSemanticZones = enabled;
+		this.markModified("terminal", "showSemanticZones");
 		this.save();
 	}
 

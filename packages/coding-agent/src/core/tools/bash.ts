@@ -1,4 +1,4 @@
-import { appendFileSync, constants, existsSync } from "node:fs";
+import { appendFileSync, constants, createWriteStream, existsSync } from "node:fs";
 import { access as fsAccess } from "node:fs/promises";
 import { resolve as pathResolve } from "node:path";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
@@ -188,6 +188,8 @@ export interface BashToolOptions {
 	 * When resolve is called, the execute() stops waiting and moves the process to TaskManager.
 	 */
 	backgroundRegistry?: Map<string, (taskId: string) => void>;
+	/** Enable read-before-write check for edit commands. Default: true */
+	readBeforeWrite?: boolean;
 }
 
 const BASH_PREVIEW_LINES = 5;
@@ -379,24 +381,79 @@ export function createBashToolDefinition(
 	const ops = options?.operations ?? createLocalBashOperations();
 	const commandPrefix = options?.commandPrefix;
 	const spawnHook = options?.spawnHook;
+	const readBeforeWrite = options?.readBeforeWrite ?? false;
 
 	// Read-before-write tracking: paths that have been fully read
 	const readFileState = new Set<string>();
 
 	/**
-	 * Parse a command string to detect edit operations (edit, sed -i, perl -i).
-	 * Returns the target file path if found, null otherwise.
-	 * This is a pre-execution check — we parse the command before running it.
+	 * Split a command string by shell operators (|, &&, ||, ;),
+	 * respecting quotes and subshell nesting.
+	 * Returns an array of sub-command strings.
 	 */
-	function extractEditTarget(cmd: string): string | null {
-		const trimmed = cmd.trim();
-		// Skip compound commands (pipes, chains, subshells)
-		if (/[|;&]|\$\(|`/.test(trimmed)) return null;
+	function splitByShellOperators(cmd: string): string[] {
+		const parts: string[] = [];
+		let current = "";
+		let inSingleQuote = false;
+		let inDoubleQuote = false;
+		let depth = 0;
 
-		const parts = trimmed.split(/\s+/);
+		for (let i = 0; i < cmd.length; i++) {
+			const c = cmd[i]!;
+
+			if (inSingleQuote) {
+				current += c;
+				if (c === "'") inSingleQuote = false;
+				continue;
+			}
+			if (inDoubleQuote) {
+				current += c;
+				if (c === '"' && (i === 0 || cmd[i - 1] !== "\\")) inDoubleQuote = false;
+				continue;
+			}
+
+			if (c === "'") { inSingleQuote = true; current += c; continue; }
+			if (c === '"') { inDoubleQuote = true; current += c; continue; }
+			if (c === "(") { depth++; current += c; continue; }
+			if (c === ")") { depth--; current += c; continue; }
+
+			if (depth > 0) { current += c; continue; }
+
+			// Shell operators
+			if (c === "|") {
+				parts.push(current);
+				current = "";
+				if (cmd[i + 1] === "|") i++; // skip ||
+				continue;
+			}
+			if (c === "&" && cmd[i + 1] === "&") {
+				parts.push(current);
+				current = "";
+				i++; // skip second &
+				continue;
+			}
+			if (c === ";") {
+				parts.push(current);
+				current = "";
+				continue;
+			}
+
+			current += c;
+		}
+
+		if (current.trim()) parts.push(current);
+		return parts;
+	}
+
+	/**
+	 * Parse a single (non-compound) command to detect edit operations.
+	 * Returns the target file path if found, null otherwise.
+	 */
+	function extractSingleEditTarget(subcmd: string): string | null {
+		const parts = subcmd.trim().split(/\s+/);
 		if (parts.length < 2) return null;
 
-		const bin = parts[0];
+		const bin = parts[0]?.split("/").pop() ?? parts[0]; // handle /usr/bin/edit
 
 		// edit [-a] <path>
 		if (bin === "edit") {
@@ -417,7 +474,6 @@ export function createBashToolDefinition(
 				}
 			}
 			if (hasI) {
-				// Last arg that doesn't start with - and isn't a flag value
 				for (let i = parts.length - 1; i >= 1; i--) {
 					if (!parts[i]!.startsWith("-")) return parts[i]!;
 				}
@@ -425,6 +481,22 @@ export function createBashToolDefinition(
 		}
 
 		return null;
+	}
+
+	/**
+	 * Parse a command string to detect edit operations (edit, sed -i, perl -i).
+	 * Handles compound commands (pipes, &&, ||, ;) by splitting and scanning each part.
+	 * Returns all target file paths found.
+	 * This is a pre-execution check — we parse the command before running it.
+	 */
+	function extractEditTargets(cmd: string): string[] {
+		const targets: string[] = [];
+		const parts = splitByShellOperators(cmd);
+		for (const part of parts) {
+			const target = extractSingleEditTarget(part);
+			if (target) targets.push(target);
+		}
+		return targets;
 	}
 
 	return {
@@ -444,27 +516,9 @@ export function createBashToolDefinition(
 			const spawnContext = resolveSpawnContext(resolvedCommand, cwd, spawnHook);
 			const taskManager = options?.taskManager;
 
-			// Background execution: spawn process, register with TaskManager, return immediately
-			if (run_in_background && taskManager) {
-				const child = spawn(AI_DASH, ["-c", spawnContext.command], {
-					cwd: spawnContext.cwd,
-					detached: process.platform !== "win32",
-					env: { ...spawnContext.env, PYTHONUNBUFFERED: "1" },
-					stdio: ["ignore", "pipe", "pipe"],
-					windowsHide: true,
-				});
-				const taskId = taskManager.register({
-					command,
-					description: command,
-					process: child,
-				});
-				const task = taskManager.getTask(taskId);
-				const outputNote = task ? `\nOutput: ${task.outputPath}` : "";
-				const pidNote = child.pid ? `\nPID: ${child.pid}` : "";
-				return {
-					content: [{ type: "text", text: `Background task started (id: ${taskId})${pidNote}${outputNote}` }],
-					details: { metadata: { intent: "bash" as const } },
-				};
+			// For background tasks, ensure Python output is unbuffered
+			if (run_in_background) {
+				spawnContext.env.PYTHONUNBUFFERED = "1";
 			}
 
 			const output = new OutputAccumulator({ tempFilePrefix: "pi-bash" });
@@ -509,8 +563,12 @@ export function createBashToolDefinition(
 			};
 
 			let isBackgrounded = false;
+			let bgLogStream: ReturnType<typeof createWriteStream> | undefined;
 			const handleData = (data: Buffer) => {
-				if (isBackgrounded) return;
+				if (isBackgrounded) {
+					bgLogStream?.write(data);
+					return;
+				}
 				output.append(data);
 				scheduleOutputUpdate();
 			};
@@ -547,18 +605,20 @@ export function createBashToolDefinition(
 			const appendStatus = (text: string, status: string) => `${text ? `${text}\n\n` : ""}${status}`;
 
 			try {
-				// Read-before-write: pre-check edit commands
-				const editTarget = extractEditTarget(command);
-				if (editTarget) {
-					const fullPath = pathResolve(spawnContext.cwd, editTarget);
-					if (existsSync(fullPath) && !readFileState.has(fullPath)) {
-						throw new Error(
-							`File has not been read yet: ${editTarget}\n` +
-								`To avoid editing the wrong lines, read the file first:\n` +
-								`  cat ${editTarget}\n` +
-								`or\n` +
-								`  nl ${editTarget}`,
-						);
+				// Read-before-write: pre-check edit commands (handles compound commands)
+				if (readBeforeWrite) {
+					const editTargets = extractEditTargets(command);
+					for (const editTarget of editTargets) {
+						const fullPath = pathResolve(spawnContext.cwd, editTarget);
+						if (existsSync(fullPath) && !readFileState.has(fullPath)) {
+							throw new Error(
+								`File has not been read yet: ${editTarget}\n` +
+									`To avoid editing the wrong lines, read the file first:\n` +
+									`  cat ${editTarget}\n` +
+									`or\n` +
+									`  nl ${editTarget}`,
+							);
+						}
 					}
 				}
 
@@ -567,12 +627,15 @@ export function createBashToolDefinition(
 				let stderrOutput: string | undefined;
 
 				// Set up background support: capture child process via onSpawn,
-				// create a promise that resolves when Ctrl+B is pressed.
+				// create a promise that resolves when background is triggered.
 				let childProcess: import("child_process").ChildProcess | undefined;
 				let backgroundResolve: ((taskId: string) => void) | undefined;
 				const backgroundPromise = new Promise<{ backgrounded: true; taskId: string }>((resolve) => {
 					backgroundResolve = (taskId: string) => resolve({ backgrounded: true, taskId });
 				});
+
+				// For run_in_background: resolve immediately after spawn
+				let autoBackground = run_in_background && taskManager;
 
 				// Register in backgroundRegistry so Ctrl+B can trigger it
 				const bgRegistry = options?.backgroundRegistry;
@@ -588,8 +651,16 @@ export function createBashToolDefinition(
 							signal,
 							timeout,
 							env: spawnContext.env,
-							onSpawn: (child) => {
+						onSpawn: (child) => {
 								childProcess = child;
+								// For run_in_background: resolve after 0.1s to let exec set up
+								if (autoBackground && backgroundResolve) {
+									const resolve = backgroundResolve;
+									setTimeout(() => {
+										const bgTaskId = Math.random().toString(36).slice(2, 10);
+										resolve(bgTaskId);
+									}, 100);
+								}
 							},
 						})
 						.then((result) => ({ backgrounded: false as const, ...result }));
@@ -602,19 +673,36 @@ export function createBashToolDefinition(
 					}
 
 					if (raceResult.backgrounded) {
-						// Ctrl+B was pressed — stop onData callbacks and move process to TaskManager
+						// Move process to TaskManager
 						isBackgrounded = true;
 						clearUpdateTimer();
+						let registeredTaskId: string | undefined;
 						if (childProcess && taskManager) {
-							taskManager.register({
+							registeredTaskId = taskManager.register({
 								command,
 								description: command,
 								process: childProcess,
 							});
+							// Open log stream and write existing output
+							const task = taskManager.getTask(registeredTaskId);
+							if (task) {
+								bgLogStream = createWriteStream(task.outputPath, { flags: "a" });
+								// Write existing output from accumulator
+								const existingSnapshot = output.snapshot();
+								if (existingSnapshot.content) {
+									bgLogStream.write(existingSnapshot.content);
+									if (!existingSnapshot.content.endsWith("\\n")) {
+										bgLogStream.write(Buffer.from("\\n"));
+									}
+								}
+							}
 						}
+						const bgTask = registeredTaskId ? taskManager?.getTask(registeredTaskId) : undefined;
+						const pidNote = childProcess?.pid ? `\nPID: ${childProcess.pid}` : "";
+						const outputNote = bgTask ? `\nOutput: ${bgTask.outputPath}` : "";
 						return {
-							content: [{ type: "text", text: `Command moved to background (task ${raceResult.taskId})` }],
-							details: { metadata: { intent: "bash" as const } },
+							content: [{ type: "text", text: `Command moved to background (task ${registeredTaskId})${pidNote}${outputNote}` }],
+							details: { metadata: { intent: "bash" as const }, isBackground: true, backgroundTaskId: registeredTaskId },
 						};
 					}
 
@@ -668,6 +756,7 @@ export function createBashToolDefinition(
 				return {
 					content: [{ type: "text", text: outputText }],
 					details: { ...details, metadata: intent, exitCode },
+					isError: exitCode != null && exitCode !== 0,
 				};
 			} finally {
 				clearUpdateTimer();

@@ -17,7 +17,8 @@
 		"toolPendingBg": "#282832",
 		"toolSuccessBg": "#283228",
 		"toolErrorBg": "#3c2828",
-		"customMsgBg": "#2d2838"
+		"customMsgBg": "#2d2838",
+		"toolBackgroundBg": "#1e2d3d"
 	},
 	"colors": {
 		"accent": "accent",
@@ -31,7 +32,6 @@
 		"dim": "dimGray",
 		"text": "text",
 		"thinkingText": "gray",
-
 		"selectedBg": "selectedBg",
 		"userMessageBg": "userMsgBg",
 		"userMessageText": "text",
@@ -43,7 +43,6 @@
 		"toolErrorBg": "toolErrorBg",
 		"toolTitle": "text",
 		"toolOutput": "gray",
-
 		"mdHeading": "#f0c674",
 		"mdLink": "#81a2be",
 		"mdLinkUrl": "dimGray",
@@ -54,11 +53,9 @@
 		"mdQuoteBorder": "gray",
 		"mdHr": "gray",
 		"mdListBullet": "accent",
-
 		"toolDiffAdded": "green",
 		"toolDiffRemoved": "red",
 		"toolDiffContext": "gray",
-
 		"syntaxComment": "#6A9955",
 		"syntaxKeyword": "#569CD6",
 		"syntaxFunction": "#DCDCAA",
@@ -68,15 +65,14 @@
 		"syntaxType": "#4EC9B0",
 		"syntaxOperator": "#D4D4D4",
 		"syntaxPunctuation": "#D4D4D4",
-
 		"thinkingOff": "darkGray",
 		"thinkingMinimal": "#6e6e6e",
 		"thinkingLow": "#5f87af",
 		"thinkingMedium": "#81a2be",
 		"thinkingHigh": "#b294bb",
 		"thinkingXhigh": "#d183e8",
-
-		"bashMode": "green"
+		"bashMode": "green",
+		"toolBackgroundBg": "toolBackgroundBg"
 	},
 	"export": {
 		"pageBg": "#18181e",

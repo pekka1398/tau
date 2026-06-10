@@ -269,6 +269,13 @@ export class InteractiveMode {
 	private lastSubmittedText = "";
 	/** chatContainer.children.length before user message was added. Used to rewind on ESC. */
 	private chatChildrenBeforeUserMessage = -1;
+	/**
+	 * Whether aborting during "waiting" should revert the user message back to the editor.
+	 * True only during the first waiting phase (before any assistant response).
+	 * Cleared when the first assistant message starts, so tool-execution waitings
+	 * only abort without reverting.
+	 */
+	private revertOnAbort = false;
 
 	// Loader state machine
 	private loaderStatus: "idle" | "waiting" | "thinking" | "streaming" | "executing" = "idle";
@@ -286,6 +293,7 @@ export class InteractiveMode {
 	private toolStartTime = 0;
 	private waitingStartTime = 0;
 	private loaderTickTimer: ReturnType<typeof setInterval> | undefined;
+	private bgTaskRefreshTimer: ReturnType<typeof setInterval> | undefined;
 	private readonly defaultHiddenThinkingLabel = "Thinking...";
 	private hiddenThinkingLabel = this.defaultHiddenThinkingLabel;
 
@@ -415,6 +423,25 @@ export class InteractiveMode {
 		this.footerDataProvider = new FooterDataProvider(this.sessionManager.getCwd());
 		this.footer = new FooterComponent(this.session, this.footerDataProvider);
 		this.footer.setAutoCompactEnabled(this.session.autoCompactionEnabled);
+		this.footer.setTaskManager(this.session.taskManager);
+
+		// Listen for background task events to refresh footer and border
+		this.session.taskManager.on("task_completed", () => {
+			this.footer.invalidate();
+			this.updateEditorBorderColor();
+			this.ui.requestRender();
+			if (this.session.taskManager.getRunningTasks().length === 0) {
+				this.stopBgTaskRefresh();
+			}
+		});
+		this.session.taskManager.on("task_failed", () => {
+			this.footer.invalidate();
+			this.updateEditorBorderColor();
+			this.ui.requestRender();
+			if (this.session.taskManager.getRunningTasks().length === 0) {
+				this.stopBgTaskRefresh();
+			}
+		});
 
 		// Load hide thinking block setting
 		this.hideThinkingBlock = this.settingsManager.getHideThinkingBlock();
@@ -1720,6 +1747,25 @@ export class InteractiveMode {
 		}
 	}
 
+	private startBgTaskRefresh(): void {
+		this.stopBgTaskRefresh();
+		this.bgTaskRefreshTimer = setInterval(() => {
+			// Use differential render - only updates changed lines, won't interrupt mouse selection
+			this.ui.requestRender();
+			// Stop timer if no more running tasks
+			if (this.session.taskManager.getRunningTasks().length === 0) {
+				this.stopBgTaskRefresh();
+			}
+		}, 1000);
+	}
+
+	private stopBgTaskRefresh(): void {
+		if (this.bgTaskRefreshTimer) {
+			clearInterval(this.bgTaskRefreshTimer);
+			this.bgTaskRefreshTimer = undefined;
+		}
+	}
+
 	private createWorkingLoader(): Loader {
 		return new Loader(
 			this.ui,
@@ -2420,8 +2466,9 @@ export class InteractiveMode {
 					this.loadingAnimation = undefined;
 					this.statusContainer.clear();
 				}
-				if (this.lastSubmittedText) {
+				if (this.revertOnAbort) {
 					// First waiting: fully revert to state before Enter
+					this.revertOnAbort = false;
 					this.clearAllQueues();
 					this.editor.setText(this.lastSubmittedText);
 					this.lastSubmittedText = "";
@@ -2726,6 +2773,7 @@ export class InteractiveMode {
 
 			// Store text for restore-on-abort
 			this.lastSubmittedText = text;
+			this.revertOnAbort = true;
 
 			if (this.onInputCallback) {
 				this.onInputCallback(text);
@@ -2754,6 +2802,10 @@ export class InteractiveMode {
 				this.pendingTools.clear();
 				if (this.settingsManager.getShowTerminalProgress()) {
 					this.ui.terminal.setProgress(true);
+				}
+				// Start bg task refresh if there are running background tasks
+				if (this.session.taskManager.getRunningTasks().length > 0) {
+					this.startBgTaskRefresh();
 				}
 				// Restore main escape handler if retry handler is still active
 				// (retry success event fires later, but we need main handler now)
@@ -2816,12 +2868,16 @@ export class InteractiveMode {
 						this.hideThinkingBlock,
 						this.getMarkdownThemeWithSettings(),
 						this.hiddenThinkingLabel,
+						this.settingsManager.getShowSemanticZones(),
 					);
 					this.streamingMessage = event.message;
 					this.chatContainer.addChild(this.streamingComponent);
 					this.streamingComponent.updateContent(this.streamingMessage);
 					// State machine: reset chars for new assistant message
 					this.streamingChars = 0;
+					// Once the assistant starts responding, abort should not revert
+					// the user message back to the editor
+					this.revertOnAbort = false;
 					this.ui.requestRender();
 				}
 				break;
@@ -2988,6 +3044,10 @@ export class InteractiveMode {
 							`contentLen=${r?.content?.length ?? 0}\n`,
 					);
 				}
+				// Start bg task refresh if this is a background task
+				if (event.result?.details?.isBackground) {
+					this.startBgTaskRefresh();
+				}
 				const component = this.pendingTools.get(event.toolCallId);
 				if (component) {
 					component.updateResult({ ...event.result, isError: event.isError });
@@ -3010,12 +3070,17 @@ export class InteractiveMode {
 				if (this.settingsManager.getShowTerminalProgress()) {
 					this.ui.terminal.setProgress(false);
 				}
+				// Only stop bg refresh if no background tasks are still running
+				if (this.session.taskManager.getRunningTasks().length === 0) {
+					this.stopBgTaskRefresh();
+				}
 				// State machine: → idle
 				this.logLoaderTransition("idle", "agent_end");
 				this.loaderStatus = "idle";
 				this.runningToolName = "";
 				this.lastSubmittedText = "";
 				this.chatChildrenBeforeUserMessage = -1;
+				this.revertOnAbort = false;
 				this.stopLoaderTick();
 				if (this.loadingAnimation) {
 					this.loadingAnimation.stop();
@@ -3265,11 +3330,12 @@ export class InteractiveMode {
 							const userComponent = new UserMessageComponent(
 								skillBlock.userMessage,
 								this.getMarkdownThemeWithSettings(),
+								this.settingsManager.getShowSemanticZones(),
 							);
 							this.chatContainer.addChild(userComponent);
 						}
 					} else {
-						const userComponent = new UserMessageComponent(textContent, this.getMarkdownThemeWithSettings());
+						const userComponent = new UserMessageComponent(textContent, this.getMarkdownThemeWithSettings(), this.settingsManager.getShowSemanticZones());
 						this.chatContainer.addChild(userComponent);
 					}
 					if (options?.populateHistory) {
@@ -3284,6 +3350,7 @@ export class InteractiveMode {
 					this.hideThinkingBlock,
 					this.getMarkdownThemeWithSettings(),
 					this.hiddenThinkingLabel,
+					this.settingsManager.getShowSemanticZones(),
 				);
 				this.chatContainer.addChild(assistantComponent);
 				break;
@@ -3671,6 +3738,7 @@ export class InteractiveMode {
 		const taskId = this.session.backgroundActiveBash();
 		if (taskId) {
 			this.showStatus(`Moved to background (task ${taskId})`);
+			this.startBgTaskRefresh();
 		} else {
 			this.showStatus("No running bash command to background");
 		}
@@ -4062,6 +4130,7 @@ export class InteractiveMode {
 					quietStartup: this.settingsManager.getQuietStartup(),
 					clearOnShrink: this.settingsManager.getClearOnShrink(),
 					showTerminalProgress: this.settingsManager.getShowTerminalProgress(),
+					showSemanticZones: this.settingsManager.getShowSemanticZones(),
 					warnings: this.settingsManager.getWarnings(),
 				},
 				{
@@ -4180,6 +4249,10 @@ export class InteractiveMode {
 					},
 					onShowTerminalProgressChange: (enabled) => {
 						this.settingsManager.setShowTerminalProgress(enabled);
+					},
+					onShowSemanticZonesChange: (enabled) => {
+						this.settingsManager.setShowSemanticZones(enabled);
+						this.rebuildChatFromMessages();
 					},
 					onWarningsChange: (warnings) => {
 						this.settingsManager.setWarnings(warnings);

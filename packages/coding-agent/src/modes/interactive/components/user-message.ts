@@ -10,9 +10,11 @@ const OSC133_ZONE_FINAL = "\x1b]133;C\x07";
  */
 export class UserMessageComponent extends Container {
 	private contentBox: Box;
+	private showSemanticZones: boolean;
 
-	constructor(text: string, markdownTheme: MarkdownTheme = getMarkdownTheme()) {
+	constructor(text: string, markdownTheme: MarkdownTheme = getMarkdownTheme(), showSemanticZones = false) {
 		super();
+		this.showSemanticZones = showSemanticZones;
 		this.contentBox = new Box(1, 0, (content: string) => theme.bg("userMessageBg", content), { paddingRight: 0 });
 		this.contentBox.addChild(
 			new Markdown(
@@ -31,7 +33,7 @@ export class UserMessageComponent extends Container {
 
 	override render(width: number): string[] {
 		const lines = super.render(width);
-		if (lines.length === 0) {
+		if (lines.length === 0 || !this.showSemanticZones) {
 			return lines;
 		}
 

@@ -14,6 +14,7 @@ export class AssistantMessageComponent extends Container {
 	private hideThinkingBlock: boolean;
 	private markdownTheme: MarkdownTheme;
 	private hiddenThinkingLabel: string;
+	private showSemanticZones: boolean;
 	private lastMessage?: AssistantMessage;
 	private hasToolCalls = false;
 
@@ -22,12 +23,14 @@ export class AssistantMessageComponent extends Container {
 		hideThinkingBlock = false,
 		markdownTheme: MarkdownTheme = getMarkdownTheme(),
 		hiddenThinkingLabel = "Thinking...",
+		showSemanticZones = false,
 	) {
 		super();
 
 		this.hideThinkingBlock = hideThinkingBlock;
 		this.markdownTheme = markdownTheme;
 		this.hiddenThinkingLabel = hiddenThinkingLabel;
+		this.showSemanticZones = showSemanticZones;
 
 		// Container for text/thinking content
 		this.contentContainer = new Container();
@@ -61,7 +64,7 @@ export class AssistantMessageComponent extends Container {
 
 	override render(width: number): string[] {
 		const lines = super.render(width);
-		if (this.hasToolCalls || lines.length === 0) {
+		if (this.hasToolCalls || lines.length === 0 || !this.showSemanticZones) {
 			return lines;
 		}
 
