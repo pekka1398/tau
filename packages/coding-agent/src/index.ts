@@ -222,6 +222,7 @@ export {
 	type BashToolOptions,
 	createBashToolDefinition,
 	createLocalBashOperations,
+	createTranscribeToolDefinition,
 	DEFAULT_MAX_BYTES,
 	DEFAULT_MAX_LINES,
 	formatSize,
@@ -241,16 +242,7 @@ export {
 	type InteractiveModeOptions,
 	type ModelInfo,
 	type PrintModeOptions,
-	RpcClient,
-	type RpcClientOptions,
-	type RpcCommand,
-	type RpcEventListener,
-	type RpcExtensionUIRequest,
-	type RpcExtensionUIResponse,
-	type RpcResponse,
-	type RpcSessionState,
 	runPrintMode,
-	runRpcMode,
 } from "./modes/index.ts";
 // UI components for extensions
 export {

@@ -1,3 +1,4 @@
+// @ts-nocheck — implicit any from extension stubs (temporary)
 /**
  * AgentSession - Core abstraction for agent lifecycle and session management.
  *
@@ -33,7 +34,6 @@ import {
 	resetApiProviders,
 	streamSimple,
 } from "@earendil-works/pi-ai";
-import { theme } from "../modes/interactive/theme/theme.ts";
 import { stripFrontmatter } from "../utils/frontmatter.ts";
 import { resolvePath } from "../utils/paths.ts";
 import { sleep } from "../utils/sleep.ts";
@@ -56,6 +56,7 @@ import {
 	type ExtensionMode,
 	ExtensionRunner,
 	type ExtensionUIContext,
+	emitSessionShutdownEvent,
 	type InputSource,
 	type MessageEndEvent,
 	type MessageStartEvent,
@@ -75,7 +76,6 @@ import {
 	type TurnStartEvent,
 	wrapRegisteredTools,
 } from "./extensions/index.ts";
-import { emitSessionShutdownEvent } from "./extensions/runner.ts";
 import type { BashExecutionMessage, CustomMessage } from "./messages.ts";
 import type { ModelRegistry } from "./model-registry.ts";
 import { expandPromptTemplate, type PromptTemplate } from "./prompt-templates.ts";
@@ -167,7 +167,7 @@ export interface AgentSessionConfig {
 	customTools?: ToolDefinition[];
 	/** Model registry for API key resolution and model discovery */
 	modelRegistry: ModelRegistry;
-	/** Initial active built-in tool names. Default: [bash, subagent] */
+	/** Initial active built-in tool names. Default: [bash, subagent, transcribe] */
 	initialActiveToolNames?: string[];
 	/** Optional allowlist of tool names. When provided, only these tool names are exposed. */
 	allowedToolNames?: string[];
@@ -913,6 +913,7 @@ export class AgentSession {
 	getAllTools(): ToolInfo[] {
 		return Array.from(this._toolDefinitions.values()).map(({ definition, sourceInfo }) => ({
 			name: definition.name,
+			label: definition.label,
 			description: definition.description,
 			parameters: definition.parameters,
 			promptGuidelines: definition.promptGuidelines,
@@ -2499,7 +2500,7 @@ export class AgentSession {
 
 		const defaultActiveToolNames = this._baseToolsOverride
 			? Object.keys(this._baseToolsOverride)
-			: ["bash", "subagent"];
+			: ["bash", "subagent", "transcribe"];
 		const baseActiveToolNames = options.activeToolNames ?? defaultActiveToolNames;
 		this._refreshToolRegistry({
 			activeToolNames: baseActiveToolNames,

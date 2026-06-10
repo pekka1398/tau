@@ -2,18 +2,17 @@ import { appendFileSync, constants, createWriteStream, existsSync } from "node:f
 import { access as fsAccess } from "node:fs/promises";
 import { resolve as pathResolve } from "node:path";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import { Container, Text, truncateToWidth } from "@earendil-works/pi-tui";
+import { Container, Text } from "@earendil-works/pi-tui";
 import { AI_DASH } from "ai-dash";
 import { spawn } from "child_process";
 import { type Static, Type } from "typebox";
-import { keyHint } from "../../modes/interactive/components/keybinding-hints.ts";
 import { truncateToVisualLines } from "../../modes/interactive/components/visual-truncate.ts";
 import { theme } from "../../modes/interactive/theme/theme.ts";
 import { waitForChildProcess } from "../../utils/child-process.ts";
 import { getShellEnv, killProcessTree, trackDetachedChildPid, untrackDetachedChildPid } from "../../utils/shell.ts";
-import type { AgentToolResult, ToolDefinition, ToolRenderResultOptions } from "../extensions/types.ts";
+import type { AgentToolResult, ToolDefinition, ToolRenderResultOptions } from "../tool-types.ts";
 import { OutputAccumulator } from "./output-accumulator.ts";
-import { getTextOutput, invalidArgText, str } from "./render-utils.ts";
+import { getTextOutput, invalidArgText } from "./render-utils.ts";
 import { wrapToolDefinition } from "./tool-definition-wrapper.ts";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult } from "./truncate.ts";
 
@@ -230,8 +229,9 @@ class BashResultRenderComponent extends Container {
 			this.state.cachedLines = visualLines;
 			this.state.cachedSkipped = skippedCount;
 			if (process.env.PI_DEBUG_TOOL_RESULT) {
-				appendFileSync("/tmp/bash-render.log",
-					`[${new Date().toISOString()}] BashResultRender: collapsedStyledOutput exists → ${visualLines.length} lines (skipped=${skippedCount})\n`
+				appendFileSync(
+					"/tmp/bash-render.log",
+					`[${new Date().toISOString()}] BashResultRender: collapsedStyledOutput exists → ${visualLines.length} lines (skipped=${skippedCount})\n`,
 				);
 			}
 			return visualLines;
@@ -275,7 +275,7 @@ function rebuildBashResultRenderComponent(
 	startedAt: number | undefined,
 	endedAt: number | undefined,
 ): void {
-	const state = component.state;
+	const _state = component.state;
 	const _dbg = process.env.PI_DEBUG_TOOL_RESULT;
 	const _ts = () => new Date().toISOString();
 	component.clear();
@@ -412,12 +412,31 @@ export function createBashToolDefinition(
 				continue;
 			}
 
-			if (c === "'") { inSingleQuote = true; current += c; continue; }
-			if (c === '"') { inDoubleQuote = true; current += c; continue; }
-			if (c === "(") { depth++; current += c; continue; }
-			if (c === ")") { depth--; current += c; continue; }
+			if (c === "'") {
+				inSingleQuote = true;
+				current += c;
+				continue;
+			}
+			if (c === '"') {
+				inDoubleQuote = true;
+				current += c;
+				continue;
+			}
+			if (c === "(") {
+				depth++;
+				current += c;
+				continue;
+			}
+			if (c === ")") {
+				depth--;
+				current += c;
+				continue;
+			}
 
-			if (depth > 0) { current += c; continue; }
+			if (depth > 0) {
+				current += c;
+				continue;
+			}
 
 			// Shell operators
 			if (c === "|") {
@@ -635,7 +654,7 @@ export function createBashToolDefinition(
 				});
 
 				// For run_in_background: resolve immediately after spawn
-				let autoBackground = run_in_background && taskManager;
+				const autoBackground = run_in_background && taskManager;
 
 				// Register in backgroundRegistry so Ctrl+B can trigger it
 				const bgRegistry = options?.backgroundRegistry;
@@ -651,7 +670,7 @@ export function createBashToolDefinition(
 							signal,
 							timeout,
 							env: spawnContext.env,
-						onSpawn: (child) => {
+							onSpawn: (child) => {
 								childProcess = child;
 								// For run_in_background: resolve after 0.1s to let exec set up
 								if (autoBackground && backgroundResolve) {
@@ -701,8 +720,17 @@ export function createBashToolDefinition(
 						const pidNote = childProcess?.pid ? `\nPID: ${childProcess.pid}` : "";
 						const outputNote = bgTask ? `\nOutput: ${bgTask.outputPath}` : "";
 						return {
-							content: [{ type: "text", text: `Command moved to background (task ${registeredTaskId})${pidNote}${outputNote}` }],
-							details: { metadata: { intent: "bash" as const }, isBackground: true, backgroundTaskId: registeredTaskId },
+							content: [
+								{
+									type: "text",
+									text: `Command moved to background (task ${registeredTaskId})${pidNote}${outputNote}`,
+								},
+							],
+							details: {
+								metadata: { intent: "bash" as const },
+								isBackground: true,
+								backgroundTaskId: registeredTaskId,
+							},
 						};
 					}
 

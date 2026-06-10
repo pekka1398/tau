@@ -447,7 +447,7 @@ export const streamSimpleOpenAICompletions: StreamFunction<"openai-completions",
 
 function createClient(
 	model: Model<"openai-completions">,
-	context: Context,
+	_context: Context,
 	apiKey: string,
 	optionsHeaders?: Record<string, string>,
 	sessionId?: string,

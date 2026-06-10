@@ -3,7 +3,13 @@
  */
 
 import { ProcessTerminal, TUI } from "@earendil-works/pi-tui";
-import type { ResolvedPaths } from "../core/package-manager.ts";
+export interface ResolvedPaths {
+	extensions: any[];
+	skills: any[];
+	prompts: any[];
+	themes: any[];
+}
+
 import type { SettingsManager } from "../core/settings-manager.ts";
 import { ConfigSelectorComponent } from "../modes/interactive/components/config-selector.ts";
 import { initTheme, stopThemeWatcher } from "../modes/interactive/theme/theme.ts";

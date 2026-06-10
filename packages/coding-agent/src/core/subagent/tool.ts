@@ -15,7 +15,7 @@ import { randomUUID } from "node:crypto";
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 import { getSubagentOutput, getSubagentUsage, runSubagent } from "@earendil-works/pi-agent-core";
 import { Type } from "typebox";
-import type { ExtensionContext, ToolDefinition } from "../extensions/types.ts";
+import type { ToolDefinition } from "../tool-types.ts";
 import type { AgentConfig, AgentScope } from "./agents.ts";
 import { discoverAgents } from "./agents.ts";
 import type { TaskRegistry } from "./task-registry.ts";
@@ -381,7 +381,16 @@ export function createSubagentToolDefinition(
 			if (isAsync) {
 				// Single async
 				if (p.agent && p.task) {
-					const taskId = runSingleAgentAsync(taskRegistry, agents, p.agent, p.task, model, getApiKey, undefined, getTools?.());
+					const taskId = runSingleAgentAsync(
+						taskRegistry,
+						agents,
+						p.agent,
+						p.task,
+						model,
+						getApiKey,
+						undefined,
+						getTools?.(),
+					);
 					return {
 						content: [
 							{

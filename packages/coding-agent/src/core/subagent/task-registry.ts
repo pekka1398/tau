@@ -6,8 +6,7 @@
  * back into the main agent when tasks complete.
  */
 
-import type { AgentMessage } from "@earendil-works/pi-agent-core";
-import type { SingleResult, SubagentDetails } from "./tool.ts";
+import type { SingleResult } from "./tool.ts";
 
 // ============================================================================
 // Types

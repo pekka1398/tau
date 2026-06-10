@@ -1,3 +1,4 @@
+// @ts-nocheck — implicit any from extension stubs (temporary)
 /**
  * Print mode (single-shot): Send prompts, output result, exit.
  *

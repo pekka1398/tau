@@ -1134,7 +1134,9 @@ export class TUI extends Container {
 		if (this.stopped) return;
 		const width = this.terminal.columns;
 		const height = this.terminal.rows;
-		this._drLog(`doRender START prev=${this.previousLines.length} w=${width} h=${height} hwCursor=${this.hardwareCursorRow} clearOnShrink=${this.clearOnShrink}`);
+		this._drLog(
+			`doRender START prev=${this.previousLines.length} w=${width} h=${height} hwCursor=${this.hardwareCursorRow} clearOnShrink=${this.clearOnShrink}`,
+		);
 		const widthChanged = this.previousWidth !== 0 && this.previousWidth !== width;
 		const heightChanged = this.previousHeight !== 0 && this.previousHeight !== height;
 		const previousBufferLength = this.previousHeight > 0 ? this.previousViewportTop + this.previousHeight : height;
@@ -1247,7 +1249,9 @@ export class TUI extends Container {
 				lastChanged = i;
 			}
 		}
-		this._drLog(`DIFF: prev=${this.previousLines.length} new=${newLines.length} first=${firstChanged} last=${lastChanged} hwCursor=${this.hardwareCursorRow}`);
+		this._drLog(
+			`DIFF: prev=${this.previousLines.length} new=${newLines.length} first=${firstChanged} last=${lastChanged} hwCursor=${this.hardwareCursorRow}`,
+		);
 
 		const appendedLines = newLines.length > this.previousLines.length;
 		if (appendedLines) {
@@ -1329,7 +1333,9 @@ export class TUI extends Container {
 
 		// Render from first changed line to end
 		// Build buffer with all updates wrapped in synchronized output
-		this._drLog(`PATH: differential render (first=${firstChanged} last=${lastChanged} renderEnd=${Math.min(lastChanged, newLines.length - 1)})`);
+		this._drLog(
+			`PATH: differential render (first=${firstChanged} last=${lastChanged} renderEnd=${Math.min(lastChanged, newLines.length - 1)})`,
+		);
 		let buffer = "\x1b[?2026h"; // Begin synchronized output
 		buffer += this.deleteChangedKittyImages(firstChanged, lastChanged);
 		const prevViewportBottom = prevViewportTop + height - 1;
@@ -1401,7 +1407,9 @@ export class TUI extends Container {
 
 		// If we had more lines before, clear them and move cursor back
 		if (this.previousLines.length > newLines.length) {
-			this._drLog(`CLEARING extra: ${this.previousLines.length - newLines.length} lines (prev=${this.previousLines.length} new=${newLines.length})`);
+			this._drLog(
+				`CLEARING extra: ${this.previousLines.length - newLines.length} lines (prev=${this.previousLines.length} new=${newLines.length})`,
+			);
 			// Move to end of new content first if we stopped before it
 			if (renderEnd < newLines.length - 1) {
 				const moveDown = newLines.length - 1 - renderEnd;
