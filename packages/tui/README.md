@@ -789,3 +789,55 @@ Set `PI_TUI_WRITE_LOG` to capture the raw ANSI stream written to stdout.
 ```bash
 PI_TUI_WRITE_LOG=/tmp/tui-ansi.log npx tsx test/chat-simple.ts
 ```
+
+### Debugging rendering issues
+
+When components don't update correctly on screen, the issue is usually one of:
+
+1. **Component state not fully cleared** — Components may have cached render state (e.g., `collapsedStyledOutput` in `BashResultRenderComponent`) that persists even after `children` are cleared. When modifying component state, ensure ALL cached state is reset, not just the children array. An `early return` that skips state cleanup will leave stale cached data that `render()` continues to use.
+
+2. **Differential rendering not clearing old content** — The TUI's differential rendering only updates changed lines. When content shrinks (e.g., tool output disappears), old lines must be explicitly cleared. If `clearOnShrink` is `false` (default), the TUI relies on the diff path to clear old lines. Check the `hardwareCursorRow` tracking — if it's stale (e.g., because a component didn't emit `CURSOR_MARKER`), cursor movement commands may target the wrong screen position.
+
+3. **Render timing** — `requestRender()` batches renders via `process.nextTick` + `setTimeout`. State changes and render execution may happen in different event loop ticks. A component can be cleared by one event handler, then rendered by a timer that was scheduled before the clear.
+
+**Debug environment variables:**
+
+```bash
+# Capture raw ANSI output for post-mortem analysis
+PI_TUI_WRITE_LOG=/tmp/tui-ansi.log
+
+# Force full re-render when content shrinks (bypasses differential rendering)
+PI_CLEAR_ON_SHRINK=1
+
+# Enable TUI render path logging (shows which rendering strategy was used)
+PI_DEBUG_REDRAW=1
+```
+
+**Debugging checklist for component rendering:**
+
+- Check if the component's `render()` returns the expected number of lines
+- Check if cached state (e.g., `collapsedStyledOutput`) is `null` when it should be
+- Check if `hideComponent` flag is set correctly
+- Use `PI_CLEAR_ON_SHRINK=1` to rule out differential rendering issues
+- Use `PI_TUI_WRITE_LOG` to capture the actual ANSI output and compare with expected
+
+### Common pitfall: early return without clearing cached state
+
+When a component has both `children` and internal cached state (like `collapsedStyledOutput`), an early return that only clears `children` will leave the cached state intact. The `render()` method will continue using the stale cached data.
+
+```typescript
+// WRONG: early return leaves collapsedStyledOutput intact
+if (shouldHide) {
+    component.clear();  // clears children
+    return;             // but collapsedStyledOutput is still set!
+}
+
+// RIGHT: clear all cached state before returning
+if (shouldHide) {
+    component.clear();
+    component.state.collapsedStyledOutput = null;  // clear cached state too
+    return;
+}
+```
+
+This bug manifests as: content disappears on rebuild (Ctrl+T) but persists during live updates. Rebuilds create fresh components with null cached state, while live updates reuse the same component instance with stale cached state.

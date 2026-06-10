@@ -177,6 +177,17 @@ static int is_passthrough(const char *cmd)
 	       strcmp(cmd, "pr") == 0;
 }
 
+/* Check if a command has a read-like intent (read, list, or search).
+ * Used for compound pipe detection: if all commands are read-like,
+ * the pipe's output can be hidden in collapsed mode. */
+static int is_readlike(const char *cmd)
+{
+	const char *intent = classify_intent(cmd);
+	return strcmp(intent, "read") == 0 ||
+	       strcmp(intent, "list") == 0 ||
+	       strcmp(intent, "search") == 0;
+}
+
 /*
  * Get the command name (first argv[0]) from an NCMD node.
  * Returns NULL if not an NCMD or no args.
@@ -222,7 +233,19 @@ void meta_emit_intent(union node *n)
 			}
 		}
 
-		if (all_passthrough) {
+		/* Check if all commands in the pipe are read-like */
+		int all_readlike = is_readlike(first_cmd);
+		if (all_readlike) {
+			for (p = nl->next; p; p = p->next) {
+				const char *cmd = get_cmd_name(p->n);
+				if (!cmd || !is_readlike(cmd)) {
+					all_readlike = 0;
+					break;
+				}
+			}
+		}
+
+		if (all_passthrough || all_readlike) {
 			/* Use first command's intent */
 			const char *intent = classify_intent(first_cmd);
 			char esc[256];

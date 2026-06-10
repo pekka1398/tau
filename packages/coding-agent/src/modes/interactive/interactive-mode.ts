@@ -272,6 +272,15 @@ export class InteractiveMode {
 
 	// Loader state machine
 	private loaderStatus: "idle" | "waiting" | "thinking" | "streaming" | "executing" = "idle";
+	private loaderStatusChangedAt = Date.now();
+	private logLoaderTransition(to: string, extra?: string): void {
+		if (!process.env.PI_DEBUG_LOADER) return;
+		const now = Date.now();
+		const elapsed = now - this.loaderStatusChangedAt;
+		const msg = `[${new Date().toISOString()}] ${this.loaderStatus} → ${to} (${elapsed}ms)${extra ? ` ${extra}` : ""}\n`;
+		fs.appendFileSync("/tmp/loader-debug.log", msg);
+		this.loaderStatusChangedAt = now;
+	}
 	private streamingChars = 0;
 	private runningToolName = "";
 	private toolStartTime = 0;
@@ -1670,7 +1679,12 @@ export class InteractiveMode {
 		switch (this.loaderStatus) {
 			case "waiting": {
 				const elapsed = ((Date.now() - this.waitingStartTime) / 1000).toFixed(0);
-				label = `waiting (${elapsed}s)`;
+				const stage = this.session.httpStage;
+				if (stage) {
+					label = `waiting (${elapsed}s) — ${stage}`;
+				} else {
+					label = `waiting (${elapsed}s)`;
+				}
 				break;
 			}
 			case "thinking":
@@ -2398,6 +2412,7 @@ export class InteractiveMode {
 		this.defaultEditor.onEscape = () => {
 			if (this.loaderStatus === "waiting") {
 				this.agent.abort();
+				this.logLoaderTransition("idle", "ESC (waiting)");
 				this.loaderStatus = "idle";
 				this.stopLoaderTick();
 				if (this.loadingAnimation) {
@@ -2756,6 +2771,7 @@ export class InteractiveMode {
 				}
 				this.stopWorkingLoader();
 				// State machine: idle → waiting
+				this.logLoaderTransition("waiting", "agent_start");
 				this.loaderStatus = "waiting";
 				this.streamingChars = 0;
 				this.runningToolName = "";
@@ -2789,7 +2805,7 @@ export class InteractiveMode {
 				if (event.message.role === "custom") {
 					this.addMessageToChat(event.message);
 					this.ui.requestRender();
-			} else if (event.message.role === "user") {
+				} else if (event.message.role === "user") {
 					this.chatChildrenBeforeUserMessage = this.chatContainer.children.length;
 					this.addMessageToChat(event.message);
 					this.updatePendingMessagesDisplay();
@@ -2824,6 +2840,7 @@ export class InteractiveMode {
 					if (ev.type === "thinking_start" || ev.type === "thinking_delta") {
 						if (!toolsRunning) {
 							if (this.loaderStatus !== "thinking") {
+								this.logLoaderTransition("thinking", `toolsRunning=${toolsRunning}`);
 								this.streamingChars = 0; // Reset on phase transition
 							}
 							this.loaderStatus = "thinking";
@@ -2840,6 +2857,7 @@ export class InteractiveMode {
 					) {
 						if (!toolsRunning) {
 							if (this.loaderStatus !== "streaming") {
+								this.logLoaderTransition("streaming", `ev=${ev.type} toolsRunning=${toolsRunning}`);
 								this.streamingChars = 0; // Reset on phase transition
 							}
 							this.loaderStatus = "streaming";
@@ -2940,6 +2958,7 @@ export class InteractiveMode {
 				}
 				component.markExecutionStarted();
 				// State machine: → executing
+				this.logLoaderTransition("executing", event.toolName);
 				this.loaderStatus = "executing";
 				this.runningToolName = event.toolName;
 				this.toolStartTime = Date.now();
@@ -2959,6 +2978,16 @@ export class InteractiveMode {
 			}
 
 			case "tool_execution_end": {
+				if (process.env.PI_DEBUG_TOOL_RESULT) {
+					const r = event.result;
+					fs.appendFileSync(
+						"/tmp/tool-result-end.log",
+						`[${new Date().toISOString()}] tool=${event.toolName} ` +
+							`hasDetails=${!!r?.details} hasMetadata=${!!r?.details?.metadata} ` +
+							`intent=${r?.details?.metadata?.intent} exitCode=${r?.details?.exitCode} ` +
+							`contentLen=${r?.content?.length ?? 0}\n`,
+					);
+				}
 				const component = this.pendingTools.get(event.toolCallId);
 				if (component) {
 					component.updateResult({ ...event.result, isError: event.isError });
@@ -2966,6 +2995,7 @@ export class InteractiveMode {
 					// State machine: if no more pending tools, transition to waiting
 					// to show LLM latency for the next API call.
 					if (this.pendingTools.size === 0) {
+						this.logLoaderTransition("waiting", "tool_execution_end (all tools done)");
 						this.loaderStatus = "waiting";
 						this.waitingStartTime = Date.now();
 						this.updateLoaderMessage();
@@ -2981,6 +3011,7 @@ export class InteractiveMode {
 					this.ui.terminal.setProgress(false);
 				}
 				// State machine: → idle
+				this.logLoaderTransition("idle", "agent_end");
 				this.loaderStatus = "idle";
 				this.runningToolName = "";
 				this.lastSubmittedText = "";
@@ -3124,6 +3155,14 @@ export class InteractiveMode {
 				if (!event.success) {
 					this.showError(`Retry failed after ${event.attempt} attempts: ${event.finalError || "Unknown error"}`);
 				}
+				this.ui.requestRender();
+				break;
+			}
+
+			case "provider_error": {
+				// Show provider HTTP error status in the loader area
+				const errorText = `Provider error: HTTP ${event.status} — will retry if applicable`;
+				this.showWarning(errorText);
 				this.ui.requestRender();
 				break;
 			}

@@ -1,4 +1,4 @@
-import { constants, existsSync } from "node:fs";
+import { appendFileSync, constants, existsSync } from "node:fs";
 import { access as fsAccess } from "node:fs/promises";
 import { resolve as pathResolve } from "node:path";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
@@ -20,7 +20,12 @@ import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult
 const bashSchema = Type.Object({
 	command: Type.String({ description: "A single shell command to execute" }),
 	timeout: Type.Optional(Type.Number({ description: "Timeout in seconds (optional, no default timeout)" })),
-	run_in_background: Type.Optional(Type.Boolean({ description: "Set to true to run this command in the background. You will be notified when it completes. Use this for long-running commands (builds, tests, servers) so you can continue with other work." })),
+	run_in_background: Type.Optional(
+		Type.Boolean({
+			description:
+				"Set to true to run this command in the background. You will be notified when it completes. Use this for long-running commands (builds, tests, servers) so you can continue with other work.",
+		}),
+	),
 });
 
 export type BashToolInput = Static<typeof bashSchema>;
@@ -222,6 +227,11 @@ class BashResultRenderComponent extends Container {
 			this.state.cachedWidth = width;
 			this.state.cachedLines = visualLines;
 			this.state.cachedSkipped = skippedCount;
+			if (process.env.PI_DEBUG_TOOL_RESULT) {
+				appendFileSync("/tmp/bash-render.log",
+					`[${new Date().toISOString()}] BashResultRender: collapsedStyledOutput exists → ${visualLines.length} lines (skipped=${skippedCount})\n`
+				);
+			}
 			return visualLines;
 		}
 		return super.render(width);
@@ -264,17 +274,35 @@ function rebuildBashResultRenderComponent(
 	endedAt: number | undefined,
 ): void {
 	const state = component.state;
+	const _dbg = process.env.PI_DEBUG_TOOL_RESULT;
+	const _ts = () => new Date().toISOString();
 	component.clear();
 
+	const intent = result.details?.metadata?.intent;
+	const exitCode = result.details?.exitCode;
+	const failed = exitCode != null && exitCode !== 0;
+
+	if (_dbg)
+		appendFileSync(
+			"/tmp/bash-rebuild.log",
+			`[${_ts()}] === rebuildBashResultRenderComponent === expanded=${options.expanded} isPartial=${options.isPartial} intent=${intent} exitCode=${exitCode} failed=${failed}\n`,
+		);
+
 	if (!options.expanded && !options.isPartial) {
-		// read/list/search intents: hide output in collapsed mode
-		// But always show if command failed (exitCode !== 0)
-		const intent = result.details?.metadata?.intent;
-		const exitCode = result.details?.exitCode;
-		const failed = exitCode != null && exitCode !== 0;
 		if (!failed && (intent === "read" || intent === "list" || intent === "search")) {
+			component.state.collapsedStyledOutput = null;
+			if (_dbg)
+				appendFileSync("/tmp/bash-rebuild.log", `[${_ts()}] → EARLY RETURN: hiding read/list/search result\n`);
 			return;
 		}
+		if (_dbg)
+			appendFileSync("/tmp/bash-rebuild.log", `[${_ts()}] → NOT hiding (intent=${intent} or failed=${failed})\n`);
+	} else {
+		if (_dbg)
+			appendFileSync(
+				"/tmp/bash-rebuild.log",
+				`[${_ts()}] → Skipping intent check (expanded=${options.expanded} isPartial=${options.isPartial})\n`,
+			);
 	}
 
 	let output = getTextOutput(result as any, showImages).trim();
@@ -294,12 +322,24 @@ function rebuildBashResultRenderComponent(
 			.join("\n");
 
 		if (options.expanded) {
+			if (_dbg)
+				appendFileSync(
+					"/tmp/bash-rebuild.log",
+					`[${_ts()}] → EXPANDED: adding full output as Text child (${styledOutput.split("\n").length} lines)\n`,
+				);
 			component.state.collapsedStyledOutput = null;
 			component.addChild(new Text(styledOutput, 0, 0));
 		} else {
+			if (_dbg)
+				appendFileSync(
+					"/tmp/bash-rebuild.log",
+					`[${_ts()}] → COLLAPSED: storing as collapsedStyledOutput (${styledOutput.split("\n").length} lines)\n`,
+				);
 			// Collapsed: store full content, visual truncation applied at render time
 			component.state.collapsedStyledOutput = styledOutput;
 		}
+	} else {
+		if (_dbg) appendFileSync("/tmp/bash-rebuild.log", `[${_ts()}] → NO OUTPUT: nothing to render\n`);
 	}
 
 	if (options.expanded) {
@@ -506,7 +546,7 @@ export function createBashToolDefinition(
 
 			const appendStatus = (text: string, status: string) => `${text ? `${text}\n\n` : ""}${status}`;
 
-		try {
+			try {
 				// Read-before-write: pre-check edit commands
 				const editTarget = extractEditTarget(command);
 				if (editTarget) {
@@ -542,13 +582,17 @@ export function createBashToolDefinition(
 
 				try {
 					// Race between normal execution and background signal
-					const execPromise = ops.exec(spawnContext.command, spawnContext.cwd, {
-						onData: handleData,
-						signal,
-						timeout,
-						env: spawnContext.env,
-						onSpawn: (child) => { childProcess = child; },
-					}).then((result) => ({ backgrounded: false as const, ...result }));
+					const execPromise = ops
+						.exec(spawnContext.command, spawnContext.cwd, {
+							onData: handleData,
+							signal,
+							timeout,
+							env: spawnContext.env,
+							onSpawn: (child) => {
+								childProcess = child;
+							},
+						})
+						.then((result) => ({ backgrounded: false as const, ...result }));
 
 					const raceResult = await Promise.race([execPromise, backgroundPromise]);
 
@@ -557,7 +601,7 @@ export function createBashToolDefinition(
 						bgRegistry.delete(_toolCallId);
 					}
 
-				if (raceResult.backgrounded) {
+					if (raceResult.backgrounded) {
 						// Ctrl+B was pressed — stop onData callbacks and move process to TaskManager
 						isBackgrounded = true;
 						clearUpdateTimer();

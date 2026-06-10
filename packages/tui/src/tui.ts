@@ -1124,10 +1124,17 @@ export class TUI extends Container {
 		return null;
 	}
 
+	private _drLog(msg: string): void {
+		if (process.env.PI_DEBUG_TOOL_RESULT) {
+			fs.appendFileSync("/tmp/tui-render.log", `[${new Date().toISOString()}] ${msg}\n`);
+		}
+	}
+
 	private doRender(): void {
 		if (this.stopped) return;
 		const width = this.terminal.columns;
 		const height = this.terminal.rows;
+		this._drLog(`doRender START prev=${this.previousLines.length} w=${width} h=${height} hwCursor=${this.hardwareCursorRow} clearOnShrink=${this.clearOnShrink}`);
 		const widthChanged = this.previousWidth !== 0 && this.previousWidth !== width;
 		const heightChanged = this.previousHeight !== 0 && this.previousHeight !== height;
 		const previousBufferLength = this.previousHeight > 0 ? this.previousViewportTop + this.previousHeight : height;
@@ -1142,6 +1149,7 @@ export class TUI extends Container {
 
 		// Render all components to get new lines
 		let newLines = this.render(width);
+		this._drLog(`rendered ${newLines.length} lines (prev=${this.previousLines.length})`);
 
 		// Composite overlays into the rendered lines (before differential compare)
 		if (this.overlayStack.length > 0) {
@@ -1194,7 +1202,7 @@ export class TUI extends Container {
 
 		// First render - just output everything without clearing (assumes clean screen)
 		if (this.previousLines.length === 0 && !widthChanged && !heightChanged) {
-			logRedraw("first render");
+			this._drLog("PATH: first render → fullRender(false)");
 			fullRender(false);
 			return;
 		}
@@ -1219,7 +1227,7 @@ export class TUI extends Container {
 		// (overlays need the padding, so only do this when no overlays are active)
 		// Configurable via setClearOnShrink() or PI_CLEAR_ON_SHRINK=0 env var
 		if (this.clearOnShrink && newLines.length < this.maxLinesRendered && this.overlayStack.length === 0) {
-			logRedraw(`clearOnShrink (maxLinesRendered=${this.maxLinesRendered})`);
+			this._drLog(`PATH: clearOnShrink → fullRender(true) (new=${newLines.length} < max=${this.maxLinesRendered})`);
 			fullRender(true);
 			return;
 		}
@@ -1239,6 +1247,8 @@ export class TUI extends Container {
 				lastChanged = i;
 			}
 		}
+		this._drLog(`DIFF: prev=${this.previousLines.length} new=${newLines.length} first=${firstChanged} last=${lastChanged} hwCursor=${this.hardwareCursorRow}`);
+
 		const appendedLines = newLines.length > this.previousLines.length;
 		if (appendedLines) {
 			if (firstChanged === -1) {
@@ -1253,6 +1263,7 @@ export class TUI extends Container {
 
 		// No changes - but still need to update hardware cursor position if it moved
 		if (firstChanged === -1) {
+			this._drLog("PATH: no changes");
 			this.positionHardwareCursor(cursorPos, newLines.length);
 			this.previousViewportTop = prevViewportTop;
 			this.previousHeight = height;
@@ -1261,6 +1272,7 @@ export class TUI extends Container {
 
 		// All changes are in deleted lines (nothing to render, just clear)
 		if (firstChanged >= newLines.length) {
+			this._drLog(`PATH: deleted lines (firstChanged=${firstChanged} >= newLen=${newLines.length})`);
 			if (this.previousLines.length > newLines.length) {
 				let buffer = "\x1b[?2026h";
 				buffer += this.deleteChangedKittyImages(firstChanged, lastChanged);
@@ -1309,6 +1321,7 @@ export class TUI extends Container {
 		// Differential rendering can only touch what was actually visible.
 		// If the first changed line is above the previous viewport, we need a full redraw.
 		if (firstChanged < prevViewportTop) {
+			this._drLog(`PATH: firstChanged < viewportTop → fullRender(true) (${firstChanged} < ${prevViewportTop})`);
 			logRedraw(`firstChanged < viewportTop (${firstChanged} < ${prevViewportTop})`);
 			fullRender(true);
 			return;
@@ -1316,6 +1329,7 @@ export class TUI extends Container {
 
 		// Render from first changed line to end
 		// Build buffer with all updates wrapped in synchronized output
+		this._drLog(`PATH: differential render (first=${firstChanged} last=${lastChanged} renderEnd=${Math.min(lastChanged, newLines.length - 1)})`);
 		let buffer = "\x1b[?2026h"; // Begin synchronized output
 		buffer += this.deleteChangedKittyImages(firstChanged, lastChanged);
 		const prevViewportBottom = prevViewportTop + height - 1;
@@ -1387,6 +1401,7 @@ export class TUI extends Container {
 
 		// If we had more lines before, clear them and move cursor back
 		if (this.previousLines.length > newLines.length) {
+			this._drLog(`CLEARING extra: ${this.previousLines.length - newLines.length} lines (prev=${this.previousLines.length} new=${newLines.length})`);
 			// Move to end of new content first if we stopped before it
 			if (renderEnd < newLines.length - 1) {
 				const moveDown = newLines.length - 1 - renderEnd;
@@ -1433,6 +1448,7 @@ export class TUI extends Container {
 		}
 
 		// Write entire buffer at once
+		this._drLog(`WRITE buffer (${buffer.length} bytes)`);
 		this.terminal.write(buffer);
 
 		// Track cursor position for next render
