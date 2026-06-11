@@ -37,6 +37,13 @@ export function formatHttpIdleTimeoutMs(timeoutMs: number): string {
 }
 
 export function configureHttpDispatcher(timeoutMs: number = DEFAULT_HTTP_IDLE_TIMEOUT_MS): void {
+	// Bun has its own fetch and proxy support (HTTP_PROXY/HTTPS_PROXY env vars).
+	// Skipping undici avoids conflicts between Bun's built-in fetch and
+	// undici's global dispatcher.
+	if (typeof process.versions.bun === "string") {
+		return;
+	}
+
 	const normalizedTimeoutMs = parseHttpIdleTimeoutMs(timeoutMs);
 	if (normalizedTimeoutMs === undefined) {
 		throw new Error(`Invalid HTTP idle timeout: ${String(timeoutMs)}`);
