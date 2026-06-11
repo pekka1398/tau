@@ -389,6 +389,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				},
 			};
 
+			const mergedHeaders = mergeProviderAttributionHeaders(model, auth.headers, options?.headers);
+
 			const stream = streamSimple(model, context, {
 				...wrappedOptions,
 				apiKey: auth.apiKey,
@@ -396,7 +398,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				websocketConnectTimeoutMs,
 				maxRetries: options?.maxRetries ?? providerRetrySettings.maxRetries,
 				maxRetryDelayMs: options?.maxRetryDelayMs ?? providerRetrySettings.maxRetryDelayMs,
-				headers: mergeProviderAttributionHeaders(model, auth.headers, options?.headers),
+				headers: mergedHeaders,
 			});
 
 			if (httpDebugEnabled) {

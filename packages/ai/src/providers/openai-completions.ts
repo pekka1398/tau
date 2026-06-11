@@ -466,6 +466,62 @@ function createClient(
 		Object.assign(headers, optionsHeaders);
 	}
 
+	if (process.env.PI_HTTP_LOG === "1") {
+		const realFetch = globalThis.fetch;
+		let _logger: any;
+		let _reqId = 0;
+		const loggingFetch: typeof fetch = async (input, init) => {
+			if (!_logger) {
+				const pino = (await import("pino")).default;
+				_logger = pino({ level: "debug" }, pino.destination(2));
+			}
+			const id = ++_reqId;
+			const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+			let reqBody: any;
+			if (typeof init?.body === "string") {
+				try {
+					reqBody = JSON.parse(init.body);
+				} catch {
+					reqBody = init.body;
+				}
+			}
+			_logger.debug(
+				{ reqId: id, method: init?.method ?? "POST", url, headers: init?.headers, body: reqBody },
+				"http_request",
+			);
+
+			const t0 = Date.now();
+			const response = await realFetch(input, init);
+			const elapsed = Date.now() - t0;
+
+			const cloned = response.clone();
+			let respBody: string | undefined;
+			try {
+				respBody = await cloned.text();
+			} catch {}
+			_logger.debug(
+				{
+					reqId: id,
+					status: response.status,
+					elapsed,
+					bodyLength: respBody?.length,
+					bodyPreview: respBody?.slice(0, 500),
+				},
+				"http_response",
+			);
+
+			return response;
+		};
+
+		return new OpenAI({
+			apiKey,
+			baseURL: model.baseUrl,
+			dangerouslyAllowBrowser: true,
+			defaultHeaders: headers,
+			fetch: loggingFetch,
+		});
+	}
+
 	return new OpenAI({
 		apiKey,
 		baseURL: model.baseUrl,

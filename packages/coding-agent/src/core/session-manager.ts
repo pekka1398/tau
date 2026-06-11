@@ -1,4 +1,4 @@
-import { type AgentMessage, uuidv7 } from "@earendil-works/pi-agent-core";
+import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { ImageContent, Message, TextContent } from "@earendil-works/pi-ai";
 import { randomUUID } from "crypto";
 import {
@@ -201,7 +201,7 @@ export type ReadonlySessionManager = Pick<
 >;
 
 function createSessionId(): string {
-	return uuidv7();
+	return randomUUID();
 }
 
 export function assertValidSessionId(id: string): void {

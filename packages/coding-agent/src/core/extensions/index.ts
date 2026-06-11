@@ -281,8 +281,8 @@ export class ExtensionRunner {
 	emitBeforeAgentStart(..._a: any[]): Promise<any> {
 		return Promise.resolve(undefined);
 	}
-	emitContext(..._a: any[]): Promise<any[]> {
-		return Promise.resolve([]);
+	emitContext(messages: any[]): Promise<any[]> {
+		return Promise.resolve(messages);
 	}
 	emitBeforeProviderRequest(..._a: any[]): Promise<any> {
 		return Promise.resolve(undefined);
@@ -350,14 +350,16 @@ export class ExtensionRunner {
 	}
 }
 
-export function wrapRegisteredTools(..._a: any[]): any[] {
-	return [];
+import { wrapToolDefinition, wrapToolDefinitions } from "../tools/tool-definition-wrapper.ts";
+
+export function wrapRegisteredTools(tools: any[], ..._rest: any[]): any[] {
+	return wrapToolDefinitions(tools.map((t) => t.definition ?? t));
 }
-export function wrapRegisteredTool(..._a: any[]): any {
-	return {};
+export function wrapRegisteredTool(tool: any, ..._rest: any[]): any {
+	return wrapToolDefinition(tool.definition ?? tool);
 }
 export function createExtensionRuntime(..._a: any[]): any {
-	return {};
+	return { pendingProviderRegistrations: [], flagValues: new Map() };
 }
 export function loadExtensions(..._a: any[]): any {
 	return { extensions: [], runtime: createExtensionRuntime(), errors: [], diagnostics: [] };
