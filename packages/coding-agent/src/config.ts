@@ -373,8 +373,14 @@ export function getThemesDir(): string {
 	if (isBunBinary) {
 		return join(getPackageDir(), "theme");
 	}
-	// Theme is in modes/interactive/theme/ relative to src/ or dist/
 	const packageDir = getPackageDir();
+	// When running from dist/ (package.json copied by copy-binary-assets),
+	// themes are directly in modes/interactive/theme/ under the package dir.
+	const directThemesDir = join(packageDir, "modes", "interactive", "theme");
+	if (existsSync(join(directThemesDir, "dark.json"))) {
+		return directThemesDir;
+	}
+	// Source tree: themes are in dist/modes/interactive/theme/
 	const srcOrDist = existsSync(join(packageDir, "src")) ? "src" : "dist";
 	return join(packageDir, srcOrDist, "modes", "interactive", "theme");
 }
@@ -415,6 +421,12 @@ export function getInteractiveAssetsDir(): string {
 		return join(getPackageDir(), "assets");
 	}
 	const packageDir = getPackageDir();
+	// When running from dist/ (package.json copied by copy-binary-assets),
+	// assets are directly in modes/interactive/assets/ under the package dir.
+	const directAssetsDir = join(packageDir, "modes", "interactive", "assets");
+	if (existsSync(directAssetsDir)) {
+		return directAssetsDir;
+	}
 	const srcOrDist = existsSync(join(packageDir, "src")) ? "src" : "dist";
 	return join(packageDir, srcOrDist, "modes", "interactive", "assets");
 }
