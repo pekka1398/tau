@@ -1,0 +1,188 @@
+{
+	"todos": [
+		{
+			"id": "t-001",
+			"title": "graph roadmap tool",
+			"status": "open",
+			"priority": "low",
+			"tags": [
+				"feature",
+				"tool"
+			],
+			"created": "2026-06-11",
+			"updated": "2026-06-11"
+		},
+		{
+			"id": "t-002",
+			"title": "TUI 细节优化，贴近 claude-code",
+			"status": "in_progress",
+			"priority": "high",
+			"tags": [
+				"tui",
+				"ux"
+			],
+			"created": "2026-06-11",
+			"updated": "2026-06-11"
+		},
+		{
+			"id": "t-003",
+			"title": "subagent 完善 (fork/worktree/transcript)",
+			"status": "in_progress",
+			"priority": "high",
+			"tags": [
+				"subagent"
+			],
+			"created": "2026-06-11",
+			"updated": "2026-06-11"
+		},
+		{
+			"id": "t-004",
+			"title": "tool error handle retry",
+			"status": "open",
+			"priority": "medium",
+			"tags": [
+				"tool",
+				"reliability"
+			],
+			"created": "2026-06-11",
+			"updated": "2026-06-11"
+		},
+		{
+			"id": "t-005",
+			"title": "消融实验：同模型 pi vs claude-code vs codex",
+			"status": "open",
+			"priority": "low",
+			"tags": [
+				"research"
+			],
+			"created": "2026-06-11",
+			"updated": "2026-06-11"
+		},
+		{
+			"id": "t-006",
+			"title": "尝试各家模型 (gpt5.5 flex 等)",
+			"status": "open",
+			"priority": "low",
+			"tags": [
+				"research",
+				"model"
+			],
+			"created": "2026-06-11",
+			"updated": "2026-06-11"
+		},
+		{
+			"id": "t-007",
+			"title": "自动化测试：headless mode 测试脚本",
+			"status": "open",
+			"priority": "high",
+			"tags": [
+				"testing",
+				"automation"
+			],
+			"created": "2026-06-11",
+			"updated": "2026-06-11"
+		},
+		{
+			"id": "t-008",
+			"title": "git worktree 开发流程：feature branch per 功能",
+			"status": "open",
+			"priority": "medium",
+			"tags": [
+				"workflow",
+				"git"
+			],
+			"created": "2026-06-11",
+			"updated": "2026-06-11"
+		},
+		{
+			"id": "t-009",
+			"title": "foreground → background 动态切换",
+			"status": "open",
+			"priority": "medium",
+			"tags": [
+				"subagent",
+				"feature"
+			],
+			"created": "2026-06-11",
+			"updated": "2026-06-11"
+		},
+		{
+			"id": "t-010",
+			"title": "resume 支持 (从 transcript 恢复)",
+			"status": "open",
+			"priority": "medium",
+			"tags": [
+				"subagent",
+				"feature"
+			],
+			"created": "2026-06-11",
+			"updated": "2026-06-11"
+		},
+		{
+			"id": "t-011",
+			"title": "HTTP log 偶尔出现在输入框",
+			"status": "open",
+			"priority": "medium",
+			"tags": [
+				"bug",
+				"tui"
+			],
+			"created": "2026-06-11",
+			"updated": "2026-06-11",
+			"description": "HTTP outgoing message end / AGENT incoming response 出现在输入匡"
+		},
+		{
+			"id": "t-012",
+			"title": "中文字输入被吃掉",
+			"status": "open",
+			"priority": "high",
+			"tags": [
+				"bug",
+				"tui",
+				"i18n"
+			],
+			"created": "2026-06-11",
+			"updated": "2026-06-11"
+		},
+		{
+			"id": "t-013",
+			"title": "TUI 滚动 bug",
+			"status": "open",
+			"priority": "medium",
+			"tags": [
+				"bug",
+				"tui"
+			],
+			"created": "2026-06-11",
+			"updated": "2026-06-11"
+		},
+		{
+			"id": "t-014",
+			"title": "queue 插入时机 vs claude-code",
+			"status": "open",
+			"priority": "medium",
+			"tags": [
+				"bug",
+				"tui"
+			],
+			"created": "2026-06-11",
+			"updated": "2026-06-11",
+			"description": "模型输出 queue 的插入时机跟 cc 相比有问题"
+		},
+		{
+			"id": "t-015",
+			"title": "模型 bash tool call 格式错误案例收集",
+			"status": "open",
+			"priority": "medium",
+			"tags": [
+				"issue",
+				"prompt",
+				"model"
+			],
+			"created": "2026-06-11",
+			"updated": "2026-06-11",
+			"description": "模型打错 edit 格式、python heredoc 等，用于优化 prompt"
+		}
+	],
+	"nextId": 17
+}

@@ -44,6 +44,7 @@ import { InteractiveMode, runPrintMode } from "./modes/index.ts";
 import { ExtensionSelectorComponent } from "./modes/interactive/components/extension-selector.ts";
 import { initTheme, stopThemeWatcher } from "./modes/interactive/theme/theme.ts";
 import { handleConfigCommand, handlePackageCommand } from "./package-manager-cli.ts";
+import { runTodoCli } from "./core/todo.ts";
 import { isLocalPath, normalizePath, resolvePath } from "./utils/paths.ts";
 import { cleanupWindowsSelfUpdateQuarantine } from "./utils/windows-self-update.ts";
 
@@ -86,6 +87,14 @@ function reportDiagnostics(diagnostics: readonly AgentSessionRuntimeDiagnostic[]
 		const prefix = diagnostic.type === "error" ? "Error: " : diagnostic.type === "warning" ? "Warning: " : "";
 		console.error(color(`${prefix}${diagnostic.message}`));
 	}
+}
+
+async function handleTodoCommand(args: string[]): Promise<boolean> {
+	if (args[0] !== "todo") return false;
+	const cwd = process.cwd();
+	const code = await runTodoCli(cwd, args.slice(1));
+	process.exit(code);
+	return true; // unreachable but satisfies type
 }
 
 function isTruthyEnvFlag(value: string | undefined): boolean {
@@ -554,6 +563,10 @@ export async function main(args: string[], options?: MainOptions) {
 	}
 
 	if (await handleConfigCommand(args)) {
+		return;
+	}
+
+	if (await handleTodoCommand(args)) {
 		return;
 	}
 

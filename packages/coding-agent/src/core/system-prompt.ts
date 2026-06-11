@@ -2,23 +2,13 @@
  * System prompt construction and project context loading
  */
 
-import { readFileSync } from "node:fs";
 import os from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { getDocsPath, getExamplesPath, getReadmePath } from "../config.ts";
 import { spawnProcessSync } from "../utils/child-process.ts";
+import { STATIC_SYSTEM_PROMPT } from "./prompts/static-prompt.ts";
 import { formatSkillsForPrompt, type Skill } from "./skills.ts";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-/** Load the static system prompt template from the bundled .md file. */
-function loadStaticPrompt(): string {
-	return readFileSync(join(__dirname, "prompts", "static-system-prompt.md"), "utf-8");
-}
-
-// Eagerly load once at module init — the content never changes.
-const STATIC_PROMPT = loadStaticPrompt();
+const STATIC_PROMPT = STATIC_SYSTEM_PROMPT;
 
 export interface BuildSystemPromptOptions {
 	/** Working directory. */

@@ -2692,6 +2692,11 @@ export class InteractiveMode {
 				await this.handleDiscordCommand(text);
 				return;
 			}
+			if (text === "/todo" || text.startsWith("/todo ")) {
+				this.editor.setText("");
+				await this.handleTodoCommand(text);
+				return;
+			}
 			if (text === "/debug") {
 				this.handleDebugCommand();
 				this.editor.setText("");
@@ -4830,6 +4835,16 @@ export class InteractiveMode {
 			dismissReloadBox(previousEditor as Component);
 			this.showError(`Reload failed: ${error instanceof Error ? error.message : String(error)}`);
 		}
+	}
+
+	private async handleTodoCommand(text: string): Promise<void> {
+		const { runTodoCli } = await import("../../core/todo.ts");
+		const args = text.slice("/todo".length).trim().split(/\s+/).filter(Boolean);
+		const cwd = this.cwd || process.cwd();
+		if (args.length === 0) {
+			args.push("list");
+		}
+		await runTodoCli(cwd, args);
 	}
 
 	private async handleDiscordCommand(text: string): Promise<void> {
