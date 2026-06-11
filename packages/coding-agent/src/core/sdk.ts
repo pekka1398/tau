@@ -399,6 +399,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				maxRetries: options?.maxRetries ?? providerRetrySettings.maxRetries,
 				maxRetryDelayMs: options?.maxRetryDelayMs ?? providerRetrySettings.maxRetryDelayMs,
 				headers: mergedHeaders,
+				serviceTier: settingsManager.getServiceTier(),
 			});
 
 			if (httpDebugEnabled) {
