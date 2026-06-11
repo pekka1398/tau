@@ -16,7 +16,7 @@
  */
 
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ConverterContext, TranscribeResult } from "../types.ts";
@@ -88,24 +88,13 @@ export const audioConverter: Converter = {
 			const results: string[] = [];
 			for (let i = 0; i < chunks.length; i++) {
 				const chunk = chunks[i];
-				const chunkPath = join(workDir, `chunk-${i}.wav`);
 
-				// Extract with overlap context, normalize to 16kHz mono
+				// Extract with overlap context → pipe to buffer (no temp chunk file)
 				const readStart = Math.max(0, chunk.startSec - OVERLAP_SEC);
 				const readEnd = Math.min(probe.durationSec, chunk.endSec + OVERLAP_SEC);
 				const readDuration = readEnd - readStart;
 
-				await runFfmpeg([
-					"-i", processedPath,
-					"-ss", String(readStart),
-					"-t", String(readDuration),
-					"-ar", "16000",
-					"-ac", "1",
-					"-acodec", "pcm_s16le",
-					"-y", chunkPath,
-				]);
-
-				const segmentData = await readFile(chunkPath);
+				const segmentData = await extractChunkToBuffer(processedPath, readStart, readDuration);
 				const prompt = buildAudioPrompt(chunk.label, i === 0, probe, chunks.length, OVERLAP_SEC > 0);
 				const text = await ctx.callApi(prompt, segmentData, "audio/wav");
 				results.push(`[${chunk.label}]\n${text}`);
@@ -168,6 +157,33 @@ function runFfmpeg(args: string[]): Promise<void> {
 					return;
 				}
 				resolve();
+			},
+		);
+	});
+}
+
+function extractChunkToBuffer(inputPath: string, startSec: number, durationSec: number): Promise<Buffer> {
+	return new Promise((resolve, reject) => {
+		execFile(
+			"ffmpeg",
+			[
+				"-hide_banner", "-nostdin",
+				"-ss", String(startSec),
+				"-t", String(durationSec),
+				"-i", inputPath,
+				"-f", "wav",
+				"-ar", "16000",
+				"-ac", "1",
+				"pipe:1",
+			],
+			{ encoding: "buffer", maxBuffer: 150 * 1024 * 1024 },
+			(err, stdout, stderr) => {
+				if (err) {
+					const msg = stderr instanceof Buffer ? stderr.toString("utf8").slice(-4000) : String(stderr);
+					reject(new Error(`ffmpeg chunk extraction failed: ${msg || err.message}`));
+					return;
+				}
+				resolve(stdout as unknown as Buffer);
 			},
 		);
 	});
@@ -332,12 +348,14 @@ function chooseSilenceThreshold(analysis: AudioAnalysis): string {
 function buildFilters(preset: PreprocessPreset, isStereo: boolean): string[] {
 	const mono = isStereo ? ["pan=mono|c0=0.5*c0+0.5*c1"] : [];
 
+	// Order: mono → highpass → lowpass → limiter (tame peaks first) →
+	//        dynaudnorm (balance volumes) → denoise → loudnorm
 	switch (preset) {
 		case "conservative":
 			return [
 				...mono,
 				"highpass=f=70",
-				"lowpass=f=7600",
+				"lowpass=f=12000",
 				"alimiter=limit=0.98",
 				"loudnorm=I=-18:TP=-2:LRA=10",
 			];
@@ -346,10 +364,10 @@ function buildFilters(preset: PreprocessPreset, isStereo: boolean): string[] {
 			return [
 				...mono,
 				"highpass=f=70",
-				"lowpass=f=7600",
-				"afftdn=nr=6:nf=-40",
-				"dynaudnorm=f=250:g=15:p=0.95:m=10",
-				"alimiter=limit=0.95",
+				"lowpass=f=12000",
+				"alimiter=limit=-3dB:attack=5:release=50",
+				"dynaudnorm=f=200:g=15:p=0.95:m=10",
+				"afftdn=nr=4:nf=-40",
 				"loudnorm=I=-18:TP=-2:LRA=8",
 			];
 
@@ -357,11 +375,11 @@ function buildFilters(preset: PreprocessPreset, isStereo: boolean): string[] {
 			return [
 				...mono,
 				"highpass=f=90",
-				"lowpass=f=7200",
-				"afftdn=nr=10:nf=-35",
-				"dynaudnorm=f=200:g=20:p=0.95:m=15",
+				"lowpass=f=11000",
+				"alimiter=limit=-3dB:attack=5:release=50",
+				"dynaudnorm=f=150:g=20:p=0.95:m=15",
+				"afftdn=nr=6:nf=-35",
 				"acompressor=threshold=-22dB:ratio=3:attack=5:release=120:makeup=4",
-				"alimiter=limit=0.93",
 				"loudnorm=I=-18:TP=-2:LRA=6",
 			];
 	}
