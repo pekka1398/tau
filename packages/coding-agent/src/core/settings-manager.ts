@@ -829,6 +829,12 @@ export class SettingsManager {
 		return this.settings.serviceTier;
 	}
 
+	setServiceTier(tier: "flex" | "priority" | undefined): void {
+		this.globalSettings.serviceTier = tier;
+		this.markModified("serviceTier");
+		this.save();
+	}
+
 	getHideThinkingBlock(): boolean {
 		return this.settings.hideThinkingBlock ?? false;
 	}

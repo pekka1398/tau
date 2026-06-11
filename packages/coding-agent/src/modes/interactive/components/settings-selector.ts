@@ -58,6 +58,7 @@ export interface SettingsConfig {
 	clearOnShrink: boolean;
 	showTerminalProgress: boolean;
 	showSemanticZones: boolean;
+	serviceTier?: "flex" | "priority";
 	warnings: WarningSettings;
 }
 
@@ -78,6 +79,7 @@ export interface SettingsCallbacks {
 	onHideThinkingBlockChange: (hidden: boolean) => void;
 	onCollapseChangelogChange: (collapsed: boolean) => void;
 	onEnableInstallTelemetryChange: (enabled: boolean) => void;
+	onServiceTierChange: (tier: "flex" | "priority" | undefined) => void;
 	onDoubleEscapeActionChange: (action: "fork" | "tree" | "none") => void;
 	onTreeFilterModeChange: (mode: "default" | "no-tools" | "user-only" | "labeled-only" | "all") => void;
 	onShowHardwareCursorChange: (enabled: boolean) => void;
@@ -242,6 +244,13 @@ export class SettingsSelectorComponent extends Container {
 				description: "Preferred transport for providers that support multiple transports",
 				currentValue: config.transport,
 				values: ["sse", "websocket", "websocket-cached", "auto"],
+			},
+			{
+				id: "service-tier",
+				label: "Service tier",
+				description: "OpenRouter service tier: 'flex' = cheaper/higher latency, 'priority' = faster/higher cost",
+				currentValue: config.serviceTier ?? "default",
+				values: ["default", "flex", "priority"],
 			},
 			{
 				id: "http-idle-timeout",
@@ -502,8 +511,11 @@ export class SettingsSelectorComponent extends Container {
 					case "follow-up-mode":
 						callbacks.onFollowUpModeChange(newValue as "all" | "one-at-a-time");
 						break;
-					case "transport":
+				case "transport":
 						callbacks.onTransportChange(newValue as Transport);
+						break;
+					case "service-tier":
+						callbacks.onServiceTierChange(newValue === "default" ? undefined : (newValue as "flex" | "priority"));
 						break;
 					case "http-idle-timeout": {
 						const choice = HTTP_IDLE_TIMEOUT_CHOICES.find((item) => item.label === newValue);
