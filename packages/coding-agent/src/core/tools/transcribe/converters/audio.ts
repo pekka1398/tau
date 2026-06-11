@@ -1,26 +1,26 @@
 /**
- * Audio converter.
+ * Audio converter — with traditional DSP pre-processing.
  *
- * Strategy:
- * 1. ffprobe for metadata (duration, format, sample rate, channels)
- * 2. ffmpeg pre-processing:
- *    - Volume normalization
- *    - Silence detection (for chunking at natural pauses)
- *    - Convert to API-compatible format (wav/mp3)
- * 3. Chunk by time (10 min default) or silence boundaries
- * 4. Send to multimodal API for transcription
- * 5. Post-process: merge chunks, clean up
- *
- * Non-speech sounds are described in [brackets].
+ * Pipeline:
+ *   1. Probe: ffprobe → format, duration, sample rate, channels, bitrate
+ *   2. Normalize: any format → WAV 16kHz mono (API-compatible)
+ *   3. Analyze: volumedetect, silencedetect, astats
+ *   4. Pre-process: compand → afftdn → loudnorm → highpass/lowpass
+ *   5. Chunk: by silence boundaries (not fixed time)
+ *   6. Send to API: each chunk → Gemini
+ *   7. Assemble: merge transcriptions in order
  */
 
 import { execFile } from "node:child_process";
 import { readFile, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { chunkAudio, DEFAULTS } from "../chunk.ts";
 import type { ConverterContext, TranscribeResult } from "../types.ts";
 import type { Converter } from "./_interface.ts";
+
+const MAX_CHUNK_SEC = 600; // 10 min hard limit
+const SILENCE_THRESH = "-35dB";
+const SILENCE_DURATION = "0.4"; // seconds
 
 export const audioConverter: Converter = {
 	name: "Audio",
@@ -28,173 +28,297 @@ export const audioConverter: Converter = {
 
 	async convert(filePath: string, ctx: ConverterContext): Promise<TranscribeResult> {
 		const warnings: string[] = [];
+		const tmpFiles: string[] = [];
 
-		// Step 1: Get metadata
-		const metadata = await getAudioMetadata(filePath);
-		const durationMin = (metadata.duration / 60).toFixed(1);
-		warnings.push(`Audio: ${durationMin}min, ${metadata.format}, ${metadata.sampleRate}Hz, ${metadata.channels}ch`);
+		const cleanup = async () => {
+			for (const f of tmpFiles) await unlink(f).catch(() => {});
+		};
 
-		// Step 2: Pre-process — normalize volume, convert to wav
-		const processedPath = await preprocessAudio(filePath, metadata);
-		warnings.push("Pre-processed: volume normalized, converted to WAV");
+		try {
+			// ── Step 1: Probe ──────────────────────────────────────────────
+			const probe = await probeAudio(filePath);
+			warnings.push(`Input: ${probe.format}, ${probe.durationSec.toFixed(1)}s, ${probe.sampleRate}Hz, ${probe.channels}ch, ${probe.bitrate ?? "?"}bps`);
 
-		// Step 3: Detect silence for smarter chunking
-		const silences = await detectSilence(processedPath);
-		if (silences.length > 0) {
-			warnings.push(`Detected ${silences.length} silence points for chunking`);
-		}
+			// ── Step 2: Normalize format → WAV 16kHz mono ──────────────────
+			const normalizedPath = tmpPath("normalized.wav");
+			tmpFiles.push(normalizedPath);
+			await ffmpeg(filePath, [
+				"-i", filePath,
+				"-ar", "16000",
+				"-ac", "1",
+				"-acodec", "pcm_s16le",
+				"-y", normalizedPath,
+			]);
+			warnings.push("Normalized: WAV 16kHz mono 16-bit");
 
-		// Step 4: Chunk by time (silence-aware chunking is a future enhancement)
-		const timeChunks = chunkAudio(metadata.duration, DEFAULTS.AUDIO_MINUTES_PER_CHUNK);
-		warnings.push(`Split into ${timeChunks.length} chunk(s)`);
+			// ── Step 3: Analyze ────────────────────────────────────────────
+			const analysis = await analyzeAudio(normalizedPath);
+			warnings.push(`Volume: max=${analysis.maxVolume}dB, mean=${analysis.meanVolume}dB`);
+			warnings.push(`Silence: ${analysis.silences.length} segments detected`);
 
-		// Step 5: Extract audio segments and transcribe each
-		const results: string[] = [];
-		for (let i = 0; i < timeChunks.length; i++) {
-			const chunk = timeChunks[i];
-			const segmentPath = await extractAudioSegment(processedPath, chunk.startSec, chunk.endSec - chunk.startSec);
+			// ── Step 4: Pre-process ────────────────────────────────────────
+			const processedPath = tmpPath("processed.wav");
+			tmpFiles.push(processedPath);
 
-			try {
-				const segmentData = await readFile(segmentPath);
-				const prompt = buildAudioPrompt(chunk.label, i === 0, metadata);
+			const filters: string[] = [];
+
+			// Highpass: remove rumble below 80Hz
+			filters.push("highpass=f=80");
+
+			// Lowpass: remove hiss above 8kHz (speech range)
+			filters.push("lowpass=f=8000");
+
+			// Dynamic compression: tame peaks, boost quiet parts
+			// compand: attacks=0.3s, decays=0.8s, soft-knee 6dB
+			// Points: -90dB→-90dB (noise floor), -40dB→-35dB (quiet speech),
+			//         -20dB→-18dB (normal speech), 0dB→-3dB (peaks)
+			const needsCompression = parseFloat(analysis.maxVolume) - parseFloat(analysis.meanVolume) > 20;
+			if (needsCompression) {
+				filters.push("compand=attacks=0.3:decays=0.8:points=-90/-90|-40/-35|-20/-18|0/-3:soft-knee=6");
+				warnings.push("Applied: dynamic compression (high dynamic range detected)");
+			}
+
+			// Noise reduction: only if there's significant noise floor
+			const hasNoise = parseFloat(analysis.meanVolume) < -35;
+			if (hasNoise) {
+				filters.push("afftdn=nf=-25");
+				warnings.push("Applied: FFT denoising (low mean volume detected)");
+			}
+
+			// Loudness normalization to -16 LUFS (broadcast standard)
+			filters.push("loudnorm=I=-16:TP=-1.5:LRA=11");
+
+			await ffmpeg(normalizedPath, [
+				"-i", normalizedPath,
+				"-af", filters.join(","),
+				"-ar", "16000",
+				"-ac", "1",
+				"-y", processedPath,
+			]);
+			warnings.push(`Pre-processing chain: ${filters.length} filters`);
+
+			// ── Step 5: Chunk by silence ───────────────────────────────────
+			const processedSilences = await detectSilence(processedPath);
+			const chunks = buildChunks(probe.durationSec, processedSilences, MAX_CHUNK_SEC);
+			warnings.push(`Chunks: ${chunks.length} (${chunks.map((c) => `${c.startSec.toFixed(0)}-${c.endSec.toFixed(0)}s`).join(", ")})`);
+
+			// ── Step 6: Extract & transcribe each chunk ───────────────────
+			const results: string[] = [];
+			for (let i = 0; i < chunks.length; i++) {
+				const chunk = chunks[i];
+				const chunkPath = tmpPath(`chunk-${i}.wav`);
+				tmpFiles.push(chunkPath);
+
+				await ffmpeg(processedPath, [
+					"-i", processedPath,
+					"-ss", String(chunk.startSec),
+					"-t", String(chunk.endSec - chunk.startSec),
+					"-c", "copy",
+					"-y", chunkPath,
+				]);
+
+				const segmentData = await readFile(chunkPath);
+				const prompt = buildAudioPrompt(chunk.label, i === 0, probe);
 
 				const text = await ctx.callApi(prompt, segmentData, "audio/wav");
 				results.push(`[${chunk.label}]\n${text}`);
-			} finally {
-				await unlink(segmentPath).catch(() => {});
 			}
+
+			// ── Step 7: Assemble ──────────────────────────────────────────
+			await cleanup();
+			return {
+				text: results.join("\n\n"),
+				format: "audio",
+				chunks: chunks.length,
+				usedApi: true,
+				warnings,
+			};
+		} catch (err) {
+			await cleanup();
+			throw err;
 		}
-
-		// Cleanup
-		await unlink(processedPath).catch(() => {});
-
-		return {
-			text: results.join("\n\n"),
-			format: "audio",
-			chunks: timeChunks.length,
-			usedApi: true,
-			warnings,
-		};
 	},
 };
 
-interface AudioMetadata {
-	duration: number; // seconds
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface AudioProbe {
 	format: string;
+	durationSec: number;
 	sampleRate: number;
 	channels: number;
 	bitrate?: number;
 }
 
-/** Get audio metadata using ffprobe. */
-function getAudioMetadata(filePath: string): Promise<AudioMetadata> {
-	return new Promise((resolve, reject) => {
-		execFile(
-			"ffprobe",
-			["-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", filePath],
-			(err, stdout) => {
-				if (err) return reject(new Error(`ffprobe failed: ${err.message}`));
-
-				try {
-					const data = JSON.parse(stdout);
-					const stream =
-						data.streams?.find((s: { codec_type: string }) => s.codec_type === "audio") ?? data.streams?.[0];
-					const format = data.format;
-
-					resolve({
-						duration: parseFloat(format?.duration ?? "0"),
-						format: format?.format_name ?? "unknown",
-						sampleRate: parseInt(stream?.sample_rate ?? "44100", 10),
-						channels: stream?.channels ?? 1,
-						bitrate: format?.bit_rate ? parseInt(format.bit_rate, 10) : undefined,
-					});
-				} catch {
-					reject(new Error("Failed to parse ffprobe output"));
-				}
-			},
-		);
-	});
+interface AudioAnalysis {
+	maxVolume: string;
+	meanVolume: string;
+	silences: Array<{ start: number; end?: number }>;
 }
 
-/**
- * Pre-process audio: normalize volume, convert to WAV.
- * Returns path to processed temporary file.
- */
-function preprocessAudio(filePath: string, _metadata: AudioMetadata): Promise<string> {
-	const outPath = join(tmpdir(), `omni-audio-${Date.now()}.wav`);
+interface Chunk {
+	startSec: number;
+	endSec: number;
+	label: string;
+}
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function tmpPath(name: string): string {
+	return join(tmpdir(), `omni-audio-${Date.now()}-${name}`);
+}
+
+function ffmpeg(input: string, args: string[]): Promise<void> {
 	return new Promise((resolve, reject) => {
-		// Build filter chain
-		const filters: string[] = [];
-
-		// Volume normalization (loudnorm filter for broadcast-quality normalization)
-		filters.push("loudnorm=I=-16:TP=-1.5:LRA=11");
-
-		// High-pass to reduce low-frequency rumble (clothing noise, etc.)
-		filters.push("highpass=f=80");
-
-		const filterChain = filters.join(",");
-
-		execFile("ffmpeg", ["-y", "-i", filePath, "-af", filterChain, "-ar", "16000", "-ac", "1", outPath], (err) => {
-			if (err) reject(new Error(`Audio pre-processing failed: ${err.message}`));
-			else resolve(outPath);
+		// args already include -i input or -i <path> etc
+		execFile("ffmpeg", args, { maxBuffer: 50 * 1024 * 1024 }, (err, _stdout, stderr) => {
+			if (err) reject(new Error(`ffmpeg failed: ${stderr?.slice(-200) || err.message}`));
+			else resolve();
 		});
 	});
 }
 
-/**
- * Detect silence points using ffmpeg's silencedetect filter.
- * Returns array of silence start times (seconds).
- */
-function detectSilence(filePath: string): Promise<number[]> {
-	return new Promise((resolve) => {
-		execFile(
-			"ffmpeg",
-			["-i", filePath, "-af", "silencedetect=noise=-30dB:d=0.5", "-f", "null", "-"],
-			(_err, _stdout, stderr) => {
-				// Parse silence_end from stderr
-				const silenceEnds: number[] = [];
-				const regex = /silence_end: ([\d.]+)/g;
-				let match: RegExpExecArray | null;
-				match = regex.exec(stderr);
-				while (match !== null) {
-					silenceEnds.push(parseFloat(match[1]));
-				}
-				resolve(silenceEnds);
-			},
-		);
-	});
-}
-
-/** Extract a time segment from an audio file. */
-function extractAudioSegment(filePath: string, startSec: number, durationSec: number): Promise<string> {
-	const outPath = join(tmpdir(), `omni-segment-${Date.now()}-${startSec}.wav`);
-
+function ffprobe(args: string[]): Promise<string> {
 	return new Promise((resolve, reject) => {
-		execFile(
-			"ffmpeg",
-			["-y", "-ss", String(startSec), "-i", filePath, "-t", String(durationSec), "-c", "copy", outPath],
-			(err) => {
-				if (err) reject(new Error(`Segment extraction failed: ${err.message}`));
-				else resolve(outPath);
-			},
-		);
+		execFile("ffprobe", args, { maxBuffer: 50 * 1024 * 1024 }, (err, stdout, stderr) => {
+			if (err) reject(new Error(`ffprobe failed: ${stderr || err.message}`));
+			else resolve(stdout);
+		});
 	});
 }
 
-function buildAudioPrompt(label: string, _isFirstChunk: boolean, metadata: AudioMetadata): string {
-	const base = `Transcribe this audio segment faithfully (${label}).`;
+async function probeAudio(filePath: string): Promise<AudioProbe> {
+	const stdout = await ffprobe(["-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", filePath]);
+	const data = JSON.parse(stdout);
+	const stream = data.streams?.find((s: { codec_type: string }) => s.codec_type === "audio") ?? data.streams?.[0];
+	const format = data.format;
+	return {
+		format: format?.format_name ?? "unknown",
+		durationSec: parseFloat(format?.duration ?? "0"),
+		sampleRate: parseInt(stream?.sample_rate ?? "44100", 10),
+		channels: stream?.channels ?? 1,
+		bitrate: format?.bit_rate ? parseInt(format.bit_rate, 10) : undefined,
+	};
+}
 
-	return `${base}
+async function analyzeAudio(filePath: string): Promise<AudioAnalysis> {
+	// volumedetect → max_volume, mean_volume
+	const volStdout = await new Promise<string>((resolve) => {
+		execFile(
+			"ffmpeg",
+			["-i", filePath, "-af", "volumedetect", "-f", "null", "-"],
+			{ maxBuffer: 10 * 1024 * 1024 },
+			(_err, _stdout, stderr) => resolve(stderr ?? ""),
+		);
+	});
+
+	const maxMatch = volStdout.match(/max_volume:\s*([-\d.]+)\s*dB/);
+	const meanMatch = volStdout.match(/mean_volume:\s*([-\d.]+)\s*dB/);
+
+	// silencedetect → silence segments
+	const silences = await detectSilence(filePath);
+
+	return {
+		maxVolume: maxMatch?.[1] ?? "0",
+		meanVolume: meanMatch?.[1] ?? "0",
+		silences,
+	};
+}
+
+async function detectSilence(filePath: string): Promise<Array<{ start: number; end?: number }>> {
+	const stdout = await new Promise<string>((resolve) => {
+		execFile(
+			"ffmpeg",
+			["-i", filePath, "-af", `silencedetect=noise=${SILENCE_THRESH}:d=${SILENCE_DURATION}`, "-f", "null", "-"],
+			{ maxBuffer: 10 * 1024 * 1024 },
+			(_err, _stdout, stderr) => resolve(stderr ?? ""),
+		);
+	});
+
+	const silences: Array<{ start: number; end?: number }> = [];
+	const startRe = /silence_start:\s*([\d.]+)/g;
+	const endRe = /silence_end:\s*([\d.]+)/g;
+
+	const starts: number[] = [];
+	let m;
+	while ((m = startRe.exec(stdout)) !== null) starts.push(parseFloat(m[1]));
+	const ends: number[] = [];
+	while ((m = endRe.exec(stdout)) !== null) ends.push(parseFloat(m[1]));
+
+	for (let i = 0; i < starts.length; i++) {
+		silences.push({ start: starts[i], end: ends[i] });
+	}
+
+	return silences;
+}
+
+function buildChunks(durationSec: number, silences: Array<{ start: number; end?: number }>, maxSec: number): Chunk[] {
+	if (durationSec <= maxSec && silences.length === 0) {
+		return [{ startSec: 0, endSec: durationSec, label: formatTime(0) + "-" + formatTime(durationSec) }];
+	}
+
+	// Find optimal split points (midpoints of silence segments)
+	const splitPoints = silences
+		.filter((s) => s.end !== undefined)
+		.map((s) => (s.start + s.end!) / 2)
+		.sort((a, b) => a - b);
+
+	// Build chunks respecting maxSec
+	const chunks: Chunk[] = [];
+	let chunkStart = 0;
+
+	for (const sp of splitPoints) {
+		if (sp - chunkStart >= maxSec) {
+			chunks.push({
+				startSec: chunkStart,
+				endSec: sp,
+				label: formatTime(chunkStart) + "-" + formatTime(sp),
+			});
+			chunkStart = sp;
+		}
+	}
+
+	// Final chunk
+	if (chunkStart < durationSec) {
+		chunks.push({
+			startSec: chunkStart,
+			endSec: durationSec,
+			label: formatTime(chunkStart) + "-" + formatTime(durationSec),
+		});
+	}
+
+	// If no silence points were usable, fall back to fixed chunks
+	if (chunks.length === 0) {
+		for (let start = 0; start < durationSec; start += maxSec) {
+			const end = Math.min(start + maxSec, durationSec);
+			chunks.push({ startSec: start, endSec: end, label: formatTime(start) + "-" + formatTime(end) });
+		}
+	}
+
+	return chunks;
+}
+
+function formatTime(sec: number): string {
+	const h = Math.floor(sec / 3600);
+	const m = Math.floor((sec % 3600) / 60);
+	const s = Math.floor(sec % 60);
+	if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+	return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function buildAudioPrompt(label: string, isFirstChunk: boolean, probe: AudioProbe): string {
+	const context = `Audio: ${probe.durationSec.toFixed(0)}s total, ${probe.sampleRate}Hz, ${probe.channels}ch.`;
+
+	return `Transcribe this audio segment faithfully (${label}).
+${context}
 
 Rules:
-- Transcribe ALL speech verbatim. Do not summarize or paraphrase.
-- Describe non-speech sounds in [brackets]: e.g., [bird chirping], [door closes], [music playing], [typing], [traffic noise].
+- Transcribe ALL speech verbatim. Do NOT summarize, paraphrase, or omit any content.
+- Do NOT add your own commentary or interpretation.
+- Describe non-speech sounds in [brackets]: e.g., [bird chirping], [door closes], [music playing].
 - Note speaker changes with [Speaker 1], [Speaker 2], etc. if multiple speakers.
 - If speech is unclear, use [unclear] rather than guessing.
 - If there is silence, note [silence] briefly — do not fill space.
 - Include emotional tone if obvious: [angrily], [laughing], [whispering].
-- For environmental sounds, be specific: [rain on window], [distant siren], [phone ringing].
-
-Context: ${metadata.duration}s audio, ${metadata.sampleRate}Hz, ${metadata.channels} channel(s).`;
+- Preserve numbers, dates, names, and technical terms exactly.${isFirstChunk ? "\n- This is the first segment. Identify the language and speakers if possible." : ""}`;
 }

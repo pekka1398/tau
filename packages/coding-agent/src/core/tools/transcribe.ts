@@ -114,7 +114,13 @@ export function createTranscribeToolDefinition(): ToolDefinition<typeof transcri
 			};
 
 			try {
-				const result = await transcribe(paths, { language, sheet, pageRange: page_range, mode }, ctx.cwd, callApi, callApiBatch);
+				const result = await transcribe(
+					paths,
+					{ language, sheet, pageRange: page_range, mode },
+					ctx.cwd,
+					callApi,
+					callApiBatch,
+				);
 
 				const pathList = result.outputPaths.join("\n");
 				const meta = [

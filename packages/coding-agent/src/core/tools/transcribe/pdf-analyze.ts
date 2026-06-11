@@ -6,7 +6,7 @@
  */
 
 import { execFile } from "node:child_process";
-import { writeFile, unlink } from "node:fs/promises";
+import { unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PageAnalysis } from "./types.ts";
@@ -28,7 +28,10 @@ async function runPython(script: string): Promise<string> {
 		execFile("python3", [tmpFile], { maxBuffer: 50 * 1024 * 1024 }, (err, stdout, stderr) => {
 			unlink(tmpFile).catch(() => {});
 			if (err) reject(new Error(`PyMuPDF analysis failed: ${stderr || err.message}`));
-			const cleaned = stdout.split("\n").filter((l) => !l.startsWith("Consider using")).join("\n");
+			const cleaned = stdout
+				.split("\n")
+				.filter((l) => !l.startsWith("Consider using"))
+				.join("\n");
 			resolve(cleaned);
 		});
 	});
