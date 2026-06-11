@@ -554,6 +554,8 @@ function buildParams(
 		prompt_cache_retention: cacheRetention === "long" && compat.supportsLongCacheRetention ? "24h" : undefined,
 		// OpenRouter sticky routing: send session_id in request body for provider affinity
 		...(isOpenRouter && options?.sessionId ? { session_id: options.sessionId } : {}),
+		// OpenRouter service tier: flex (cheaper) or priority (faster)
+		...(options?.serviceTier ? { service_tier: options.serviceTier } : {}),
 	};
 
 	if (compat.supportsUsageInStreaming !== false) {

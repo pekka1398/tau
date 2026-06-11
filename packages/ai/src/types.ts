@@ -109,6 +109,14 @@ export interface StreamOptions {
 	 * For example, Anthropic uses `user_id` for abuse tracking and rate limiting.
 	 */
 	metadata?: Record<string, unknown>;
+	/**
+	 * Service tier for cost/latency tradeoffs (via OpenRouter).
+	 * "flex" = lower cost, higher latency.
+	 * "priority" = faster, higher cost.
+	 * Only supported by OpenAI, Google Vertex, and Google AI Studio.
+	 * Providers that don't support this ignore it silently.
+	 */
+	serviceTier?: "flex" | "priority";
 }
 
 export type ProviderStreamOptions = StreamOptions & Record<string, unknown>;
