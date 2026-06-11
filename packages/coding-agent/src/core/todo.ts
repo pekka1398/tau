@@ -6,7 +6,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 
 export type TodoStatus = "open" | "in_progress" | "done" | "cancelled";
 export type TodoPriority = "critical" | "high" | "medium" | "low";
@@ -51,9 +51,10 @@ export function loadTodos(cwd: string): TodoStore {
 		const data = JSON.parse(raw);
 		// Migration: handle missing nextId
 		if (!data.nextId) {
-			data.nextId = data.todos.length > 0
-				? Math.max(...data.todos.map((t: Todo) => parseInt(t.id.replace("t-", ""), 10) || 0)) + 1
-				: 1;
+			data.nextId =
+				data.todos.length > 0
+					? Math.max(...data.todos.map((t: Todo) => parseInt(t.id.replace("t-", ""), 10) || 0)) + 1
+					: 1;
 		}
 		return data as TodoStore;
 	} catch {
@@ -295,7 +296,10 @@ export async function runTodoCli(cwd: string, args: string[]): Promise<number> {
 				return 1;
 			}
 			const priority = flag("priority") as TodoPriority | undefined;
-			const tags = flag("tag")?.split(",").map((t) => t.trim()) ?? [];
+			const tags =
+				flag("tag")
+					?.split(",")
+					.map((t) => t.trim()) ?? [];
 			const description = flag("desc");
 			const todo = addTodo(cwd, title, { priority, tags, description });
 			console.log(`Created: ${todo.id} — ${todo.title}`);
