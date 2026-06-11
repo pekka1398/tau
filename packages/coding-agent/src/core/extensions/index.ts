@@ -352,8 +352,10 @@ export class ExtensionRunner {
 
 import { wrapToolDefinition, wrapToolDefinitions } from "../tools/tool-definition-wrapper.ts";
 
-export function wrapRegisteredTools(tools: any[], ..._rest: any[]): any[] {
-	return wrapToolDefinitions(tools.map((t) => t.definition ?? t));
+export function wrapRegisteredTools(tools: any[], runnerOrCtxFactory?: any, ctxFactory?: () => any): any[] {
+	// Support both (tools, runner) and (tools, runner, ctxFactory) signatures
+	const factory = ctxFactory ?? (typeof runnerOrCtxFactory === "function" ? runnerOrCtxFactory : undefined);
+	return wrapToolDefinitions(tools.map((t) => t.definition ?? t), factory);
 }
 export function wrapRegisteredTool(tool: any, ..._rest: any[]): any {
 	return wrapToolDefinition(tool.definition ?? tool);

@@ -2405,7 +2405,16 @@ export class AgentSession {
 		}
 		this._toolDefinitions = definitionRegistry;
 		const runner = this._extensionRunner;
-		const wrappedExtensionTools = wrapRegisteredTools(allCustomTools, runner);
+		const ctxFactory = () => ({
+			cwd: this._cwd,
+			modelRegistry: this._modelRegistry,
+			model: this.model,
+			ui: undefined,
+			mode: "tui",
+			hasUI: false,
+			sessionManager: this.sessionManager,
+		});
+		const wrappedExtensionTools = wrapRegisteredTools(allCustomTools, runner, ctxFactory);
 		const wrappedBuiltInTools = wrapRegisteredTools(
 			Array.from(this._baseToolDefinitions.values())
 				.filter((definition) => isAllowedTool(definition.name))
@@ -2414,6 +2423,7 @@ export class AgentSession {
 					sourceInfo: createSyntheticSourceInfo(`<builtin:${definition.name}>`, { source: "builtin" }),
 				})),
 			runner,
+			ctxFactory,
 		);
 
 		const toolRegistry = new Map(wrappedBuiltInTools.map((tool) => [tool.name, tool]));
@@ -2471,6 +2481,8 @@ export class AgentSession {
 					subagent: {
 						taskRegistry: this._subagentTaskRegistry,
 						getTools: () => Array.from(this._toolRegistry.values()),
+						getParentMessages: () => this.messages,
+						getParentSystemPrompt: () => this.systemPrompt,
 					},
 				});
 
