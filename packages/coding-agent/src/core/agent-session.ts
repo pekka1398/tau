@@ -89,7 +89,7 @@ import { formatTaskNotification, TaskRegistry } from "./subagent/task-registry.t
 import { type BuildSystemPromptOptions, buildSystemPrompt } from "./system-prompt.ts";
 import { TaskManager } from "./task-manager.ts";
 import { type BashOperations, createLocalBashOperations } from "./tools/bash.ts";
-import { createAllToolDefinitions } from "./tools/index.ts";
+import { allToolNames, createAllToolDefinitions } from "./tools/index.ts";
 import { createToolDefinitionFromAgentTool } from "./tools/tool-definition-wrapper.ts";
 
 // ============================================================================
@@ -2512,7 +2512,7 @@ export class AgentSession {
 
 		const defaultActiveToolNames = this._baseToolsOverride
 			? Object.keys(this._baseToolsOverride)
-			: ["bash", "subagent", "transcribe", "vision"];
+			: [...allToolNames];
 		const baseActiveToolNames = options.activeToolNames ?? defaultActiveToolNames;
 		this._refreshToolRegistry({
 			activeToolNames: baseActiveToolNames,
