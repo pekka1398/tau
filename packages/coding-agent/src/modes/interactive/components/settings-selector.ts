@@ -511,7 +511,7 @@ export class SettingsSelectorComponent extends Container {
 					case "follow-up-mode":
 						callbacks.onFollowUpModeChange(newValue as "all" | "one-at-a-time");
 						break;
-				case "transport":
+					case "transport":
 						callbacks.onTransportChange(newValue as Transport);
 						break;
 					case "service-tier":

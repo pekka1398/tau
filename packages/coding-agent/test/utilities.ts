@@ -12,7 +12,7 @@ import { AgentSession } from "../src/core/agent-session.ts";
 import { AuthStorage } from "../src/core/auth-storage.ts";
 import { createEventBus } from "../src/core/event-bus.ts";
 import type { Extension, ExtensionFactory, LoadExtensionsResult } from "../src/core/extensions/index.ts";
-import { createExtensionRuntime, loadExtensionFromFactory } from "../src/core/extensions/loader.ts";
+import { createExtensionRuntime, loadExtensionFromFactory } from "../src/core/extensions/index.ts";
 import { ModelRegistry } from "../src/core/model-registry.ts";
 import type { ResourceLoader } from "../src/core/resource-loader.ts";
 import { SessionManager } from "../src/core/session-manager.ts";

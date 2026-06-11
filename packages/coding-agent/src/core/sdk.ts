@@ -427,8 +427,13 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					try {
 						const { writeFileSync } = await import("node:fs");
 						writeFileSync(dumpPath, body);
-						appendFileSync("/tmp/pi-http-debug.log", `[${new Date().toISOString()}] FULL REQUEST BODY dumped to ${dumpPath} (${(body.length / 1024).toFixed(0)}KB)\n`);
-					} catch { /* silent */ }
+						appendFileSync(
+							"/tmp/pi-http-debug.log",
+							`[${new Date().toISOString()}] FULL REQUEST BODY dumped to ${dumpPath} (${(body.length / 1024).toFixed(0)}KB)\n`,
+						);
+					} catch {
+						/* silent */
+					}
 				}
 			}
 
