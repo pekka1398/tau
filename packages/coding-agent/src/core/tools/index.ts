@@ -10,7 +10,7 @@ export {
 	createBashToolDefinition,
 	createLocalBashOperations,
 } from "./bash.ts";
-export { createReadImageToolDefinition } from "./read-image.ts";
+export { createVisionToolDefinition } from "./vision.ts";
 export { createTranscribeToolDefinition } from "./transcribe.ts";
 export {
 	DEFAULT_MAX_BYTES,
@@ -27,13 +27,13 @@ import type { AgentTool } from "@earendil-works/pi-agent-core";
 import { createSubagentToolDefinition, type SubagentToolOptions } from "../subagent/tool.ts";
 import type { ToolDefinition } from "../tool-types.ts";
 import { type BashToolOptions, createBashTool, createBashToolDefinition } from "./bash.ts";
-import { createReadImageToolDefinition } from "./read-image.ts";
+import { createVisionToolDefinition } from "./vision.ts";
 import { createTranscribeToolDefinition } from "./transcribe.ts";
 
 export type Tool = AgentTool<any>;
 export type ToolDef = ToolDefinition<any, any>;
-export type ToolName = "bash" | "subagent" | "transcribe" | "read-image";
-export const allToolNames: Set<ToolName> = new Set(["bash", "subagent", "transcribe", "read-image"]);
+export type ToolName = "bash" | "subagent" | "transcribe" | "vision";
+export const allToolNames: Set<ToolName> = new Set(["bash", "subagent", "transcribe", "vision"]);
 
 export interface ToolsOptions {
 	bash?: BashToolOptions;
@@ -44,7 +44,7 @@ export function createToolDefinition(toolName: ToolName, cwd: string, options?: 
 	if (toolName === "bash") return createBashToolDefinition(cwd, options?.bash);
 	if (toolName === "subagent") return createSubagentToolDefinition(options?.subagent);
 	if (toolName === "transcribe") return createTranscribeToolDefinition();
-	if (toolName === "read-image") return createReadImageToolDefinition();
+	if (toolName === "vision") return createVisionToolDefinition();
 	throw new Error(`Unknown tool name: ${toolName}`);
 }
 
@@ -60,7 +60,7 @@ export function createAllToolDefinitions(cwd: string, options?: ToolsOptions): R
 		bash: createBashToolDefinition(cwd, options?.bash),
 		subagent: createSubagentToolDefinition(options?.subagent),
 		transcribe: createTranscribeToolDefinition(),
-		"read-image": createReadImageToolDefinition(),
+		"vision": createVisionToolDefinition(),
 	};
 }
 
@@ -69,7 +69,7 @@ export function createAllTools(cwd: string, options?: ToolsOptions): Record<Tool
 		bash: createBashTool(cwd, options?.bash),
 		subagent: createSubagentToolDefinition(options?.subagent) as ToolDef as Tool,
 		transcribe: createTranscribeToolDefinition() as ToolDef as Tool,
-		"read-image": createReadImageToolDefinition() as ToolDef as Tool,
+		"vision": createVisionToolDefinition() as ToolDef as Tool,
 	};
 }
 
@@ -78,7 +78,7 @@ export function createCodingTools(cwd: string, options?: ToolsOptions): Tool[] {
 		createBashTool(cwd, options?.bash),
 		createSubagentToolDefinition(options?.subagent) as ToolDef as Tool,
 		createTranscribeToolDefinition() as ToolDef as Tool,
-		createReadImageToolDefinition() as ToolDef as Tool,
+		createVisionToolDefinition() as ToolDef as Tool,
 	];
 }
 

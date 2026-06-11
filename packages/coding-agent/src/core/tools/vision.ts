@@ -35,10 +35,10 @@ function detectMimeType(filePath: string): string | undefined {
 	return undefined;
 }
 
-export function createReadImageToolDefinition(): ToolDefinition<any, any> {
+export function createVisionToolDefinition(): ToolDefinition<any, any> {
 	return {
-		name: "read-image",
-		label: "Read Image",
+		name: "vision",
+		label: "Vision",
 		description:
 			"Read an image file and see its contents directly. " +
 			"Supports PNG, JPEG, GIF, WebP, BMP, SVG, TIFF, AVIF. " +
