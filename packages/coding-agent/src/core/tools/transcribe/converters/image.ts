@@ -161,7 +161,10 @@ function buildImagePrompt(mode: "text" | "visual", metadata: ImageMetadata): str
 	if (mode === "text") {
 		return `This is an image (${metadata.width}x${metadata.height}).
 If it contains text (document scan, screenshot, sign, etc.), extract ALL text via OCR.
-If it contains data (chart, graph, table), extract the data in a structured format.
+If it contains data (chart, graph, table), extract the data in structured format (markdown table for tabular data).
+If it contains a flowchart, sequence diagram, state machine, class diagram, or architecture diagram, output it in mermaid syntax.
+If it contains a circuit diagram, output it in circuitikz (LaTeX/TikZ) syntax.
+If it contains formulas or equations, use LaTeX notation ($...$ for inline, $$...$$ for display).
 If it's a photo or illustration, describe what you see factually.
 Always include any visible text, labels, numbers, or captions.`;
 	}
@@ -171,5 +174,6 @@ Provide a detailed visual description. Include:
 - What is shown (objects, people, scene)
 - Any visible text, labels, or numbers
 - Colors, layout, and composition
-- Any charts, graphs, or data visualizations with their data`;
+- Any charts, graphs, or data visualizations with their data
+- If it contains a diagram, describe the structure and relationships`;
 }

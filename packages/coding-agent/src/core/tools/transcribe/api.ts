@@ -206,8 +206,10 @@ Rules:
 - Do NOT add your own commentary or interpretation.
 - Preserve the original structure: headings, paragraphs, lists, tables.
 - For tables, use markdown table format.
-- For formulas, preserve them as-is (LaTeX if applicable).
+- For formulas and equations, use LaTeX notation ($...$ for inline, $$...$$ for display).
 - For images: describe what you see factually, then extract any visible text (OCR).
+- For flowcharts, sequence diagrams, state machines, class diagrams, Gantt charts, and architecture diagrams: output in mermaid syntax.
+- For circuit diagrams: output in circuitikz (LaTeX/TikZ) syntax.
 - For audio: transcribe speech verbatim. Describe non-speech sounds in [brackets], e.g. [bird chirping], [door closes], [music playing].
 - If content is unclear, note it with [unclear] rather than guessing.
 - Preserve numbers, dates, names, and technical terms exactly.`;
