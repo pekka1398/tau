@@ -355,7 +355,10 @@ import { wrapToolDefinition, wrapToolDefinitions } from "../tools/tool-definitio
 export function wrapRegisteredTools(tools: any[], runnerOrCtxFactory?: any, ctxFactory?: () => any): any[] {
 	// Support both (tools, runner) and (tools, runner, ctxFactory) signatures
 	const factory = ctxFactory ?? (typeof runnerOrCtxFactory === "function" ? runnerOrCtxFactory : undefined);
-	return wrapToolDefinitions(tools.map((t) => t.definition ?? t), factory);
+	return wrapToolDefinitions(
+		tools.map((t) => t.definition ?? t),
+		factory,
+	);
 }
 export function wrapRegisteredTool(tool: any, ..._rest: any[]): any {
 	return wrapToolDefinition(tool.definition ?? tool);

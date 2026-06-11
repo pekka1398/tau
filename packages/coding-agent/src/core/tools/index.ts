@@ -10,7 +10,6 @@ export {
 	createBashToolDefinition,
 	createLocalBashOperations,
 } from "./bash.ts";
-export { createVisionToolDefinition } from "./vision.ts";
 export { createTranscribeToolDefinition } from "./transcribe.ts";
 export {
 	DEFAULT_MAX_BYTES,
@@ -22,13 +21,14 @@ export {
 	truncateLine,
 	truncateTail,
 } from "./truncate.ts";
+export { createVisionToolDefinition } from "./vision.ts";
 
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import { createSubagentToolDefinition, type SubagentToolOptions } from "../subagent/tool.ts";
 import type { ToolDefinition } from "../tool-types.ts";
 import { type BashToolOptions, createBashTool, createBashToolDefinition } from "./bash.ts";
-import { createVisionToolDefinition } from "./vision.ts";
 import { createTranscribeToolDefinition } from "./transcribe.ts";
+import { createVisionToolDefinition } from "./vision.ts";
 
 export type Tool = AgentTool<any>;
 export type ToolDef = ToolDefinition<any, any>;
@@ -60,7 +60,7 @@ export function createAllToolDefinitions(cwd: string, options?: ToolsOptions): R
 		bash: createBashToolDefinition(cwd, options?.bash),
 		subagent: createSubagentToolDefinition(options?.subagent),
 		transcribe: createTranscribeToolDefinition(),
-		"vision": createVisionToolDefinition(),
+		vision: createVisionToolDefinition(),
 	};
 }
 
@@ -69,7 +69,7 @@ export function createAllTools(cwd: string, options?: ToolsOptions): Record<Tool
 		bash: createBashTool(cwd, options?.bash),
 		subagent: createSubagentToolDefinition(options?.subagent) as ToolDef as Tool,
 		transcribe: createTranscribeToolDefinition() as ToolDef as Tool,
-		"vision": createVisionToolDefinition() as ToolDef as Tool,
+		vision: createVisionToolDefinition() as ToolDef as Tool,
 	};
 }
 
