@@ -2,6 +2,7 @@
  * Agent discovery and configuration for the subagent system.
  *
  * Discovers agent definitions from markdown files in:
+ * - Built-in: hardcoded agent definitions
  * - User directory: ~/.pi/agent/agents/*.md
  * - Project directory: <project>/.pi/agents/*.md
  *
@@ -11,6 +12,9 @@
  * description: Code review agent
  * tools: read,grep,ls
  * model: gpt-4
+ * maxTurns: 50
+ * background: false
+ * isolation: worktree
  * ---
  * You are a code reviewer...
  */
@@ -19,17 +23,28 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { getAgentDir } from "../../config.ts";
 import { parseFrontmatter } from "../../utils/frontmatter.ts";
+import { getBuiltInAgents } from "./built-in-agents.ts";
 
 export type AgentScope = "user" | "project" | "both";
+
+export type AgentIsolation = "worktree";
 
 export interface AgentConfig {
 	name: string;
 	description: string;
+	/** Tool names this agent can use. '*' means all tools. undefined means all tools. */
 	tools?: string[];
+	/** Model override. 'inherit' means use parent's model. undefined means default. */
 	model?: string;
 	systemPrompt: string;
-	source: "user" | "project";
-	filePath: string;
+	source: "user" | "project" | "built-in";
+	filePath?: string;
+	/** Max turns before the agent loop stops. */
+	maxTurns?: number;
+	/** Force this agent to run in background (async). */
+	background?: boolean;
+	/** Default isolation mode for this agent. */
+	isolation?: AgentIsolation;
 }
 
 export interface AgentDiscoveryResult {
@@ -42,6 +57,9 @@ type AgentFrontmatter = Record<string, unknown> & {
 	description?: string;
 	tools?: string;
 	model?: string;
+	maxTurns?: number | string;
+	background?: boolean | string;
+	isolation?: string;
 };
 
 function loadAgentsFromDir(dir: string, source: "user" | "project"): AgentConfig[] {
@@ -82,10 +100,25 @@ function loadAgentsFromDir(dir: string, source: "user" | "project"): AgentConfig
 			continue;
 		}
 
-		const tools = frontmatter.tools
-			?.split(",")
-			.map((t) => t.trim())
-			.filter(Boolean);
+		const tools =
+			frontmatter.tools === "*"
+				? ["*"]
+				: frontmatter.tools
+						?.split(",")
+						.map((t) => t.trim())
+						.filter(Boolean);
+
+		const maxTurns =
+			typeof frontmatter.maxTurns === "number"
+				? frontmatter.maxTurns
+				: typeof frontmatter.maxTurns === "string"
+					? parseInt(frontmatter.maxTurns, 10) || undefined
+					: undefined;
+
+		const background =
+			typeof frontmatter.background === "boolean" ? frontmatter.background : frontmatter.background === "true";
+
+		const isolation = frontmatter.isolation === "worktree" ? "worktree" : undefined;
 
 		agents.push({
 			name: frontmatter.name,
@@ -95,6 +128,9 @@ function loadAgentsFromDir(dir: string, source: "user" | "project"): AgentConfig
 			systemPrompt: body,
 			source,
 			filePath,
+			maxTurns,
+			background: background || undefined,
+			isolation,
 		});
 	}
 
@@ -124,6 +160,8 @@ function findNearestProjectAgentsDir(cwd: string): string | null {
 /**
  * Discover all available agents based on scope.
  *
+ * Priority: built-in < user < project (later overrides earlier by name).
+ *
  * @param cwd - Current working directory (used to find project-local agents)
  * @param scope - Which agent directories to scan
  * @returns Discovery result with agents list and project agents directory path
@@ -132,18 +170,19 @@ export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryRe
 	const userDir = join(getAgentDir(), "agents");
 	const projectAgentsDir = findNearestProjectAgentsDir(cwd);
 
+	const builtInAgents = getBuiltInAgents();
 	const userAgents = scope === "project" ? [] : loadAgentsFromDir(userDir, "user");
 	const projectAgents = scope === "user" || !projectAgentsDir ? [] : loadAgentsFromDir(projectAgentsDir, "project");
 
+	// Priority: built-in < user < project (later overrides earlier by name)
 	const agentMap = new Map<string, AgentConfig>();
 
-	if (scope === "both") {
-		// Project agents override user agents with the same name
+	for (const agent of builtInAgents) agentMap.set(agent.name, agent);
+
+	if (scope === "both" || scope === "user") {
 		for (const agent of userAgents) agentMap.set(agent.name, agent);
-		for (const agent of projectAgents) agentMap.set(agent.name, agent);
-	} else if (scope === "user") {
-		for (const agent of userAgents) agentMap.set(agent.name, agent);
-	} else {
+	}
+	if (scope === "both" || scope === "project") {
 		for (const agent of projectAgents) agentMap.set(agent.name, agent);
 	}
 

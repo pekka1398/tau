@@ -1006,8 +1006,12 @@ export class AgentSession {
 		const loadedSkills = this._resourceLoader.getSkills().skills;
 		const loadedContextFiles = this._resourceLoader.getAgentsFiles().agentsFiles;
 
+		const modelId = this.model?.id;
+		const modelDisplay = modelId ? `${this.model!.provider}/${modelId}` : undefined;
+
 		this._baseSystemPromptOptions = {
 			cwd: this._cwd,
+			model: modelDisplay,
 			skills: loadedSkills,
 			contextFiles: loadedContextFiles,
 		};
@@ -2510,9 +2514,7 @@ export class AgentSession {
 		this._bindExtensionCore(this._extensionRunner);
 		this._applyExtensionBindings(this._extensionRunner);
 
-		const defaultActiveToolNames = this._baseToolsOverride
-			? Object.keys(this._baseToolsOverride)
-			: [...allToolNames];
+		const defaultActiveToolNames = this._baseToolsOverride ? Object.keys(this._baseToolsOverride) : [...allToolNames];
 		const baseActiveToolNames = options.activeToolNames ?? defaultActiveToolNames;
 		this._refreshToolRegistry({
 			activeToolNames: baseActiveToolNames,

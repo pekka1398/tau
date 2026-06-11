@@ -268,6 +268,7 @@ function validateShrinkwrap(shrinkwrap, internalNames) {
 
 	for (const [lockPath, entry] of Object.entries(shrinkwrap.packages)) {
 		for (const dependencyName of Object.keys(packageDependencies(entry))) {
+			if (SKIP_PACKAGES.has(dependencyName)) continue;
 			const dependencyIncluded = [...includedPaths].some(
 				(candidate) => candidate === `node_modules/${dependencyName}` || candidate.endsWith(`/node_modules/${dependencyName}`),
 			);
@@ -286,6 +287,10 @@ function validateShrinkwrap(shrinkwrap, internalNames) {
 		throw new Error(`Generated shrinkwrap failed validation:\n${errors.map((error) => `  - ${error}`).join("\n")}`);
 	}
 }
+
+// Packages to skip in shrinkwrap — local binaries or non-standard packages
+// that aren't in the lockfile but are bundled differently.
+const SKIP_PACKAGES = new Set(["ai-dash"]);
 
 function generateShrinkwrap() {
 	const rootLock = readJson(rootLockfilePath);
@@ -307,6 +312,10 @@ function generateShrinkwrap() {
 		const item = queue.shift();
 		if (!item) {
 			break;
+		}
+
+		if (SKIP_PACKAGES.has(item.name)) {
+			continue;
 		}
 
 		const workspace = internalWorkspaces.get(item.name);

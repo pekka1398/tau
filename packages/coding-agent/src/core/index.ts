@@ -75,7 +75,15 @@ export {
 	type WorkingIndicatorOptions,
 } from "./extensions/index.ts";
 export { createSyntheticSourceInfo } from "./source-info.ts";
-export { type AgentConfig, type AgentDiscoveryResult, type AgentScope, discoverAgents } from "./subagent/agents.ts";
+export {
+	type AgentConfig,
+	type AgentDiscoveryResult,
+	type AgentIsolation,
+	type AgentScope,
+	discoverAgents,
+} from "./subagent/agents.ts";
+export { getBuiltInAgents, isBuiltInAgent } from "./subagent/built-in-agents.ts";
+export { buildChildDirective, buildForkedMessages, isInForkChild } from "./subagent/fork.ts";
 export {
 	formatTaskNotification,
 	type NotificationCallback,
@@ -84,8 +92,23 @@ export {
 } from "./subagent/task-registry.ts";
 export {
 	createSubagentToolDefinition,
+	resolveAgentModel,
+	resolveAgentTools,
 	type SingleResult,
 	type SubagentDetails,
 	type SubagentToolOptions,
 	type UsageStats,
 } from "./subagent/tool.ts";
+export {
+	listTranscripts,
+	readAgentMetadata,
+	readTranscript,
+	recordTranscript,
+	writeAgentMetadata,
+} from "./subagent/transcript.ts";
+export {
+	createAgentWorktree,
+	hasWorktreeChanges,
+	removeAgentWorktree,
+	type WorktreeInfo,
+} from "./subagent/worktree.ts";

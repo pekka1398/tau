@@ -47,7 +47,7 @@ export function createVisionToolDefinition(): ToolDefinition<any, any> {
 		parameters: Type.Object({
 			file_path: Type.String({ description: "Absolute path to the image file" }),
 		}),
-		execute: async (toolCallId, params, signal, onUpdate, ctx) => {
+		execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
 			const { file_path } = params as { file_path: string };
 			const filePath = resolve(ctx?.cwd ?? process.cwd(), file_path);
 
@@ -66,7 +66,9 @@ export function createVisionToolDefinition(): ToolDefinition<any, any> {
 			// Check size
 			if (stat.size > MAX_FILE_SIZE) {
 				return {
-					content: [{ type: "text", text: `Error: File too large (${(stat.size / 1024 / 1024).toFixed(1)}MB, max 20MB)` }],
+					content: [
+						{ type: "text", text: `Error: File too large (${(stat.size / 1024 / 1024).toFixed(1)}MB, max 20MB)` },
+					],
 					details: undefined,
 					isError: true,
 				};
@@ -76,7 +78,12 @@ export function createVisionToolDefinition(): ToolDefinition<any, any> {
 			const mimeType = detectMimeType(filePath);
 			if (!mimeType) {
 				return {
-					content: [{ type: "text", text: `Error: Unsupported image format. Supported: ${Object.keys(SUPPORTED_EXTENSIONS).join(", ")}` }],
+					content: [
+						{
+							type: "text",
+							text: `Error: Unsupported image format. Supported: ${Object.keys(SUPPORTED_EXTENSIONS).join(", ")}`,
+						},
+					],
 					details: undefined,
 					isError: true,
 				};
@@ -102,7 +109,9 @@ export function createVisionToolDefinition(): ToolDefinition<any, any> {
 				};
 			} catch (err) {
 				return {
-					content: [{ type: "text", text: `Error reading file: ${err instanceof Error ? err.message : String(err)}` }],
+					content: [
+						{ type: "text", text: `Error reading file: ${err instanceof Error ? err.message : String(err)}` },
+					],
 					details: undefined,
 					isError: true,
 				};

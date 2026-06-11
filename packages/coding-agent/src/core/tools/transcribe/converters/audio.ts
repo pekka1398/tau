@@ -352,7 +352,9 @@ async function detectSilence(filePath: string, noiseThresh: string): Promise<Sil
 	const re = /silence_(start|end):\s*([\d.]+)/g;
 	let match: RegExpExecArray | null;
 
-	while ((match = re.exec(stderr)) !== null) {
+	for (;;) {
+		match = re.exec(stderr);
+		if (match === null) break;
 		const kind = match[1];
 		const value = Number.parseFloat(match[2]);
 		if (!Number.isFinite(value)) continue;
