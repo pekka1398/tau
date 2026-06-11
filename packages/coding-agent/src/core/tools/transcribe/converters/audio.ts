@@ -5,11 +5,11 @@
  *   1. Probe: ffprobe → format, duration, sample rate, channels, bitrate
  *   2. Analyze original: volumedetect (max/mean dB), silencedetect
  *   3. Select preset based on analysis (conservative / speech / aggressive)
- *   4. Pre-process: highpass → lowpass → denoise → dynamics → limiter → loudnorm
- *   5. Detect silence on processed audio (adaptive threshold)
- *   6. Chunk: by silence boundaries, hard max guarantee, no s.end! assertions
- *   7. Extract chunks with 2s overlap context
- *   8. Normalize to 16kHz mono only at chunk extraction (last step)
+ *   4. Pre-process: mono → highpass → lowpass → denoise → limiter → dynaudnorm → loudnorm
+ *   5. Re-probe processed audio, analyze processed volume
+ *   6. Detect silence on processed audio (threshold from processed volume)
+ *   7. Chunk: by silence boundaries, hard max guarantee, no overlap overflow
+ *   8. Extract chunks with overlap context → pipe to buffer (no temp files)
  *   9. Send each chunk to API
  *  10. Assemble in order
  *  11. Cleanup work dir in finally
@@ -23,8 +23,8 @@ import type { ConverterContext, TranscribeResult } from "../types.ts";
 import type { Converter } from "./_interface.ts";
 
 const MAX_CHUNK_SEC = 600; // 10 min hard limit
-const SILENCE_DURATION = "0.4"; // seconds
 const OVERLAP_SEC = 2; // context overlap between chunks
+const SILENCE_DURATION = "0.5"; // seconds of silence to detect
 
 type PreprocessPreset = "conservative" | "speech" | "aggressive";
 
@@ -34,68 +34,102 @@ export const audioConverter: Converter = {
 
 	async convert(filePath: string, ctx: ConverterContext): Promise<TranscribeResult> {
 		const warnings: string[] = [];
-
-		// Each conversion gets its own temp directory — cleaned up in finally
 		const workDir = await mkdtemp(join(tmpdir(), "omni-audio-"));
 
 		try {
 			// ── Step 1: Probe ──────────────────────────────────────────────
 			const probe = await probeAudio(filePath);
-			if (probe.durationSec <= 0) throw new Error("Audio has no duration");
+			if (!Number.isFinite(probe.durationSec) || probe.durationSec <= 0) {
+				throw new Error(`Invalid audio duration: ${probe.durationSec}`);
+			}
 			if (!probe.hasAudioStream) throw new Error("No audio stream found");
 			warnings.push(
 				`Input: ${probe.format}, ${probe.durationSec.toFixed(1)}s, ${probe.sampleRate}Hz, ${probe.channels}ch, ${probe.bitrate ?? "?"}bps`,
 			);
 
 			// ── Step 2: Analyze original ───────────────────────────────────
-			const analysis = await analyzeAudio(filePath);
+			const origAnalysis = await analyzeVolume(filePath);
 			warnings.push(
-				`Volume: max=${formatDb(analysis.maxVolumeDb)}, mean=${formatDb(analysis.meanVolumeDb)}`,
+				`Volume (original): max=${formatDb(origAnalysis.maxVolumeDb)}, mean=${formatDb(origAnalysis.meanVolumeDb)}`,
 			);
-			warnings.push(`Silence: ${analysis.silences.length} segments detected`);
 
 			// ── Step 3: Select preset ──────────────────────────────────────
-			const preset = selectPreset(analysis);
+			const preset = selectPreset(origAnalysis);
 			warnings.push(`Preset: ${preset}`);
 
-			// ── Step 4: Pre-process → processed.wav (original sample rate) ─
+			// ── Step 4: Pre-process (with fallback) ────────────────────────
 			const processedPath = join(workDir, "processed.wav");
-			const filters = buildFilters(preset, probe.channels > 1);
-			await runFfmpeg([
-				"-i", filePath,
-				"-af", filters.join(","),
-				"-acodec", "pcm_s16le",
-				"-y", processedPath,
-			]);
-			warnings.push(`Pre-processing: ${filters.length} filters (${preset})`);
+			let actualPreset = preset;
 
-			// ── Step 5: Detect silence on processed audio ──────────────────
-			const silenceThresh = chooseSilenceThreshold(analysis);
-			const processedSilences = await detectSilence(processedPath, silenceThresh);
+			const tryPreprocess = async (p: PreprocessPreset) => {
+				const filters = buildFilters(p, probe.channels, probe.sampleRate);
+				await runFfmpeg([
+					"-i", filePath,
+					"-map", "0:a:0", "-vn",
+					"-af", filters.join(","),
+					"-acodec", "pcm_s16le",
+					"-y", processedPath,
+				]);
+				return filters;
+			};
+
+			let filters: string[];
+			try {
+				filters = await tryPreprocess(preset);
+			} catch (err) {
+				if (preset !== "conservative") {
+					warnings.push(`Pre-processing with ${preset} failed, falling back to conservative`);
+					actualPreset = "conservative";
+					filters = await tryPreprocess("conservative");
+				} else {
+					throw err;
+				}
+			}
+			warnings.push(`Pre-processing: ${actualPreset} (${filters.length} filters)`);
+
+			// ── Step 5: Re-probe processed audio ───────────────────────────
+			const processedProbe = await probeAudio(processedPath);
+			const processedDuration = processedProbe.durationSec;
+			const processedVol = await analyzeVolume(processedPath);
 			warnings.push(
-				`Silence (processed): ${processedSilences.length} segments, threshold=${silenceThresh}`,
+				`Volume (processed): max=${formatDb(processedVol.maxVolumeDb)}, mean=${formatDb(processedVol.meanVolumeDb)}`,
 			);
 
-			// ── Step 6: Build chunks ───────────────────────────────────────
-			const chunks = buildChunks(probe.durationSec, processedSilences, MAX_CHUNK_SEC, {
-				minChunkSec: 30,
-			});
-			warnings.push(
-				`Chunks: ${chunks.length} (${chunks.map((c) => `${c.label}`).join(", ")})`,
-			);
+			// ── Step 6: Detect silence on processed audio ──────────────────
+			const silenceThresh = chooseSilenceThreshold(processedVol);
+			const silences = await detectSilence(processedPath, silenceThresh);
+			warnings.push(`Silence: ${silences.length} segments, threshold=${silenceThresh}`);
 
-			// ── Step 7–9: Extract, normalize, transcribe ───────────────────
+			// ── Step 7: Build chunks ───────────────────────────────────────
+			// Reserve room for overlap so actual extracted audio never exceeds MAX_CHUNK_SEC
+			const effectiveMax = MAX_CHUNK_SEC - OVERLAP_SEC * 2;
+			const chunks = buildChunks(processedDuration, silences, effectiveMax, { minChunkSec: 30 });
+			warnings.push(`Chunks: ${chunks.length} (${chunks.map((c) => c.label).join(", ")})`);
+
+			// ── Step 8–9: Extract & transcribe ─────────────────────────────
 			const results: string[] = [];
 			for (let i = 0; i < chunks.length; i++) {
 				const chunk = chunks[i];
 
-				// Extract with overlap context → pipe to buffer (no temp chunk file)
 				const readStart = Math.max(0, chunk.startSec - OVERLAP_SEC);
-				const readEnd = Math.min(probe.durationSec, chunk.endSec + OVERLAP_SEC);
+				const readEnd = Math.min(processedDuration, chunk.endSec + OVERLAP_SEC);
 				const readDuration = readEnd - readStart;
 
 				const segmentData = await extractChunkToBuffer(processedPath, readStart, readDuration);
-				const prompt = buildAudioPrompt(chunk.label, i === 0, probe, chunks.length, OVERLAP_SEC > 0);
+
+				const leadingOverlap = chunk.startSec - readStart;
+				const trailingOverlap = readEnd - chunk.endSec;
+
+				const prompt = buildAudioPrompt({
+					chunkIndex: i + 1,
+					totalChunks: chunks.length,
+					label: chunk.label,
+					isFirstChunk: i === 0,
+					probe,
+					leadingOverlapSec: leadingOverlap,
+					trailingOverlapSec: trailingOverlap,
+				});
+
 				const text = await ctx.callApi(prompt, segmentData, "audio/wav");
 				results.push(`[${chunk.label}]\n${text}`);
 			}
@@ -109,7 +143,6 @@ export const audioConverter: Converter = {
 				warnings,
 			};
 		} finally {
-			// ── Step 11: Cleanup ───────────────────────────────────────────
 			await rm(workDir, { recursive: true, force: true }).catch(() => {});
 		}
 	},
@@ -126,10 +159,14 @@ interface AudioProbe {
 	hasAudioStream: boolean;
 }
 
-interface AudioAnalysis {
+interface VolumeStats {
 	maxVolumeDb?: number;
 	meanVolumeDb?: number;
-	silences: Array<{ start: number; end?: number }>;
+}
+
+interface SilenceSegment {
+	start: number;
+	end: number;
 }
 
 interface Chunk {
@@ -138,18 +175,13 @@ interface Chunk {
 	label: string;
 }
 
-interface CompleteSilence {
-	start: number;
-	end: number;
-}
-
-// ── Helpers: ffmpeg wrappers ─────────────────────────────────────────────────
+// ── ffmpeg wrappers ──────────────────────────────────────────────────────────
 
 function runFfmpeg(args: string[]): Promise<void> {
 	return new Promise((resolve, reject) => {
 		execFile(
 			"ffmpeg",
-			["-hide_banner", "-nostdin", ...args],
+			["-hide_banner", "-nostdin", "-nostats", "-v", "error", ...args],
 			{ maxBuffer: 50 * 1024 * 1024 },
 			(err, _stdout, stderr) => {
 				if (err) {
@@ -162,38 +194,11 @@ function runFfmpeg(args: string[]): Promise<void> {
 	});
 }
 
-function extractChunkToBuffer(inputPath: string, startSec: number, durationSec: number): Promise<Buffer> {
-	return new Promise((resolve, reject) => {
-		execFile(
-			"ffmpeg",
-			[
-				"-hide_banner", "-nostdin",
-				"-ss", String(startSec),
-				"-t", String(durationSec),
-				"-i", inputPath,
-				"-f", "wav",
-				"-ar", "16000",
-				"-ac", "1",
-				"pipe:1",
-			],
-			{ encoding: "buffer", maxBuffer: 150 * 1024 * 1024 },
-			(err, stdout, stderr) => {
-				if (err) {
-					const msg = stderr instanceof Buffer ? stderr.toString("utf8").slice(-4000) : String(stderr);
-					reject(new Error(`ffmpeg chunk extraction failed: ${msg || err.message}`));
-					return;
-				}
-				resolve(stdout as unknown as Buffer);
-			},
-		);
-	});
-}
-
 function runFfmpegCaptureStderr(args: string[]): Promise<string> {
 	return new Promise((resolve, reject) => {
 		execFile(
 			"ffmpeg",
-			["-hide_banner", "-nostdin", ...args],
+			["-hide_banner", "-nostdin", "-nostats", "-v", "info", ...args],
 			{ maxBuffer: 50 * 1024 * 1024 },
 			(err, _stdout, stderr) => {
 				if (err) {
@@ -215,31 +220,64 @@ function runFfprobe(args: string[]): Promise<string> {
 	});
 }
 
+function extractChunkToBuffer(inputPath: string, startSec: number, durationSec: number): Promise<Buffer> {
+	return new Promise((resolve, reject) => {
+		execFile(
+			"ffmpeg",
+			[
+				"-hide_banner", "-nostdin", "-nostats", "-v", "error",
+				"-ss", String(startSec),
+				"-t", String(durationSec),
+				"-i", inputPath,
+				"-map", "0:a:0", "-vn",
+				"-f", "wav",
+				"-ar", "16000",
+				"-ac", "1",
+				"pipe:1",
+			],
+			{ encoding: "buffer", maxBuffer: 150 * 1024 * 1024 },
+			(err, stdout, stderr) => {
+				if (err) {
+					const msg = Buffer.isBuffer(stderr)
+						? stderr.toString("utf8").slice(-4000)
+						: String(stderr).slice(-4000);
+					reject(new Error(`ffmpeg chunk extraction failed: ${msg || err.message}`));
+					return;
+				}
+				if (!Buffer.isBuffer(stdout)) {
+					reject(new Error("ffmpeg chunk extraction did not return a Buffer"));
+					return;
+				}
+				resolve(stdout);
+			},
+		);
+	});
+}
+
 // ── Probe ────────────────────────────────────────────────────────────────────
 
 async function probeAudio(filePath: string): Promise<AudioProbe> {
 	const stdout = await runFfprobe([
-		"-v", "quiet",
-		"-print_format", "json",
-		"-show_format", "-show_streams",
-		filePath,
+		"-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", filePath,
 	]);
 	const data = JSON.parse(stdout);
-	const audioStream = data.streams?.find(
-		(s: { codec_type: string }) => s.codec_type === "audio",
-	);
-	const format = data.format;
+	const stream = data.streams?.find((s: { codec_type: string }) => s.codec_type === "audio");
+	const fmt = data.format;
+
+	const durationRaw = fmt?.duration ?? stream?.duration ?? "0";
+	const sampleRateRaw = stream?.sample_rate ?? "44100";
+
 	return {
-		format: format?.format_name ?? "unknown",
-		durationSec: parseFloat(format?.duration ?? "0"),
-		sampleRate: parseInt(audioStream?.sample_rate ?? "44100", 10),
-		channels: audioStream?.channels ?? 1,
-		bitrate: format?.bit_rate ? parseInt(format.bit_rate, 10) : undefined,
-		hasAudioStream: !!audioStream,
+		format: fmt?.format_name ?? "unknown",
+		durationSec: Number.parseFloat(durationRaw),
+		sampleRate: Number.parseInt(sampleRateRaw, 10),
+		channels: stream?.channels ?? 1,
+		bitrate: fmt?.bit_rate ? Number.parseInt(fmt.bit_rate, 10) : undefined,
+		hasAudioStream: !!stream,
 	};
 }
 
-// ── Analyze ──────────────────────────────────────────────────────────────────
+// ── Volume analysis ──────────────────────────────────────────────────────────
 
 function parseDb(value: string | undefined): number | undefined {
 	if (!value) return undefined;
@@ -254,39 +292,38 @@ function formatDb(value: number | undefined): string {
 	return `${value.toFixed(1)}dB`;
 }
 
-async function analyzeAudio(filePath: string): Promise<AudioAnalysis> {
-	// volumedetect → max_volume, mean_volume
-	const volStderr = await runFfmpegCaptureStderr([
+async function analyzeVolume(filePath: string): Promise<VolumeStats> {
+	const stderr = await runFfmpegCaptureStderr([
 		"-i", filePath,
+		"-map", "0:a:0", "-vn",
 		"-af", "volumedetect",
 		"-f", "null", "-",
 	]);
 
 	const dbRe = "(-?inf|[-\\d.]+)";
-	const maxMatch = volStderr.match(new RegExp(`max_volume:\\s*${dbRe}\\s*dB`));
-	const meanMatch = volStderr.match(new RegExp(`mean_volume:\\s*${dbRe}\\s*dB`));
-
-	// silencedetect
-	const silences = await detectSilence(filePath, "-35dB");
+	const maxMatch = stderr.match(new RegExp(`max_volume:\\s*${dbRe}\\s*dB`));
+	const meanMatch = stderr.match(new RegExp(`mean_volume:\\s*${dbRe}\\s*dB`));
 
 	return {
 		maxVolumeDb: parseDb(maxMatch?.[1]),
 		meanVolumeDb: parseDb(meanMatch?.[1]),
-		silences,
 	};
 }
+
+// ── Silence detection ────────────────────────────────────────────────────────
 
 async function detectSilence(
 	filePath: string,
 	noiseThresh: string,
-): Promise<Array<{ start: number; end?: number }>> {
+): Promise<SilenceSegment[]> {
 	const stderr = await runFfmpegCaptureStderr([
 		"-i", filePath,
+		"-map", "0:a:0", "-vn",
 		"-af", `silencedetect=noise=${noiseThresh}:d=${SILENCE_DURATION}`,
 		"-f", "null", "-",
 	]);
 
-	const silences: Array<{ start: number; end?: number }> = [];
+	const silences: SilenceSegment[] = [];
 	let current: { start: number; end?: number } | undefined;
 
 	const re = /silence_(start|end):\s*([\d.]+)/g;
@@ -303,40 +340,32 @@ async function detectSilence(
 		} else {
 			if (current) {
 				current.end = value;
-				silences.push(current);
+				silences.push(current as SilenceSegment);
 				current = undefined;
-			} else {
-				silences.push({ start: 0, end: value });
 			}
 		}
 	}
 
-	if (current) silences.push(current);
+	if (current?.end !== undefined) silences.push(current as SilenceSegment);
+
 	return silences;
 }
 
 // ── Preset selection ─────────────────────────────────────────────────────────
 
-function selectPreset(analysis: AudioAnalysis): PreprocessPreset {
-	const max = analysis.maxVolumeDb;
-	const mean = analysis.meanVolumeDb;
-
+function selectPreset(vol: VolumeStats): PreprocessPreset {
+	const max = vol.maxVolumeDb;
+	const mean = vol.meanVolumeDb;
 	if (max === undefined || mean === undefined) return "conservative";
 
 	const dynamicRange = max - mean;
-
-	// Very dirty: high dynamic range OR very quiet recording
 	if (dynamicRange > 30 || mean < -40) return "aggressive";
-
-	// Normal-ish but could use some help
 	if (dynamicRange > 18 || mean < -30) return "speech";
-
-	// Already decent quality
 	return "conservative";
 }
 
-function chooseSilenceThreshold(analysis: AudioAnalysis): string {
-	const mean = analysis.meanVolumeDb;
+function chooseSilenceThreshold(vol: VolumeStats): string {
+	const mean = vol.meanVolumeDb;
 	if (mean === undefined) return "-35dB";
 	if (mean < -40) return "-45dB";
 	if (mean > -22) return "-30dB";
@@ -345,18 +374,27 @@ function chooseSilenceThreshold(analysis: AudioAnalysis): string {
 
 // ── Filter presets ───────────────────────────────────────────────────────────
 
-function buildFilters(preset: PreprocessPreset, isStereo: boolean): string[] {
-	const mono = isStereo ? ["pan=mono|c0=0.5*c0+0.5*c1"] : [];
+function chooseLowpassHz(sampleRate: number, preferredHz: number): number {
+	const nyquist = sampleRate / 2;
+	return Math.floor(Math.min(preferredHz, nyquist * 0.95));
+}
 
-	// Order: mono → highpass → lowpass → limiter (tame peaks first) →
-	//        dynaudnorm (balance volumes) → denoise → loudnorm
+function buildMonoFilter(channels: number): string[] {
+	if (channels <= 1) return [];
+	if (channels === 2) return ["pan=mono|c0=0.5*c0+0.5*c1"];
+	return ["aformat=channel_layouts=mono"];
+}
+
+function buildFilters(preset: PreprocessPreset, channels: number, sampleRate: number): string[] {
+	const mono = buildMonoFilter(channels);
+
 	switch (preset) {
 		case "conservative":
 			return [
 				...mono,
 				"highpass=f=70",
-				"lowpass=f=12000",
-				"alimiter=limit=0.98",
+				`lowpass=f=${chooseLowpassHz(sampleRate, 12000)}`,
+				"alimiter=limit=0.98:attack=5:release=50",
 				"loudnorm=I=-18:TP=-2:LRA=10",
 			];
 
@@ -364,10 +402,11 @@ function buildFilters(preset: PreprocessPreset, isStereo: boolean): string[] {
 			return [
 				...mono,
 				"highpass=f=70",
-				"lowpass=f=12000",
-				"alimiter=limit=-3dB:attack=5:release=50",
-				"dynaudnorm=f=200:g=15:p=0.95:m=10",
+				`lowpass=f=${chooseLowpassHz(sampleRate, 12000)}`,
 				"afftdn=nr=4:nf=-40",
+				"alimiter=limit=0.95:attack=5:release=50",
+				"dynaudnorm=f=200:g=15:p=0.95:m=10",
+				"alimiter=limit=0.95:attack=5:release=50",
 				"loudnorm=I=-18:TP=-2:LRA=8",
 			];
 
@@ -375,11 +414,12 @@ function buildFilters(preset: PreprocessPreset, isStereo: boolean): string[] {
 			return [
 				...mono,
 				"highpass=f=90",
-				"lowpass=f=11000",
-				"alimiter=limit=-3dB:attack=5:release=50",
-				"dynaudnorm=f=150:g=20:p=0.95:m=15",
+				`lowpass=f=${chooseLowpassHz(sampleRate, 11000)}`,
 				"afftdn=nr=6:nf=-35",
+				"alimiter=limit=0.95:attack=5:release=50",
+				"dynaudnorm=f=150:g=20:p=0.95:m=15",
 				"acompressor=threshold=-22dB:ratio=3:attack=5:release=120:makeup=4",
+				"alimiter=limit=0.90:attack=5:release=50",
 				"loudnorm=I=-18:TP=-2:LRA=6",
 			];
 	}
@@ -387,7 +427,7 @@ function buildFilters(preset: PreprocessPreset, isStereo: boolean): string[] {
 
 // ── Chunking ─────────────────────────────────────────────────────────────────
 
-function isCompleteSilence(s: { start: number; end?: number }): s is CompleteSilence {
+function isCompleteSilence(s: { start: number; end?: number }): s is SilenceSegment {
 	return (
 		Number.isFinite(s.start) &&
 		typeof s.end === "number" &&
@@ -398,7 +438,7 @@ function isCompleteSilence(s: { start: number; end?: number }): s is CompleteSil
 
 function buildChunks(
 	durationSec: number,
-	silences: Array<{ start: number; end?: number }>,
+	silences: SilenceSegment[],
 	maxSec: number,
 	options?: { minChunkSec?: number },
 ): Chunk[] {
@@ -408,27 +448,11 @@ function buildChunks(
 		throw new Error(`Invalid audio duration: ${durationSec}`);
 	}
 
-	// Single chunk if short enough and no useful silence points
+	// Short enough: single chunk, don't split just because there's silence
 	if (durationSec <= maxSec) {
-		const splitPoints = silences
-			.filter(isCompleteSilence)
-			.map((s) => (s.start + s.end) / 2)
-			.filter((t) => t > minChunkSec && t < durationSec - minChunkSec)
-			.sort((a, b) => a - b);
-
-		if (splitPoints.length === 0) {
-			return [{ startSec: 0, endSec: durationSec, label: `${formatTime(0)}-${formatTime(durationSec)}` }];
-		}
-
-		// Split at best silence point
-		const mid = splitPoints[Math.floor(splitPoints.length / 2)];
-		return [
-			{ startSec: 0, endSec: mid, label: `${formatTime(0)}-${formatTime(mid)}` },
-			{ startSec: mid, endSec: durationSec, label: `${formatTime(mid)}-${formatTime(durationSec)}` },
-		];
+		return [{ startSec: 0, endSec: durationSec, label: `${formatTime(0)}-${formatTime(durationSec)}` }];
 	}
 
-	// Multiple chunks needed — build with hard max guarantee
 	const splitPoints = silences
 		.filter(isCompleteSilence)
 		.map((s) => (s.start + s.end) / 2)
@@ -450,7 +474,6 @@ function buildChunks(
 			break;
 		}
 
-		// Find the latest silence point before hardEnd, but after minChunkSec
 		const candidates = splitPoints.filter(
 			(p) => p > start + minChunkSec && p <= hardEnd,
 		);
@@ -458,7 +481,6 @@ function buildChunks(
 		const end = candidates.length > 0 ? candidates[candidates.length - 1] : hardEnd;
 
 		if (end <= start) {
-			// Safety: shouldn't happen, but avoid infinite loop
 			chunks.push({
 				startSec: start,
 				endSec: hardEnd,
@@ -490,19 +512,23 @@ function formatTime(sec: number): string {
 
 // ── Prompt ───────────────────────────────────────────────────────────────────
 
-function buildAudioPrompt(
-	label: string,
-	isFirstChunk: boolean,
-	probe: AudioProbe,
-	totalChunks: number,
-	hasOverlap: boolean,
-): string {
+function buildAudioPrompt(opts: {
+	chunkIndex: number;
+	totalChunks: number;
+	label: string;
+	isFirstChunk: boolean;
+	probe: AudioProbe;
+	leadingOverlapSec: number;
+	trailingOverlapSec: number;
+}): string {
+	const hasOverlap = opts.leadingOverlapSec > 0 || opts.trailingOverlapSec > 0;
+
 	return `You are a meticulous transcription engine.
 
 Transcribe this audio segment faithfully and completely.
 
-Segment: ${label} (${totalChunks} total segments)
-Audio: ${probe.durationSec.toFixed(0)}s total, ${probe.sampleRate}Hz, ${probe.channels}ch.
+Segment: ${opts.chunkIndex}/${opts.totalChunks}, time range ${opts.label}
+Audio: ${opts.probe.durationSec.toFixed(0)}s total, ${opts.probe.sampleRate}Hz, ${opts.probe.channels}ch.
 
 Critical rules:
 - Return only the transcript. Do not add explanations, notes, commentary, or conclusions.
@@ -513,6 +539,6 @@ Critical rules:
 - If speech is unclear, write [unclear] instead of guessing.
 - If multiple speakers are present, mark speaker changes as [Speaker 1], [Speaker 2], etc.
 - Describe non-speech audio briefly in brackets: [door closes], [phone ringing], [music playing].
-${hasOverlap ? "- This segment may include a few seconds of overlap with neighboring segments. Transcribe what is audible in this segment regardless." : ""}
-${isFirstChunk ? "- This is the first segment. Identify the spoken language and speakers if possible." : ""}`;
+${hasOverlap ? `- This audio includes ~${opts.leadingOverlapSec.toFixed(0)}s leading and ~${opts.trailingOverlapSec.toFixed(0)}s trailing overlap with neighboring segments for context. Use overlap to understand context, but avoid duplicating boundary speech that clearly belongs to a neighboring segment.` : ""}
+${opts.isFirstChunk ? "- This is the first segment. Identify the spoken language and speakers if possible." : ""}`;
 }
