@@ -64,11 +64,17 @@ export const audioConverter: Converter = {
 			const tryPreprocess = async (p: PreprocessPreset) => {
 				const filters = buildFilters(p, probe.channels, probe.sampleRate);
 				await runFfmpeg([
-					"-i", filePath,
-					"-map", "0:a:0", "-vn",
-					"-af", filters.join(","),
-					"-acodec", "pcm_s16le",
-					"-y", processedPath,
+					"-i",
+					filePath,
+					"-map",
+					"0:a:0",
+					"-vn",
+					"-af",
+					filters.join(","),
+					"-acodec",
+					"pcm_s16le",
+					"-y",
+					processedPath,
 				]);
 				return filters;
 			};
@@ -225,22 +231,32 @@ function extractChunkToBuffer(inputPath: string, startSec: number, durationSec: 
 		execFile(
 			"ffmpeg",
 			[
-				"-hide_banner", "-nostdin", "-nostats", "-v", "error",
-				"-ss", String(startSec),
-				"-t", String(durationSec),
-				"-i", inputPath,
-				"-map", "0:a:0", "-vn",
-				"-f", "wav",
-				"-ar", "16000",
-				"-ac", "1",
+				"-hide_banner",
+				"-nostdin",
+				"-nostats",
+				"-v",
+				"error",
+				"-ss",
+				String(startSec),
+				"-t",
+				String(durationSec),
+				"-i",
+				inputPath,
+				"-map",
+				"0:a:0",
+				"-vn",
+				"-f",
+				"wav",
+				"-ar",
+				"16000",
+				"-ac",
+				"1",
 				"pipe:1",
 			],
 			{ encoding: "buffer", maxBuffer: 150 * 1024 * 1024 },
 			(err, stdout, stderr) => {
 				if (err) {
-					const msg = Buffer.isBuffer(stderr)
-						? stderr.toString("utf8").slice(-4000)
-						: String(stderr).slice(-4000);
+					const msg = Buffer.isBuffer(stderr) ? stderr.toString("utf8").slice(-4000) : String(stderr).slice(-4000);
 					reject(new Error(`ffmpeg chunk extraction failed: ${msg || err.message}`));
 					return;
 				}
@@ -257,9 +273,7 @@ function extractChunkToBuffer(inputPath: string, startSec: number, durationSec: 
 // ── Probe ────────────────────────────────────────────────────────────────────
 
 async function probeAudio(filePath: string): Promise<AudioProbe> {
-	const stdout = await runFfprobe([
-		"-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", filePath,
-	]);
+	const stdout = await runFfprobe(["-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", filePath]);
 	const data = JSON.parse(stdout);
 	const stream = data.streams?.find((s: { codec_type: string }) => s.codec_type === "audio");
 	const fmt = data.format;
@@ -294,10 +308,16 @@ function formatDb(value: number | undefined): string {
 
 async function analyzeVolume(filePath: string): Promise<VolumeStats> {
 	const stderr = await runFfmpegCaptureStderr([
-		"-i", filePath,
-		"-map", "0:a:0", "-vn",
-		"-af", "volumedetect",
-		"-f", "null", "-",
+		"-i",
+		filePath,
+		"-map",
+		"0:a:0",
+		"-vn",
+		"-af",
+		"volumedetect",
+		"-f",
+		"null",
+		"-",
 	]);
 
 	const dbRe = "(-?inf|[-\\d.]+)";
@@ -312,15 +332,18 @@ async function analyzeVolume(filePath: string): Promise<VolumeStats> {
 
 // ── Silence detection ────────────────────────────────────────────────────────
 
-async function detectSilence(
-	filePath: string,
-	noiseThresh: string,
-): Promise<SilenceSegment[]> {
+async function detectSilence(filePath: string, noiseThresh: string): Promise<SilenceSegment[]> {
 	const stderr = await runFfmpegCaptureStderr([
-		"-i", filePath,
-		"-map", "0:a:0", "-vn",
-		"-af", `silencedetect=noise=${noiseThresh}:d=${SILENCE_DURATION}`,
-		"-f", "null", "-",
+		"-i",
+		filePath,
+		"-map",
+		"0:a:0",
+		"-vn",
+		"-af",
+		`silencedetect=noise=${noiseThresh}:d=${SILENCE_DURATION}`,
+		"-f",
+		"null",
+		"-",
 	]);
 
 	const silences: SilenceSegment[] = [];
@@ -335,18 +358,21 @@ async function detectSilence(
 		if (!Number.isFinite(value)) continue;
 
 		if (kind === "start") {
-			if (current) silences.push(current);
-			current = { start: value };
+			if (current && current.end !== undefined) {
+				silences.push({ start: current.start, end: current.end });
+			}
+			current = { start: value, end: undefined };
 		} else {
 			if (current) {
-				current.end = value;
-				silences.push(current as SilenceSegment);
+				silences.push({ start: current.start, end: value });
 				current = undefined;
 			}
 		}
 	}
 
-	if (current?.end !== undefined) silences.push(current as SilenceSegment);
+	if (current && current.end !== undefined) {
+		silences.push({ start: current.start, end: current.end });
+	}
 
 	return silences;
 }
@@ -428,12 +454,7 @@ function buildFilters(preset: PreprocessPreset, channels: number, sampleRate: nu
 // ── Chunking ─────────────────────────────────────────────────────────────────
 
 function isCompleteSilence(s: { start: number; end?: number }): s is SilenceSegment {
-	return (
-		Number.isFinite(s.start) &&
-		typeof s.end === "number" &&
-		Number.isFinite(s.end) &&
-		s.end > s.start
-	);
+	return Number.isFinite(s.start) && typeof s.end === "number" && Number.isFinite(s.end) && s.end > s.start;
 }
 
 function buildChunks(
@@ -474,9 +495,7 @@ function buildChunks(
 			break;
 		}
 
-		const candidates = splitPoints.filter(
-			(p) => p > start + minChunkSec && p <= hardEnd,
-		);
+		const candidates = splitPoints.filter((p) => p > start + minChunkSec && p <= hardEnd);
 
 		const end = candidates.length > 0 ? candidates[candidates.length - 1] : hardEnd;
 

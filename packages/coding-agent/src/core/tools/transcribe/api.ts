@@ -114,7 +114,9 @@ export async function transcribeImageBatch(
 	prompt: string,
 	config: ApiConfig,
 ): Promise<string> {
-	const content: Array<Record<string, unknown>> = [{ type: "text", text: prompt }];
+	const content: Array<{ type: "text"; text: string } | { type: "image"; data: string; mimeType: string }> = [
+		{ type: "text", text: prompt },
+	];
 
 	for (const img of images) {
 		content.push({
@@ -131,7 +133,7 @@ export async function transcribeImageBatch(
 			messages: [
 				{
 					role: "user",
-					content,
+					content: content as any,
 					timestamp: Date.now(),
 				},
 			],
