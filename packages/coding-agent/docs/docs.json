@@ -38,6 +38,10 @@
         {
           "title": "Compaction",
           "path": "compaction.md"
+        },
+        {
+          "title": "Todo",
+          "path": "todo.md"
         }
       ]
     },
