@@ -238,6 +238,7 @@ export class InteractiveMode {
 	private autocompleteProviderWrappers: AutocompleteProviderFactory[] = [];
 	private fdPath: string | undefined;
 	private editorContainer: Container;
+	private pendingImages: ImageContent[] = [];
 	private footer: FooterComponent;
 	private footerDataProvider: FooterDataProvider;
 	// Stored so the same manager can be injected into custom editors, selectors, and extension UI.
@@ -808,7 +809,9 @@ export class InteractiveMode {
 		while (true) {
 			const userInput = await this.getUserInput();
 			try {
-				await this.session.prompt(userInput);
+				const images = this.pendingImages.length > 0 ? [...this.pendingImages] : undefined;
+				this.pendingImages = [];
+				await this.session.prompt(userInput, { images });
 			} catch (error: unknown) {
 				const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
 				this.showError(errorMessage);
@@ -2559,15 +2562,16 @@ export class InteractiveMode {
 				return;
 			}
 
-			// Write to temp file
-			const tmpDir = os.tmpdir();
-			const ext = extensionForImageMimeType(image.mimeType) ?? "png";
-			const fileName = `pi-clipboard-${crypto.randomUUID()}.${ext}`;
-			const filePath = path.join(tmpDir, fileName);
-			fs.writeFileSync(filePath, Buffer.from(image.bytes));
+			// Store as pending image for the next submit
+			const base64 = Buffer.from(image.bytes).toString("base64");
+			this.pendingImages.push({
+				type: "image",
+				data: base64,
+				mimeType: image.mimeType,
+			});
 
-			// Insert file path directly
-			this.editor.insertTextAtCursor?.(filePath);
+			// Insert placeholder text
+			this.editor.insertTextAtCursor?.("[image pasted]");
 			this.ui.requestRender();
 		} catch {
 			// Silently ignore clipboard errors (may not have permission, etc.)
