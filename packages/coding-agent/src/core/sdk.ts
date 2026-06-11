@@ -415,6 +415,23 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		onPayload: async (payload, model) => {
 			// Dump API request (only new messages, not full history)
 			dumpLogger?.logRequest(model.id, model.provider, payload as Record<string, unknown>);
+
+			// Full request body dump (PI_DEBUG_HTTP=2 for body, PI_DEBUG_HTTP=3 for body+headers)
+			const onPayloadDebugEnabled = process.env.PI_DEBUG_HTTP === "1";
+			const onPayloadDebugLevel = Number.parseInt(process.env.PI_DEBUG_HTTP ?? "0", 10);
+			if (onPayloadDebugEnabled) {
+				if (onPayloadDebugLevel >= 2) {
+					const body = JSON.stringify(payload, null, onPayloadDebugLevel >= 3 ? 2 : undefined);
+					const ts = new Date().toISOString().replace(/[:.]/g, "-");
+					const dumpPath = `/tmp/pi-request-${ts}.json`;
+					try {
+						const { writeFileSync } = await import("node:fs");
+						writeFileSync(dumpPath, body);
+						appendFileSync("/tmp/pi-http-debug.log", `[${new Date().toISOString()}] FULL REQUEST BODY dumped to ${dumpPath} (${(body.length / 1024).toFixed(0)}KB)\n`);
+					} catch { /* silent */ }
+				}
+			}
+
 			const runner = extensionRunnerRef.current;
 			if (!runner?.hasHandlers("before_provider_request")) {
 				return payload;
