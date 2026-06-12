@@ -3,6 +3,60 @@
 > Auto-generated project overview. Update this file as the project evolves.
 > Agents: reference this file to understand project structure and find important files.
 
+## Architecture
+
+```
+packages/ai              LLM provider abstraction (OpenRouter, model registry, streaming)
+packages/agent           Agent loop core (runAgentLoop, EventStream, tool execution)
+packages/tui             Terminal UI components (Ink-based, themes, keybindings)
+packages/ai-dash         Sandboxed shell (C, modified dash) — spawned as subprocess
+
+packages/coding-agent    Main product — depends on all above
+├─ src/cli/              CLI argument parsing, entry point
+├─ src/core/             Session management, tools, subagent, config
+│  ├─ tools/             Bash, Transcribe, Vision tool definitions
+│  ├─ subagent/          Fork, worktree, transcript, built-in agents
+│  ├─ compaction/        Context compaction for long sessions
+│  └─ extensions/        Extension type stubs (infrastructure removed)
+├─ src/modes/            Execution modes
+│  ├─ interactive/       TUI mode (default)
+│  ├─ print-mode.ts      Single-shot mode (-p flag)
+│  └─ rpc/               JSON-RPC mode
+└─ src/bun/              Bun-specific entry point and sandbox fix
+```
+
+## Dependencies
+
+```
+coding-agent ──→ agent ──→ ai (LLM provider, streaming)
+    │                        ↑
+    ├────────────────────────┘
+    │
+    ├────→ tui (terminal rendering)
+    │
+    └────→ ai-dash (C binary, spawned via child_process.spawn)
+```
+
+## Entry Points
+
+| Want to... | Go to |
+|---|---|
+| Change CLI args | `src/cli/args.ts` |
+| Change tool behavior | `src/core/tools/bash.ts` |
+| Add a new tool | `src/core/tools/` + `src/core/tools/index.ts` |
+| Change system prompt | `src/core/prompts/static-system-prompt.md` |
+| Change subagent logic | `src/core/subagent/tool.ts` |
+| Change agent definitions | `src/core/subagent/agents.ts` + `built-in-agents.ts` |
+| Change TUI display | `src/modes/interactive/` |
+| Change model/provider | `packages/ai/src/providers/` |
+| Change agent loop | `packages/agent/src/agent-loop.ts` |
+| Change fork/worktree | `src/core/subagent/fork.ts` + `worktree.ts` |
+| Change todo system | `src/core/todo.ts` |
+| Change roadmap | `src/core/roadmap.ts` |
+| Change config/paths | `src/config.ts` |
+| Change keybindings | `src/core/keybindings.ts` |
+| Change theme | `src/modes/interactive/theme/` |
+
 ## File Structure
 
 ```
@@ -504,7 +558,7 @@ tsconfig.json
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/provider-display-names.ts | 4 | provider-display-names, BUILT_IN_PROVIDER_DISPLAY_NAMES | (no description) |
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/resolve-config-value.ts | 287 | resolve-config-value, getConfigValueEnvVarName, getConfigValueEnvVarNames, getMissingConfigValueEnvVarNames, isCommandConfigValue | Resolve configuration values that may be shell commands, environment variables,  |
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/resource-loader.ts | 851 | resource-loader, ResourceExtensionPaths, ResourceLoader, loadProjectContextFiles, DefaultResourceLoaderOptions | (no description) |
-| /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/roadmap.ts | 251 | roadmap, roadmapExists, getRoadmapAbsolutePath, createRoadmap | Project roadmap management. |
+| /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/roadmap.ts | 294 | roadmap, roadmapExists, getRoadmapAbsolutePath, createRoadmap | Project roadmap management. |
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/sdk.ts | 523 | sdk, CreateAgentSessionOptions, CreateAgentSessionResult, agent-session, auth-storage | Optional default tool suppression mode when no explicit allowlist is provided. |
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/session-cwd.ts | 60 | session-cwd, SessionCwdIssue, getMissingSessionCwdIssue, formatMissingSessionCwdError, formatMissingSessionCwdPrompt | (no description) |
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/session-manager.ts | 1568 | session-manager, CURRENT_SESSION_VERSION, SessionHeader, NewSessionOptions, SessionEntryBase | Custom entry for extensions to store extension-specific data in the session. |
@@ -687,14 +741,3 @@ tsconfig.json
 | /home/pekka/Desktop/yuuuu/pi/packages/tui/src/undo-stack.ts | 29 | undo-stack, UndoStack | Generic undo stack with clone-on-push semantics. |
 | /home/pekka/Desktop/yuuuu/pi/packages/tui/src/utils.ts | 1158 | utils, getGraphemeSegmenter, getWordSegmenter, visibleWidth, normalizeTerminalOutput | Get the shared grapheme segmenter instance. |
 | /home/pekka/Desktop/yuuuu/pi/packages/tui/src/word-navigation.ts | 118 | word-navigation, WordNavigationOptions, findWordBackward, findWordForward, utils | Options for word navigation functions. |
-
-## Quick Reference
-
-- **Entry point**: packages/coding-agent/src/cli.ts
-- **Main logic**: packages/coding-agent/src/main.ts
-- **System prompt**: packages/coding-agent/src/core/system-prompt.ts
-- **Tools**: packages/coding-agent/src/core/tools/
-- **Subagent**: packages/coding-agent/src/core/subagent/
-- **TUI**: packages/coding-agent/src/modes/interactive/
-- **AI provider**: packages/ai/src/
-- **Agent loop**: packages/agent/src/
