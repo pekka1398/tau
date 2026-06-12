@@ -5,9 +5,9 @@
  * that agents can reference to understand file layout and important files.
  */
 
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join, relative } from "node:path";
 import { execSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 function getRoadmapPath(cwd: string): string {
 	return join(cwd, ".pi", "ROADMAP.md");
@@ -125,11 +125,14 @@ function generateFileTable(cwd: string): string {
 		if (!existsSync(fullPath)) continue;
 
 		try {
-			const files = execSync(`find ${dir} -name "*.ts" -not -path "*/node_modules/*" -not -path "*/dist/*" -not -name "*.d.ts" -not -name "*.test.ts" | sort`, {
-				cwd,
-				encoding: "utf-8",
-				timeout: 10000,
-			})
+			const files = execSync(
+				`find ${dir} -name "*.ts" -not -path "*/node_modules/*" -not -path "*/dist/*" -not -name "*.d.ts" -not -name "*.test.ts" | sort`,
+				{
+					cwd,
+					encoding: "utf-8",
+					timeout: 10000,
+				},
+			)
 				.trim()
 				.split("\n")
 				.filter(Boolean);

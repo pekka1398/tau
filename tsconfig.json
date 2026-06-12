@@ -18,5 +18,5 @@
 		}
 	},
 	"include": ["packages/*/src/**/*", "packages/*/test/**/*", "packages/coding-agent/examples/**/*"],
-	"exclude": ["**/dist/**"]
+	"exclude": ["**/dist/**", "packages/ai/test/**", "packages/agent/test/**", "packages/coding-agent/test/**", "packages/coding-agent/examples/**", "test/**"]
 }

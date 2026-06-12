@@ -68,7 +68,7 @@ export function loadTodos(cwd: string): TodoStore {
 export function saveTodos(cwd: string, store: TodoStore): void {
 	ensurePiDir(cwd);
 	const path = getTodosPath(cwd);
-	writeFileSync(path, JSON.stringify(store, null, "\t") + "\n", "utf-8");
+	writeFileSync(path, `${JSON.stringify(store, null, "\t")}\n`, "utf-8");
 }
 
 /**
