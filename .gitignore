@@ -59,8 +59,7 @@ packages/ai-dash/config.status
 packages/ai-dash/stamp-h1
 
 # Pi sessions / data
-.pi/hf-sessions/
-.pi/hf-sessions-backup/
+.pi/
 
 # Temp / personal
 .venv/
