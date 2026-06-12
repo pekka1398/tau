@@ -2,7 +2,7 @@
  * System prompt construction and project context loading
  */
 
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import os from "node:os";
 import { join } from "node:path";
 import { getDocsPath, getExamplesPath, getReadmePath } from "../config.ts";
@@ -77,10 +77,10 @@ interface EnvironmentInfo {
 	tools: string;
 }
 
-/** Detect available tools by checking which ones exist in $PATH. */
+/** Scan $PATH once and check which tools exist (fast, no child processes). */
 function detectInstalledTools(): string {
-	// Languages & runtimes
-	const langs = [
+	const wanted = new Set([
+		// Languages & runtimes
 		"python",
 		"python3",
 		"node",
@@ -99,22 +99,22 @@ function detectInstalledTools(): string {
 		"tsc",
 		"tsx",
 		"npx",
-	];
-	// Package managers
-	const pkg = [
+		"julia",
+		"swift",
+		"kotlin",
+		// Package managers
 		"pip",
 		"pip3",
 		"pipx",
 		"uv",
 		"conda",
 		"poetry",
+		"pdm",
 		"npm",
 		"pnpm",
 		"yarn",
-		"bun",
 		"gem",
 		"composer",
-		"cargo",
 		"apt",
 		"apt-get",
 		"dpkg",
@@ -124,30 +124,51 @@ function detectInstalledTools(): string {
 		"pacman",
 		"yum",
 		"dnf",
-	];
-	// Build & compile
-	const build = [
+		"zypper",
+		// Build & compile
 		"make",
 		"cmake",
 		"ninja",
 		"meson",
+		"bazel",
 		"gcc",
 		"g++",
 		"clang",
 		"clang++",
+		"cc",
 		"autoconf",
 		"automake",
 		"libtool",
 		"pkg-config",
-	];
-	// Version control
-	const vcs = ["git", "gh", "svn", "hg", "jj"];
-	// Containers & orchestration
-	const containers = ["docker", "docker-compose", "podman", "nerdctl", "kubectl", "helm", "k9s", "minikube", "kind"];
-	// Databases
-	const db = ["sqlite3", "psql", "mysql", "mongosh", "redis-cli", "litecli", "mycli", "pgcli"];
-	// Text & data processing
-	const text = [
+		// Version control
+		"git",
+		"gh",
+		"svn",
+		"hg",
+		"jj",
+		"fossil",
+		// Containers & orchestration
+		"docker",
+		"docker-compose",
+		"podman",
+		"nerdctl",
+		"kubectl",
+		"helm",
+		"k9s",
+		"minikube",
+		"kind",
+		"k3s",
+		// Databases
+		"sqlite3",
+		"psql",
+		"mysql",
+		"mongosh",
+		"redis-cli",
+		"litecli",
+		"mycli",
+		"pgcli",
+		"duckdb",
+		// Text & data processing
 		"jq",
 		"yq",
 		"sed",
@@ -159,16 +180,17 @@ function detectInstalledTools(): string {
 		"fd",
 		"bat",
 		"exa",
+		"eza",
 		"lsd",
 		"tree",
 		"xargs",
 		"parallel",
+		"sd",
 		"column",
 		"csvtool",
 		"mlr",
-	];
-	// Network & download
-	const net = [
+		"xmlstarlet",
+		// Network & download
 		"curl",
 		"wget",
 		"aria2c",
@@ -180,11 +202,17 @@ function detectInstalledTools(): string {
 		"mutagen",
 		"nmap",
 		"netcat",
+		"nc",
 		"socat",
 		"wireguard",
-	];
-	// Media & document
-	const media = [
+		"ping",
+		"dig",
+		"nslookup",
+		"traceroute",
+		"mtr",
+		"ip",
+		"ifconfig",
+		// Media & document
 		"ffmpeg",
 		"ffprobe",
 		"sox",
@@ -194,10 +222,12 @@ function detectInstalledTools(): string {
 		"typst",
 		"latex",
 		"pdflatex",
+		"lualatex",
 		"tesseract",
-	];
-	// Cloud & infra
-	const cloud = [
+		"pdftotext",
+		"pdfimages",
+		"libreoffice",
+		// Cloud & infra
 		"aws",
 		"gcloud",
 		"az",
@@ -209,9 +239,87 @@ function detectInstalledTools(): string {
 		"multipass",
 		"cloudflared",
 		"ngrok",
-	];
-	// Misc tools
-	const misc = [
+		"rclone",
+		"mc",
+		"restic",
+		"borg",
+		// AI & LLM
+		"ollama",
+		"huggingface-cli",
+		"llama-cli",
+		"llama-run",
+		// Web automation
+		"chromium",
+		"chrome",
+		"playwright",
+		"puppeteer",
+		"links",
+		"lynx",
+		"w3m",
+		// GPU & hardware
+		"nvidia-smi",
+		"rocm-smi",
+		"lscpu",
+		"lspci",
+		"lsusb",
+		// Code quality & linters
+		"ruff",
+		"black",
+		"yapf",
+		"eslint",
+		"prettier",
+		"shellcheck",
+		"hadolint",
+		"biome",
+		// Clipboard
+		"pbcopy",
+		"pbpaste",
+		"xclip",
+		"xsel",
+		"wl-copy",
+		"wl-paste",
+		// Task runners
+		"just",
+		"task",
+		"pm2",
+		"crontab",
+		// Security
+		"gitleaks",
+		"trufflehog",
+		"trivy",
+		"gpg",
+		// Benchmarks
+		"hyperfine",
+		"wrk",
+		"hey",
+		"ab",
+		"speedtest-cli",
+		// System info & debug
+		"journalctl",
+		"dmesg",
+		"strace",
+		"ltrace",
+		"valgrind",
+		"gdb",
+		// Env managers
+		"asdf",
+		"mise",
+		"rtx",
+		"nvm",
+		"fnm",
+		"pyenv",
+		// Modern CLI
+		"zoxide",
+		"dust",
+		"duf",
+		"delta",
+		"btop",
+		"htop",
+		"glances",
+		// Data formats
+		"protoc",
+		"parquet-cli",
+		// Misc
 		"tmux",
 		"screen",
 		"zellij",
@@ -226,30 +334,26 @@ function detectInstalledTools(): string {
 		"gzip",
 		"zstd",
 		"bc",
-		"dc",
 		"units",
-		"strace",
-		"ltrace",
-		"valgrind",
-		"gdb",
-		"btop",
-		"htop",
-		"glances",
-	];
+		"scrcpy",
+		"osascript",
+		"xdotool",
+	]);
 
-	const allCategories = [langs, pkg, build, vcs, containers, db, text, net, media, cloud, misc];
-	const allTools = [...new Set(allCategories.flat())];
-
-	const found: string[] = [];
-	for (const tool of allTools) {
+	// Scan $PATH once — fast, no child processes
+	const pathDirs = (process.env.PATH || "").split(":").filter(Boolean);
+	const available = new Set<string>();
+	for (const dir of pathDirs) {
 		try {
-			spawnProcessSync("which", [tool], { encoding: "utf-8", stdio: "pipe" });
-			found.push(tool);
+			const entries = readdirSync(dir);
+			for (const entry of entries) {
+				if (wanted.has(entry)) available.add(entry);
+			}
 		} catch {
-			// not installed
+			// skip unreadable dirs
 		}
 	}
-	return found.join(", ") || "(none detected)";
+	return Array.from(available).sort().join(", ") || "(none detected)";
 }
 
 function gatherEnvironmentInfo(cwd: string, model?: string): EnvironmentInfo {
