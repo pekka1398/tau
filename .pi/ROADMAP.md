@@ -558,7 +558,7 @@ tsconfig.json
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/provider-display-names.ts | 4 | provider-display-names, BUILT_IN_PROVIDER_DISPLAY_NAMES | (no description) |
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/resolve-config-value.ts | 287 | resolve-config-value, getConfigValueEnvVarName, getConfigValueEnvVarNames, getMissingConfigValueEnvVarNames, isCommandConfigValue | Resolve configuration values that may be shell commands, environment variables,  |
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/resource-loader.ts | 851 | resource-loader, ResourceExtensionPaths, ResourceLoader, loadProjectContextFiles, DefaultResourceLoaderOptions | (no description) |
-| /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/roadmap.ts | 294 | roadmap, roadmapExists, getRoadmapAbsolutePath, createRoadmap | Project roadmap management. |
+| /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/roadmap.ts | 312 | roadmap, roadmapExists, getRoadmapAbsolutePath, createRoadmap | Project roadmap management. |
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/sdk.ts | 523 | sdk, CreateAgentSessionOptions, CreateAgentSessionResult, agent-session, auth-storage | Optional default tool suppression mode when no explicit allowlist is provided. |
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/session-cwd.ts | 60 | session-cwd, SessionCwdIssue, getMissingSessionCwdIssue, formatMissingSessionCwdError, formatMissingSessionCwdPrompt | (no description) |
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/session-manager.ts | 1568 | session-manager, CURRENT_SESSION_VERSION, SessionHeader, NewSessionOptions, SessionEntryBase | Custom entry for extensions to store extension-specific data in the session. |
@@ -741,3 +741,21 @@ tsconfig.json
 | /home/pekka/Desktop/yuuuu/pi/packages/tui/src/undo-stack.ts | 29 | undo-stack, UndoStack | Generic undo stack with clone-on-push semantics. |
 | /home/pekka/Desktop/yuuuu/pi/packages/tui/src/utils.ts | 1158 | utils, getGraphemeSegmenter, getWordSegmenter, visibleWidth, normalizeTerminalOutput | Get the shared grapheme segmenter instance. |
 | /home/pekka/Desktop/yuuuu/pi/packages/tui/src/word-navigation.ts | 118 | word-navigation, WordNavigationOptions, findWordBackward, findWordForward, utils | Options for word navigation functions. |
+
+## Tech Stack
+
+- **Runtime**: Bun (compiled binary) / Node.js (dev)
+- **Language**: TypeScript (strict)
+- **Lint**: Biome
+- **Build**: tsgo (type check) + bun build --compile (binary)
+- **Shell**: ai-dash (C, modified dash) — spawned as subprocess
+- **Test**: Vitest
+- **Package**: npm workspaces
+
+## Conventions
+
+- Tool 用 bash，没有独立的 read/write/edit
+- 子代理默认继承父工具，除非 agent definition 限制 tools 字段
+- Commit message: feat/fix/refactor + 简短描述
+- 不要加不必要的抽象层，三次重复才提取
+- 改动只限于需求范围，不要"顺手"改别的

@@ -286,6 +286,24 @@ ${fileTree}
 ## Important Files
 
 ${fileTable}
+
+## Tech Stack
+
+- **Runtime**: Bun (compiled binary) / Node.js (dev)
+- **Language**: TypeScript (strict)
+- **Lint**: Biome
+- **Build**: tsgo (type check) + bun build --compile (binary)
+- **Shell**: ai-dash (C, modified dash) — spawned as subprocess
+- **Test**: Vitest
+- **Package**: npm workspaces
+
+## Conventions
+
+- Tool 用 bash，没有独立的 read/write/edit
+- 子代理默认继承父工具，除非 agent definition 限制 tools 字段
+- Commit message: feat/fix/refactor + 简短描述
+- 不要加不必要的抽象层，三次重复才提取
+- 改动只限于需求范围，不要"顺手"改别的
 `;
 
 	writeFileSync(roadmapPath, content, "utf-8");
