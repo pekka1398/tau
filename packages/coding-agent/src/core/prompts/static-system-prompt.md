@@ -176,19 +176,29 @@ Is directory a git repo: {IS_GIT}
 Platform: {PLATFORM}
 Shell: bash
 OS Version: {OS_VERSION}
+GPU: {GPU}
+RAM: {RAM}
+Disk free: {DISK_FREE}
+Locale: {LOCALE}
+Timezone: {TIMEZONE}
 Available CLI programs (run via bash): {TOOLS}
 </env>
 You are powered by the model {MODEL}.
 
 When working with tool results, write down any important information you might need later in your response, as the original tool result may be cleared later.
 
-gitStatus: This is the git status at the start of the conversation. Note that this status is a snapshot in time, and will not update during the conversation.
+## Git Info
 
 Current branch: {BRANCH}
-
-Main branch (you will usually use this for PRs): {MAIN_BRANCH}
-
+Main branch: {MAIN_BRANCH}
 Git user: {GIT_USER}
+Remote: {GIT_REMOTE}
+Worktrees:
+{GIT_WORKTREES}
+Stashes: {GIT_STASH_COUNT}
+Recent tags: {GIT_TAGS}
+
+gitStatus: This is the git status at the start of the conversation. Note that this status is a snapshot in time, and will not update during the conversation.
 
 Status:
 {GIT_STATUS}

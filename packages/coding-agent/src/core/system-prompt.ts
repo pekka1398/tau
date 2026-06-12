@@ -2,7 +2,7 @@
  * System prompt construction and project context loading
  */
 
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import os from "node:os";
 import { join } from "node:path";
 import { getDocsPath, getExamplesPath, getReadmePath } from "../config.ts";
@@ -53,10 +53,74 @@ function gatherGitInfo(cwd: string) {
 	}
 
 	const gitUser = git(["config", "user.name"], cwd);
+	const gitEmail = git(["config", "user.email"], cwd);
 	const gitStatus = git(["status", "--short"], cwd);
 	const gitCommits = git(["log", "--oneline", "-5"], cwd);
+	const gitRemote = git(["remote", "get-url", "origin"], cwd);
+	const gitWorktrees = git(["worktree", "list"], cwd);
+	const gitStashCount = git(["stash", "list"], cwd);
+	const gitTags = git(["tag", "--sort=-version:refname", "-l"], cwd);
 
-	return { isGit, branch, mainBranch, gitUser, gitStatus, gitCommits };
+	return {
+		isGit,
+		branch,
+		mainBranch,
+		gitUser: gitEmail ? `${gitUser} <${gitEmail}>` : gitUser,
+		gitStatus,
+		gitCommits,
+		gitRemote,
+		gitWorktrees,
+		gitStashCount: gitStashCount ? gitStashCount.split("\n").filter(Boolean).length.toString() : "0",
+		gitTags: gitTags ? gitTags.split("\n").slice(0, 5).join(", ") : "(none)",
+	};
+}
+
+// ============================================================================
+// Hardware info
+// ============================================================================
+
+function gatherHardwareInfo(): { gpu: string; ram: string; diskFree: string } {
+	let gpu = "(unknown)";
+	let ram = "(unknown)";
+	let diskFree = "(unknown)";
+
+	try {
+		// GPU
+		const gpuInfo = spawnProcessSync(
+			"bash",
+			["-c", "nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null || echo 'none'"],
+			{ encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
+		);
+		gpu = gpuInfo.stdout.trim() === "none" ? "None" : gpuInfo.stdout.trim();
+	} catch {
+		gpu = "None";
+	}
+
+	try {
+		// RAM
+		const memInfo = readFileSync("/proc/meminfo", "utf-8");
+		const match = memInfo.match(/MemTotal:\s+(\d+)\s+kB/);
+		if (match) {
+			const kb = parseInt(match[1], 10);
+			ram = `${Math.round(kb / 1024 / 1024)}GB`;
+		}
+	} catch {
+		ram = os.totalmem() ? `${Math.round(os.totalmem() / 1024 / 1024 / 1024)}GB` : "(unknown)";
+	}
+
+	try {
+		// Disk free on root partition
+		const dfInfo = spawnProcessSync("df", ["-h", "/"], { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] });
+		const lines = dfInfo.stdout.trim().split("\n");
+		if (lines.length >= 2) {
+			const parts = lines[1].split(/\s+/);
+			diskFree = parts[3] || "(unknown)";
+		}
+	} catch {
+		diskFree = "(unknown)";
+	}
+
+	return { gpu, ram, diskFree };
 }
 
 // ============================================================================
@@ -74,6 +138,15 @@ interface EnvironmentInfo {
 	gitUser: string;
 	gitStatus: string;
 	gitCommits: string;
+	gitRemote: string;
+	gitWorktrees: string;
+	gitStashCount: string;
+	gitTags: string;
+	gpu: string;
+	ram: string;
+	diskFree: string;
+	locale: string;
+	timezone: string;
 	tools: string;
 }
 
@@ -358,6 +431,7 @@ function detectInstalledTools(): string {
 
 function gatherEnvironmentInfo(cwd: string, model?: string): EnvironmentInfo {
 	const gitInfo = gatherGitInfo(cwd);
+	const hw = gatherHardwareInfo();
 
 	return {
 		dir: cwd,
@@ -370,6 +444,15 @@ function gatherEnvironmentInfo(cwd: string, model?: string): EnvironmentInfo {
 		gitUser: gitInfo.gitUser,
 		gitStatus: gitInfo.gitStatus || "(clean)",
 		gitCommits: gitInfo.gitCommits || "(no commits)",
+		gitRemote: gitInfo.gitRemote || "(none)",
+		gitWorktrees: gitInfo.gitWorktrees || "(none)",
+		gitStashCount: gitInfo.gitStashCount,
+		gitTags: gitInfo.gitTags,
+		gpu: hw.gpu,
+		ram: hw.ram,
+		diskFree: hw.diskFree,
+		locale: process.env.LC_ALL || process.env.LANG || process.env.LC_CTYPE || "(unknown)",
+		timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || process.env.TZ || "(unknown)",
 		tools: detectInstalledTools(),
 	};
 }
@@ -386,6 +469,15 @@ function applyEnvironment(prompt: string, env: EnvironmentInfo): string {
 		.replaceAll("{GIT_USER}", env.gitUser)
 		.replaceAll("{GIT_STATUS}", env.gitStatus)
 		.replaceAll("{GIT_STATUS_COMMITS}", env.gitCommits)
+		.replaceAll("{GIT_REMOTE}", env.gitRemote)
+		.replaceAll("{GIT_WORKTREES}", env.gitWorktrees)
+		.replaceAll("{GIT_STASH_COUNT}", env.gitStashCount)
+		.replaceAll("{GIT_TAGS}", env.gitTags)
+		.replaceAll("{GPU}", env.gpu)
+		.replaceAll("{RAM}", env.ram)
+		.replaceAll("{DISK_FREE}", env.diskFree)
+		.replaceAll("{LOCALE}", env.locale)
+		.replaceAll("{TIMEZONE}", env.timezone)
 		.replaceAll("{TOOLS}", env.tools);
 }
 
