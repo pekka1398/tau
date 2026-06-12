@@ -74,6 +74,7 @@ export {
 	type TurnStartEvent,
 	type WorkingIndicatorOptions,
 } from "./extensions/index.ts";
+export { createRoadmap, getRoadmapAbsolutePath, roadmapExists } from "./roadmap.ts";
 export { createSyntheticSourceInfo } from "./source-info.ts";
 export {
 	type AgentConfig,
@@ -84,7 +85,6 @@ export {
 } from "./subagent/agents.ts";
 export { getBuiltInAgents, isBuiltInAgent } from "./subagent/built-in-agents.ts";
 export { buildChildDirective, buildForkedMessages, isInForkChild } from "./subagent/fork.ts";
-export { createRoadmap, getRoadmapAbsolutePath, roadmapExists } from "./roadmap.ts";
 export {
 	formatTaskNotification,
 	type NotificationCallback,

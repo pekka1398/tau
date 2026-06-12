@@ -182,7 +182,19 @@
 			"created": "2026-06-11",
 			"updated": "2026-06-11",
 			"description": "模型打错 edit 格式、python heredoc 等，用于优化 prompt"
+		},
+		{
+			"id": "t-017",
+			"title": "roadmap 功能 (/roadmap + .pi/ROADMAP.md)",
+			"status": "done",
+			"priority": "medium",
+			"tags": [
+				"feature",
+				"done"
+			],
+			"created": "2026-06-12",
+			"updated": "2026-06-12"
 		}
 	],
-	"nextId": 17
+	"nextId": 18
 }
