@@ -2,7 +2,9 @@
  * System prompt construction and project context loading
  */
 
+import { existsSync } from "node:fs";
 import os from "node:os";
+import { join } from "node:path";
 import { getDocsPath, getExamplesPath, getReadmePath } from "../config.ts";
 import { spawnProcessSync } from "../utils/child-process.ts";
 import { STATIC_SYSTEM_PROMPT } from "./prompts/static-prompt.ts";
@@ -133,6 +135,12 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
 	// Append skills section
 	if (skills.length > 0) {
 		prompt += formatSkillsForPrompt(skills);
+	}
+
+	// Append roadmap reference
+	const roadmapPath = join(options.cwd, ".pi", "ROADMAP.md");
+	if (existsSync(roadmapPath)) {
+		prompt += `\n\n## Project Roadmap\n\nA project roadmap is available at: ${roadmapPath}\n\nThis file contains:\n- The project's file structure\n- A table of all important files with their paths, line counts, keywords, and descriptions\n\nTo understand the project layout or find where a feature is implemented, read this file first.`;
 	}
 
 	// Pi documentation paths (resolved at runtime)

@@ -2697,6 +2697,11 @@ export class InteractiveMode {
 				await this.handleTodoCommand(text);
 				return;
 			}
+			if (text === "/roadmap") {
+				this.editor.setText("");
+				await this.handleRoadmapCommand();
+				return;
+			}
 			if (text === "/debug") {
 				this.handleDebugCommand();
 				this.editor.setText("");
@@ -4845,6 +4850,17 @@ export class InteractiveMode {
 			args.push("list");
 		}
 		await runTodoCli(cwd, args);
+	}
+
+	private async handleRoadmapCommand(): Promise<void> {
+		const { createRoadmap, roadmapExists } = await import("../../core/roadmap.ts");
+		const cwd = this.cwd || process.cwd();
+		if (roadmapExists(cwd)) {
+			console.log("ROADMAP.md already exists at .pi/ROADMAP.md");
+			return;
+		}
+		const path = createRoadmap(cwd);
+		console.log(`Created: ${path}`);
 	}
 
 	private async handleDiscordCommand(text: string): Promise<void> {
