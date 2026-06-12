@@ -74,6 +74,59 @@ interface EnvironmentInfo {
 	gitUser: string;
 	gitStatus: string;
 	gitCommits: string;
+	tools: string;
+}
+
+/** Detect commonly used tools available on the system. */
+function detectInstalledTools(): string {
+	const tools = [
+		"git",
+		"node",
+		"bun",
+		"npm",
+		"pnpm",
+		"yarn",
+		"python3",
+		"pip",
+		"pipx",
+		"uv",
+		"conda",
+		"cargo",
+		"rustc",
+		"go",
+		"java",
+		"javac",
+		"docker",
+		"docker-compose",
+		"make",
+		"cmake",
+		"gcc",
+		"g++",
+		"clang",
+		"rg",
+		"fd",
+		"fzf",
+		"jq",
+		"yq",
+		"ssh",
+		"curl",
+		"wget",
+		"ffmpeg",
+		"ffprobe",
+		"sqlite3",
+		"psql",
+		"mysql",
+	];
+	const found: string[] = [];
+	for (const tool of tools) {
+		try {
+			spawnProcessSync("which", [tool], { encoding: "utf-8", stdio: "pipe" });
+			found.push(tool);
+		} catch {
+			// not installed
+		}
+	}
+	return found.join(", ") || "(none detected)";
 }
 
 function gatherEnvironmentInfo(cwd: string, model?: string): EnvironmentInfo {
@@ -90,6 +143,7 @@ function gatherEnvironmentInfo(cwd: string, model?: string): EnvironmentInfo {
 		gitUser: gitInfo.gitUser,
 		gitStatus: gitInfo.gitStatus || "(clean)",
 		gitCommits: gitInfo.gitCommits || "(no commits)",
+		tools: detectInstalledTools(),
 	};
 }
 
@@ -104,7 +158,8 @@ function applyEnvironment(prompt: string, env: EnvironmentInfo): string {
 		.replaceAll("{MAIN_BRANCH}", env.mainBranch)
 		.replaceAll("{GIT_USER}", env.gitUser)
 		.replaceAll("{GIT_STATUS}", env.gitStatus)
-		.replaceAll("{GIT_STATUS_COMMITS}", env.gitCommits);
+		.replaceAll("{GIT_STATUS_COMMITS}", env.gitCommits)
+		.replaceAll("{TOOLS}", env.tools);
 }
 
 // ============================================================================

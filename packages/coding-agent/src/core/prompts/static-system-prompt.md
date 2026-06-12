@@ -176,6 +176,7 @@ Is directory a git repo: {IS_GIT}
 Platform: {PLATFORM}
 Shell: bash
 OS Version: {OS_VERSION}
+Installed tools: {TOOLS}
 </env>
 You are powered by the model {MODEL}.
 
