@@ -77,48 +77,171 @@ interface EnvironmentInfo {
 	tools: string;
 }
 
-/** Detect commonly used tools available on the system. */
+/** Detect available tools by checking which ones exist in $PATH. */
 function detectInstalledTools(): string {
-	const tools = [
-		"git",
+	// Languages & runtimes
+	const langs = [
+		"python",
+		"python3",
 		"node",
 		"bun",
-		"npm",
-		"pnpm",
-		"yarn",
-		"python3",
-		"pip",
-		"pipx",
-		"uv",
-		"conda",
+		"deno",
+		"java",
+		"javac",
 		"cargo",
 		"rustc",
 		"go",
-		"java",
-		"javac",
-		"docker",
-		"docker-compose",
+		"ruby",
+		"perl",
+		"php",
+		"lua",
+		"R",
+		"tsc",
+		"tsx",
+		"npx",
+	];
+	// Package managers
+	const pkg = [
+		"pip",
+		"pip3",
+		"pipx",
+		"uv",
+		"conda",
+		"poetry",
+		"npm",
+		"pnpm",
+		"yarn",
+		"bun",
+		"gem",
+		"composer",
+		"cargo",
+		"apt",
+		"apt-get",
+		"dpkg",
+		"snap",
+		"flatpak",
+		"brew",
+		"pacman",
+		"yum",
+		"dnf",
+	];
+	// Build & compile
+	const build = [
 		"make",
 		"cmake",
+		"ninja",
+		"meson",
 		"gcc",
 		"g++",
 		"clang",
-		"rg",
-		"fd",
-		"fzf",
+		"clang++",
+		"autoconf",
+		"automake",
+		"libtool",
+		"pkg-config",
+	];
+	// Version control
+	const vcs = ["git", "gh", "svn", "hg", "jj"];
+	// Containers & orchestration
+	const containers = ["docker", "docker-compose", "podman", "nerdctl", "kubectl", "helm", "k9s", "minikube", "kind"];
+	// Databases
+	const db = ["sqlite3", "psql", "mysql", "mongosh", "redis-cli", "litecli", "mycli", "pgcli"];
+	// Text & data processing
+	const text = [
 		"jq",
 		"yq",
-		"ssh",
+		"sed",
+		"awk",
+		"grep",
+		"rg",
+		"ag",
+		"fzf",
+		"fd",
+		"bat",
+		"exa",
+		"lsd",
+		"tree",
+		"xargs",
+		"parallel",
+		"column",
+		"csvtool",
+		"mlr",
+	];
+	// Network & download
+	const net = [
 		"curl",
 		"wget",
+		"aria2c",
+		"httpie",
+		"ssh",
+		"scp",
+		"rsync",
+		"mosh",
+		"mutagen",
+		"nmap",
+		"netcat",
+		"socat",
+		"wireguard",
+	];
+	// Media & document
+	const media = [
 		"ffmpeg",
 		"ffprobe",
-		"sqlite3",
-		"psql",
-		"mysql",
+		"sox",
+		"imagemagick",
+		"convert",
+		"pandoc",
+		"typst",
+		"latex",
+		"pdflatex",
+		"tesseract",
 	];
+	// Cloud & infra
+	const cloud = [
+		"aws",
+		"gcloud",
+		"az",
+		"terraform",
+		"ansible",
+		"puppet",
+		"chef",
+		"vagrant",
+		"multipass",
+		"cloudflared",
+		"ngrok",
+	];
+	// Misc tools
+	const misc = [
+		"tmux",
+		"screen",
+		"zellij",
+		"vim",
+		"nvim",
+		"nano",
+		"code",
+		"zip",
+		"unzip",
+		"7z",
+		"tar",
+		"gzip",
+		"zstd",
+		"bc",
+		"dc",
+		"units",
+		"strace",
+		"ltrace",
+		"valgrind",
+		"gdb",
+		"btop",
+		"htop",
+		"glances",
+	];
+
+	const allCategories = [langs, pkg, build, vcs, containers, db, text, net, media, cloud, misc];
+	const allTools = [...new Set(allCategories.flat())];
+
 	const found: string[] = [];
-	for (const tool of tools) {
+	for (const tool of allTools) {
 		try {
 			spawnProcessSync("which", [tool], { encoding: "utf-8", stdio: "pipe" });
 			found.push(tool);
