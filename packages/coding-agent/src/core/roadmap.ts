@@ -45,50 +45,64 @@ function generateFileTree(cwd: string): string {
 
 		if (files.length === 0) return "(no files found)";
 
-		// Build tree structure
 		const lines: string[] = [];
-		const indent = "  ";
+		const MAX_DEPTH = 5;
+		const MAX_ENTRIES_PER_DIR = 20;
 
-		// Group by top-level directory
-		const groups = new Map<string, string[]>();
-		for (const file of files) {
-			const parts = file.split("/");
-			const topLevel = parts[0];
-			if (!groups.has(topLevel)) groups.set(topLevel, []);
-			groups.get(topLevel)!.push(file);
-		}
-
-		for (const [name, groupFiles] of groups) {
-			if (groupFiles.length === 1 && !groupFiles[0].includes("/")) {
-				// Single file at root
-				lines.push(`${name}`);
-			} else {
-				// Directory
-				lines.push(`${name}/`);
-				// Show first 3 levels
-				const subGroups = new Map<string, string[]>();
-				for (const f of groupFiles) {
-					const rel = f.slice(name.length + 1);
-					const subParts = rel.split("/");
-					const subKey = subParts.length > 1 ? `${subParts[0]}/` : subParts[0];
-					if (!subGroups.has(subKey)) subGroups.set(subKey, []);
-					subGroups.get(subKey)!.push(rel);
+		function renderTree(fileList: string[], depth: number, prefix: string): void {
+			if (depth >= MAX_DEPTH) {
+				if (fileList.length > 0) {
+					lines.push(`${prefix}... (${fileList.length} more files)`);
 				}
-				let count = 0;
-				for (const [subName, subFiles] of subGroups) {
-					if (count >= 15) {
-						lines.push(`${indent}... (${subGroups.size - count} more)`);
-						break;
-					}
-					if (subFiles.length === 1) {
-						lines.push(`${indent}${subName}`);
-					} else {
-						lines.push(`${indent}${subName} (${subFiles.length} files)`);
-					}
-					count++;
+				return;
+			}
+
+			// Group files by their next path component
+			const groups = new Map<string, { files: string[]; hasChildren: boolean }>();
+			const directFiles: string[] = [];
+
+			for (const file of fileList) {
+				const remaining = file;
+				const slashIdx = remaining.indexOf("/");
+				if (slashIdx === -1) {
+					directFiles.push(remaining);
+				} else {
+					const dirName = remaining.slice(0, slashIdx);
+					if (!groups.has(dirName)) groups.set(dirName, { files: [], hasChildren: false });
+					const group = groups.get(dirName)!;
+					const child = remaining.slice(slashIdx + 1);
+					if (child.includes("/")) group.hasChildren = true;
+					group.files.push(child);
 				}
 			}
+
+			// Sort: directories first, then files
+			const sortedDirs = Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+			directFiles.sort();
+
+			let count = 0;
+			for (const [dirName, { files: subFiles, hasChildren }] of sortedDirs) {
+				if (count >= MAX_ENTRIES_PER_DIR) {
+					lines.push(`${prefix}... (${sortedDirs.length + directFiles.length - count} more)`);
+					return;
+				}
+				const marker = hasChildren || subFiles.length > 1 ? "/" : "";
+				lines.push(`${prefix}${dirName}${marker} (${subFiles.length})`);
+				renderTree(subFiles, depth + 1, `${prefix}  `);
+				count++;
+			}
+
+			for (const file of directFiles) {
+				if (count >= MAX_ENTRIES_PER_DIR) {
+					lines.push(`${prefix}... (${directFiles.length - (count - sortedDirs.length)} more)`);
+					return;
+				}
+				lines.push(`${prefix}${file}`);
+				count++;
+			}
 		}
+
+		renderTree(files, 0, "");
 
 		return lines.join("\n");
 	} catch {

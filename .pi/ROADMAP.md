@@ -6,29 +6,428 @@
 ## File Structure
 
 ```
-.gitattributes
-.gitignore
-.husky/
+.husky (1)
   pre-commit
-.npmrc
-.pi/
-  git/
-  npm/
+.pi/ (10)
+  git (1)
+    .gitignore
+  npm (1)
+    .gitignore
+  prompts/ (4)
+    cl.md
+    is.md
+    pr.md
+    wr.md
+  skills (1)
+    add-llm-provider.md
+  ROADMAP.md
   project-map.md
-  prompts/ (4 files)
-  skills/
   todos.json
-LICENSE
-biome.json
-package-lock.json
-package.json
-packages/
-  agent/ (22 files)
-  ai-dash/ (102 files)
-  ai/ (127 files)
-  coding-agent/ (378 files)
-  tui/ (68 files)
-scripts/
+packages/ (697)
+  agent/ (22)
+    docs/ (4)
+      agent-harness.md
+      durable-harness.md
+      hooks.md
+      observability.md
+    src/ (7)
+      agent-loop.ts
+      agent.ts
+      index.ts
+      node.ts
+      proxy.ts
+      subagent.ts
+      types.ts
+    test/ (6)
+      utils/ (2)
+        calculate.ts
+        get-current-time.ts
+      agent-loop.test.ts
+      agent.test.ts
+      e2e.test.ts
+      subagent.test.ts
+    CHANGELOG.md
+    README.md
+    package.json
+    tsconfig.build.json
+    vitest.config.ts
+  ai/ (127)
+    scripts/ (2)
+      generate-models.ts
+      generate-test-image.ts
+    src/ (34)
+      providers/ (7)
+        images/ (2)
+          ... (2 more files)
+        openai-completions.ts
+        openai-prompt-cache.ts
+        register-builtins.ts
+        simple-options.ts
+        transform-messages.ts
+      utils/ (13)
+        oauth/ (2)
+          ... (2 more files)
+        abort-signals.ts
+        diagnostics.ts
+        event-stream.ts
+        hash.ts
+        headers.ts
+        json-parse.ts
+        node-http-proxy.ts
+        overflow.ts
+        sanitize-unicode.ts
+        typebox-helpers.ts
+        validation.ts
+      api-registry.ts
+      cli.ts
+      env-api-keys.ts
+      image-models.generated.ts
+      image-models.ts
+      images-api-registry.ts
+      images.ts
+      index.ts
+      models.generated.ts
+      models.ts
+      oauth.ts
+      session-resources.ts
+      stream.ts
+      types.ts
+    test/ (84)
+      data (1)
+        red-circle.png
+      abort.test.ts
+      anthropic-adaptive-thinking-models.test.ts
+      anthropic-eager-tool-input-compat.test.ts
+      anthropic-eager-tool-input-e2e.test.ts
+      anthropic-empty-thinking-signature-compat.test.ts
+      anthropic-force-adaptive-thinking.test.ts
+      anthropic-long-cache-retention-e2e.test.ts
+      anthropic-oauth.test.ts
+      anthropic-opus-4-8-smoke.test.ts
+      anthropic-sse-parsing.test.ts
+      anthropic-temperature-compat.test.ts
+      anthropic-thinking-disable.test.ts
+      anthropic-tool-name-normalization.test.ts
+      azure-openai-base-url.test.ts
+      azure-utils.ts
+      bedrock-convert-messages.test.ts
+      bedrock-custom-headers.test.ts
+      bedrock-endpoint-resolution.test.ts
+      bedrock-models.test.ts
+      ... (64 more)
+    CHANGELOG.md
+    README.md
+    bedrock-provider.d.ts
+    bedrock-provider.js
+    package.json
+    tsconfig.build.json
+    vitest.config.ts
+  ai-dash/ (102)
+    bin (1)
+      ai-dash
+    src/ (85)
+      bltin/ (10)
+        .dirstamp
+        bltin.h
+        echo.1
+        edit.c
+        printf.1
+        printf.c
+        rm.c
+        test.1
+        test.c
+        times.c
+      funcs/ (8)
+        cmv
+        dirs
+        kill
+        login
+        newgrp
+        popd
+        pushd
+        suspend
+      .gitignore
+      Makefile.am
+      Makefile.in
+      TOUR
+      alias.c
+      alias.h
+      arith_yacc.c
+      arith_yacc.h
+      arith_yylex.c
+      builtins.def.in
+      cd.c
+      cd.h
+      dash.1
+      error.c
+      error.h
+      eval.c
+      eval.h
+      exec.c
+      ... (49 more)
+    COPYING
+    ChangeLog
+    Makefile.am
+    Makefile.in
+    README.md
+    aclocal.m4
+    autogen.sh
+    compile
+    config.h.in
+    configure
+    configure.ac
+    depcomp
+    index.js
+    install-sh
+    missing
+    package.json
+  coding-agent/ (378)
+    docs/ (33)
+      images/ (4)
+        doom-extension.png
+        exy.png
+        interactive-mode.png
+        tree-view.png
+      compaction.md
+      containerization.md
+      custom-provider.md
+      development.md
+      docs.json
+      extensions.md
+      index.md
+      json.md
+      keybindings.md
+      models.md
+      packages.md
+      prompt-templates.md
+      providers.md
+      quickstart.md
+      rpc.md
+      sdk.md
+      session-format.md
+      sessions.md
+      settings.md
+      ... (10 more)
+    examples/ (16)
+      sdk/ (14)
+        01-minimal.ts
+        02-custom-model.ts
+        03-custom-prompt.ts
+        04-skills.ts
+        05-tools.ts
+        06-extensions.ts
+        07-context-files.ts
+        08-prompt-templates.ts
+        09-api-keys-and-oauth.ts
+        10-settings.ts
+        11-sessions.ts
+        12-full-control.ts
+        13-session-runtime.ts
+        README.md
+      README.md
+      rpc-extension-ui.ts
+    scripts (1)
+      migrate-sessions.sh
+    src/ (163)
+      bun/ (2)
+        cli.ts
+        restore-sandbox-env.ts
+      cli/ (6)
+        args.ts
+        config-selector.ts
+        file-processor.ts
+        initial-message.ts
+        list-models.ts
+        session-picker.ts
+      core/ (76)
+        compaction/ (4)
+          ... (4 more files)
+        extensions (1)
+          ... (1 more files)
+        prompts/ (2)
+          ... (2 more files)
+        subagent/ (8)
+          ... (8 more files)
+        tools/ (23)
+          ... (23 more files)
+        agent-session-runtime.ts
+        agent-session-services.ts
+        agent-session.ts
+        auth-storage.ts
+        bash-executor.ts
+        defaults.ts
+        diagnostics.ts
+        discord-bridge.ts
+        event-bus.ts
+        exec.ts
+        footer-data-provider.ts
+        http-dispatcher.ts
+        index.ts
+        keybindings.ts
+        messages.ts
+        ... (23 more)
+      modes/ (43)
+        interactive/ (41)
+          ... (41 more files)
+        index.ts
+        print-mode.ts
+      utils/ (29)
+        ansi.ts
+        changelog.ts
+        child-process.ts
+        clipboard-image.ts
+        clipboard-native.ts
+        clipboard.ts
+        deprecation.ts
+        exif-orientation.ts
+        frontmatter.ts
+        fs-watch.ts
+        git.ts
+        highlight-js-lib-index.d.ts
+        html.ts
+        image-convert.ts
+        image-resize-core.ts
+        image-resize-worker.ts
+        image-resize.ts
+        json.ts
+        mime.ts
+        open-browser.ts
+        ... (9 more)
+      ai-dash.d.ts
+      cli.ts
+      config.ts
+      index.ts
+      main.ts
+      migrations.ts
+      package-manager-cli.ts
+    test/ (157)
+      fixtures/ (21)
+        empty-agent (1)
+          ... (1 more files)
+        empty-cwd (1)
+          ... (1 more files)
+        skills/ (14)
+          ... (14 more files)
+        skills-collision/ (2)
+          ... (2 more files)
+        assistant-message-with-thinking-code.json
+        before-compaction.jsonl
+        large-session.jsonl
+      session-manager/ (7)
+        build-context.test.ts
+        custom-session-id.test.ts
+        file-operations.test.ts
+        labels.test.ts
+        migration.test.ts
+        save-entry.test.ts
+        tree-traversal.test.ts
+      suite/ (28)
+        regressions/ (19)
+          ... (19 more files)
+        README.md
+        agent-session-bash-persistence.test.ts
+        agent-session-compaction.test.ts
+        agent-session-model-extension.test.ts
+        agent-session-prompt.test.ts
+        agent-session-queue.test.ts
+        agent-session-retry-events.test.ts
+        agent-session-runtime.test.ts
+        harness.ts
+      agent-session-auto-compaction-queue.test.ts
+      agent-session-branching.test.ts
+      agent-session-compaction.test.ts
+      agent-session-concurrent.test.ts
+      agent-session-dynamic-provider.test.ts
+      agent-session-dynamic-tools.test.ts
+      agent-session-retry.test.ts
+      agent-session-runtime-events.test.ts
+      agent-session-stats.test.ts
+      agent-session-tree-navigation.test.ts
+      ansi-utils.test.ts
+      args.test.ts
+      assistant-message.test.ts
+      auth-storage.test.ts
+      bash-close-hang-windows.test.ts
+      bash-execution-width.test.ts
+      block-images.test.ts
+      ... (84 more)
+    .gitignore
+    CHANGELOG.md
+    README.md
+    npm-shrinkwrap.json
+    package.json
+    tsconfig.build.json
+    tsconfig.examples.json
+    vitest.config.ts
+  tui/ (68)
+    native/ (6)
+      darwin/ (3)
+        prebuilds/ (2)
+          ... (2 more files)
+        src (1)
+          ... (1 more files)
+      win32/ (3)
+        prebuilds/ (2)
+          ... (2 more files)
+        src (1)
+          ... (1 more files)
+    src/ (27)
+      components/ (12)
+        box.ts
+        cancellable-loader.ts
+        editor.ts
+        image.ts
+        input.ts
+        loader.ts
+        markdown.ts
+        select-list.ts
+        settings-list.ts
+        spacer.ts
+        text.ts
+        truncated-text.ts
+      autocomplete.ts
+      editor-component.ts
+      fuzzy.ts
+      index.ts
+      keybindings.ts
+      keys.ts
+      kill-ring.ts
+      native-modifiers.ts
+      stdin-buffer.ts
+      terminal-image.ts
+      terminal.ts
+      tui.ts
+      undo-stack.ts
+      utils.ts
+      word-navigation.ts
+    test/ (30)
+      autocomplete.test.ts
+      bug-regression-isimageline-startswith-bug.test.ts
+      chat-simple.ts
+      editor.test.ts
+      fuzzy.test.ts
+      image-test.ts
+      input.test.ts
+      key-tester.ts
+      keybindings.test.ts
+      keys.test.ts
+      markdown.test.ts
+      overlay-non-capturing.test.ts
+      overlay-options.test.ts
+      overlay-short-content.test.ts
+      regression-regional-indicator-width.test.ts
+      select-list.test.ts
+      stdin-buffer.test.ts
+      tab-width.test.ts
+      terminal-image.test.ts
+      terminal.test.ts
+      ... (10 more)
+    CHANGELOG.md
+    README.md
+    package.json
+    tsconfig.build.json
+    vitest.config.ts
+scripts/ (21)
   browser-smoke-entry.ts
   build-binaries.sh
   check-browser-smoke.mjs
@@ -44,7 +443,19 @@ scripts/
   publish.mjs
   read-tool-stats.mjs
   release.mjs
-  ... (6 more)
+  session-context-stats.mjs
+  session-transcripts.ts
+  stats.ts
+  sync-versions.js
+  tool-stats.ts
+  ... (1 more)
+.gitattributes
+.gitignore
+.npmrc
+LICENSE
+biome.json
+package-lock.json
+package.json
 tsconfig.base.json
 tsconfig.json
 ```
@@ -93,7 +504,7 @@ tsconfig.json
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/provider-display-names.ts | 4 | provider-display-names, BUILT_IN_PROVIDER_DISPLAY_NAMES | (no description) |
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/resolve-config-value.ts | 287 | resolve-config-value, getConfigValueEnvVarName, getConfigValueEnvVarNames, getMissingConfigValueEnvVarNames, isCommandConfigValue | Resolve configuration values that may be shell commands, environment variables,  |
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/resource-loader.ts | 851 | resource-loader, ResourceExtensionPaths, ResourceLoader, loadProjectContextFiles, DefaultResourceLoaderOptions | (no description) |
-| /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/roadmap.ts | 237 | roadmap, roadmapExists, getRoadmapAbsolutePath, createRoadmap | Project roadmap management. |
+| /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/roadmap.ts | 251 | roadmap, roadmapExists, getRoadmapAbsolutePath, createRoadmap | Project roadmap management. |
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/sdk.ts | 523 | sdk, CreateAgentSessionOptions, CreateAgentSessionResult, agent-session, auth-storage | Optional default tool suppression mode when no explicit allowlist is provided. |
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/session-cwd.ts | 60 | session-cwd, SessionCwdIssue, getMissingSessionCwdIssue, formatMissingSessionCwdError, formatMissingSessionCwdPrompt | (no description) |
 | /home/pekka/Desktop/yuuuu/pi/packages/coding-agent/src/core/session-manager.ts | 1568 | session-manager, CURRENT_SESSION_VERSION, SessionHeader, NewSessionOptions, SessionEntryBase | Custom entry for extensions to store extension-specific data in the session. |
