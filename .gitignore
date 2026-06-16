@@ -60,6 +60,7 @@ packages/ai-dash/stamp-h1
 
 # Pi sessions / data
 .pi/
+.tau/
 
 # Temp / personal
 .venv/

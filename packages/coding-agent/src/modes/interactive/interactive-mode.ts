@@ -66,6 +66,7 @@ import type { ResourceDiagnostic } from "../../core/resource-loader.ts";
 import { formatMissingSessionCwdPrompt, MissingSessionCwdError } from "../../core/session-cwd.ts";
 import { type SessionContext, SessionManager } from "../../core/session-manager.ts";
 import { BUILTIN_SLASH_COMMANDS } from "../../core/slash-commands.ts";
+import { getActiveSessionIds, isDiscordBridgeRunning, startDiscordBridge, stopDiscordBridge } from "../../core/discord-bridge.ts";
 import type { SourceInfo } from "../../core/source-info.ts";
 import type { TruncationResult } from "../../core/tools/truncate.ts";
 import { hasProjectTrustInputs, ProjectTrustStore } from "../../core/trust-manager.ts";
@@ -222,6 +223,8 @@ export interface InteractiveModeOptions {
 	initialMessages?: string[];
 	/** Force verbose startup (overrides quietStartup setting) */
 	verbose?: boolean;
+	/** Auto-start Discord bridge on launch */
+	discord?: boolean;
 }
 
 export class InteractiveMode {
@@ -804,6 +807,11 @@ export class InteractiveMode {
 					this.showError(errorMessage);
 				}
 			}
+		}
+
+		// Auto-start Discord bridge if --discord flag was set
+		if (this.options.discord) {
+			await this.handleDiscordCommand("/discord");
 		}
 
 		// Main interactive loop
@@ -4878,7 +4886,6 @@ export class InteractiveMode {
 		}
 
 		if (args === "stop") {
-			const { stopDiscordBridge, getActiveSessionIds } = await import("../../core/discord-bridge.ts");
 			const ids = getActiveSessionIds();
 			if (ids.length === 0) {
 				this.showStatus("No active Discord bridge sessions.");
@@ -4891,7 +4898,6 @@ export class InteractiveMode {
 			return;
 		}
 
-		const { startDiscordBridge, isDiscordBridgeRunning } = await import("../../core/discord-bridge.ts");
 		if (isDiscordBridgeRunning()) {
 			this.showStatus("Discord bridge is already running. Use /discord stop to disconnect.");
 			return;

@@ -11,6 +11,7 @@
 
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { AssistantMessage, ToolCall, ToolResultMessage } from "@earendil-works/pi-ai";
+import { Client, Events, GatewayIntentBits, type TextChannel, type Message } from "discord.js";
 import type { AgentSession, AgentSessionEvent } from "./agent-session.ts";
 import type {
 	BashExecutionMessage,
@@ -19,11 +20,9 @@ import type {
 	CustomMessage,
 } from "./messages.ts";
 
-// discord.js types — require("discord.js") at runtime to avoid
-// bundling the dependency when the bridge is not used.
-type DiscordClient = any;
-type DiscordTextChannel = any;
-type DiscordMessage = any;
+type DiscordClient = Client;
+type DiscordTextChannel = TextChannel;
+type DiscordMessage = Message;
 
 const DISCORD_MAX_LENGTH = 2000;
 const CHANNEL_PREFIX = "pi-";
@@ -207,10 +206,6 @@ async function ensureClient(token: string, statusCb?: (msg: string) => void): Pr
 		client.destroy();
 		client = null;
 	}
-
-	// discord.js is an optional peer dependency — only loaded when the bridge is used
-	const discordMod = "discord.js";
-	const { Client, GatewayIntentBits, Events } = await import(discordMod);
 
 	client = new Client({
 		intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
