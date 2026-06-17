@@ -33,6 +33,7 @@ coverage/
 # Package specific
 .npm/
 .pi_config/
+packages/ai/src/models.generated.ts
 compaction-results/
 .opencode/
 syntax.jsonl
