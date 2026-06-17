@@ -22,7 +22,7 @@ import { allToolNames, createBashTool, type ToolName } from "./tools/index.ts";
 export interface CreateAgentSessionOptions {
 	/** Working directory for project-local discovery. Default: process.cwd() */
 	cwd?: string;
-	/** Global config directory. Default: ~/.pi/agent */
+	/** Global config directory. Default: ~/.tau/agent */
 	agentDir?: string;
 
 	/** Auth storage for credentials. Default: AuthStorage.create(agentDir/auth.json) */
@@ -48,7 +48,7 @@ export interface CreateAgentSessionOptions {
 	/**
 	 * Optional allowlist of tool names.
 	 *
-	 * When omitted, pi enables the default built-in tools (bash, subagent, transcribe)
+	 * When omitted, tau enables the default built-in tools (bash, subagent, transcribe)
 	 * and leaves extension/custom tools enabled unless `noTools` changes that default.
 	 * When provided, only the listed tool names are enabled.
 	 */
@@ -105,7 +105,7 @@ function getDefaultAgentDir(): string {
 }
 
 // ── Dump-prompts logger ──────────────────────────────────────────────
-// Logs complete API request payloads to ~/.pi/agent/dump-prompts/<session>.jsonl
+// Logs complete API request payloads to ~/.tau/agent/dump-prompts/<session>.jsonl
 
 class DumpLogger {
 	#file: string;
@@ -155,7 +155,7 @@ class DumpLogger {
 let dumpLogger: DumpLogger | undefined;
 
 function initDumpLogger(agentDir: string, sessionId: string): void {
-	if (process.env.PI_NO_DUMP === "1") return;
+	if (process.env.TAU_NO_DUMP === "1") return;
 	const dir = join(agentDir, "dump-prompts");
 	dumpLogger = new DumpLogger(dir, sessionId);
 }
@@ -337,7 +337,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		convertToLlm: convertToLlmWithBlockImages,
 		streamFn: async (model, context, options) => {
 			const requestStart = Date.now();
-			const httpDebugEnabled = process.env.PI_DEBUG_HTTP === "1";
+			const httpDebugEnabled = process.env.TAU_DEBUG_HTTP === "1";
 			let responseReceivedAt = 0;
 
 			setHttpStageRef.current?.("resolving auth");
@@ -416,9 +416,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			// Dump API request (only new messages, not full history)
 			dumpLogger?.logRequest(model.id, model.provider, payload as Record<string, unknown>);
 
-			// Full request body dump (PI_DEBUG_HTTP=2 for body, PI_DEBUG_HTTP=3 for body+headers)
-			const onPayloadDebugEnabled = process.env.PI_DEBUG_HTTP === "1";
-			const onPayloadDebugLevel = Number.parseInt(process.env.PI_DEBUG_HTTP ?? "0", 10);
+			// Full request body dump (TAU_DEBUG_HTTP=2 for body, TAU_DEBUG_HTTP=3 for body+headers)
+			const onPayloadDebugEnabled = process.env.TAU_DEBUG_HTTP === "1";
+			const onPayloadDebugLevel = Number.parseInt(process.env.TAU_DEBUG_HTTP ?? "0", 10);
 			if (onPayloadDebugEnabled) {
 				if (onPayloadDebugLevel >= 2) {
 					const body = JSON.stringify(payload, null, onPayloadDebugLevel >= 3 ? 2 : undefined);

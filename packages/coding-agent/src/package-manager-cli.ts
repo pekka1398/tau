@@ -16,7 +16,7 @@ import { DefaultPackageManager } from "./core/package-manager.ts";
 import { SettingsManager } from "./core/settings-manager.ts";
 import { hasProjectTrustInputs, ProjectTrustStore } from "./core/trust-manager.ts";
 import { spawnProcess } from "./utils/child-process.ts";
-import { getLatestPiRelease, isNewerPackageVersion } from "./utils/version-check.ts";
+import { getLatestTauRelease, isNewerPackageVersion } from "./utils/version-check.ts";
 import {
 	cleanupWindowsSelfUpdateQuarantine,
 	quarantineWindowsNativeDependencies,
@@ -74,7 +74,7 @@ function getPackageCommandUsage(command: PackageCommand): string {
 		case "remove":
 			return `${APP_NAME} remove <source> [-l] [--approve|--no-approve]`;
 		case "update":
-			return `${APP_NAME} update [source|self|pi] [--self] [--extensions] [--extension <source>] [--approve|--no-approve] [--force]`;
+		return `${APP_NAME} update [source|self|tau] [--self] [--extensions] [--extension <source>] [--approve|--no-approve] [--force]`;
 		case "list":
 			return `${APP_NAME} list [--approve|--no-approve]`;
 	}
@@ -89,7 +89,7 @@ function printPackageCommandHelp(command: PackageCommand): void {
 Install a package and add it to settings.
 
 Options:
-  -l, --local       Install project-locally (.pi/settings.json)
+  -l, --local       Install project-locally (.tau/settings.json)
   -a, --approve     Trust project-local files for this command
   -na, --no-approve Ignore project-local files for this command
 
@@ -111,7 +111,7 @@ Remove a package and its source from settings.
 Alias: ${APP_NAME} uninstall <source> [-l]
 
 Options:
-  -l, --local       Remove from project settings (.pi/settings.json)
+  -l, --local       Remove from project settings (.tau/settings.json)
   -a, --approve     Trust project-local files for this command
   -na, --no-approve Ignore project-local files for this command
 
@@ -276,7 +276,7 @@ function parsePackageCommand(args: string[]): PackageCommandOptions | undefined 
 			}
 			updateTarget = { type: "extensions", source: extensionFlagSource };
 		} else if (source) {
-			const sourceIsSelf = source === "self" || source === "pi";
+			const sourceIsSelf = source === "self" || source === "tau";
 			if (sourceIsSelf) {
 				updateTarget = extensionsFlag ? { type: "all" } : { type: "self" };
 			} else {
@@ -367,7 +367,7 @@ async function getSelfUpdatePlan(force: boolean): Promise<SelfUpdatePlan> {
 	}
 
 	try {
-		const latestRelease = await getLatestPiRelease(VERSION);
+		const latestRelease = await getLatestTauRelease(VERSION);
 		const packageName = latestRelease?.packageName ?? PACKAGE_NAME;
 		if (!latestRelease || packageName !== PACKAGE_NAME || isNewerPackageVersion(latestRelease.version, VERSION)) {
 			return { packageName, shouldRun: true, ...(latestRelease?.note ? { note: latestRelease.note } : {}) };

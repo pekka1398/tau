@@ -1,8 +1,8 @@
 import type { Api, Model } from "@earendil-works/pi-ai";
 
 const OPENROUTER_ATTRIBUTION_HEADERS = {
-	"HTTP-Referer": "https://pi.dev",
-	"X-OpenRouter-Title": "pi",
+	"HTTP-Referer": "https://tau.dev",
+	"X-OpenRouter-Title": "tau",
 	"X-OpenRouter-Categories": "cli-agent",
 };
 

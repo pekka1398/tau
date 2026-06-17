@@ -228,7 +228,7 @@ class BashResultRenderComponent extends Container {
 			this.state.cachedWidth = width;
 			this.state.cachedLines = visualLines;
 			this.state.cachedSkipped = skippedCount;
-			if (process.env.PI_DEBUG_TOOL_RESULT) {
+			if (process.env.TAU_DEBUG_TOOL_RESULT) {
 				appendFileSync(
 					"/tmp/bash-render.log",
 					`[${new Date().toISOString()}] BashResultRender: collapsedStyledOutput exists → ${visualLines.length} lines (skipped=${skippedCount})\n`,
@@ -276,7 +276,7 @@ function rebuildBashResultRenderComponent(
 	endedAt: number | undefined,
 ): void {
 	const _state = component.state;
-	const _dbg = process.env.PI_DEBUG_TOOL_RESULT;
+	const _dbg = process.env.TAU_DEBUG_TOOL_RESULT;
 	const _ts = () => new Date().toISOString();
 	component.clear();
 

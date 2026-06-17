@@ -7,6 +7,7 @@
 
 import { execSync } from "node:child_process";
 import { join } from "node:path";
+import { CONFIG_DIR_NAME } from "../../config.ts";
 
 export interface WorktreeInfo {
 	worktreePath: string;
@@ -40,11 +41,11 @@ export function createAgentWorktree(cwd: string, slug: string): WorktreeInfo | n
 	}
 
 	const branchName = `agent-${slug}`;
-	const worktreePath = join(gitRoot, ".pi", "worktrees", slug);
+	const worktreePath = join(gitRoot, CONFIG_DIR_NAME, "worktrees", slug);
 
 	// Create worktree directory
 	try {
-		execSync(`mkdir -p "${join(gitRoot, ".pi", "worktrees")}"`, { cwd: gitRoot });
+		execSync(`mkdir -p "${join(gitRoot, CONFIG_DIR_NAME, "worktrees")}"`, { cwd: gitRoot });
 	} catch {
 		return null;
 	}

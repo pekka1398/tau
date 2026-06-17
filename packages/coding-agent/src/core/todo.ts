@@ -1,12 +1,13 @@
 /**
  * Project todo/issue tracking.
  *
- * Stores todos in .pi/todos.json at the project root.
- * Accessible via CLI (`pi todo`), slash command (`/todo`), and agent tools.
+ * Stores todos in .tau/todos.json at the project root.
+ * Accessible via CLI (`tau todo`), slash command (`/todo`), and agent tools.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { CONFIG_DIR_NAME } from "../config.ts";
 
 export type TodoStatus = "open" | "in_progress" | "done" | "cancelled";
 export type TodoPriority = "critical" | "high" | "medium" | "low";
@@ -28,11 +29,11 @@ export interface TodoStore {
 }
 
 function getTodosPath(cwd: string): string {
-	return join(cwd, ".pi", "todos.json");
+	return join(cwd, CONFIG_DIR_NAME, "todos.json");
 }
 
-function ensurePiDir(cwd: string): void {
-	const dir = join(cwd, ".pi");
+function ensureConfigDir(cwd: string): void {
+	const dir = join(cwd, CONFIG_DIR_NAME);
 	if (!existsSync(dir)) {
 		mkdirSync(dir, { recursive: true });
 	}
@@ -66,7 +67,7 @@ export function loadTodos(cwd: string): TodoStore {
  * Save todos to disk.
  */
 export function saveTodos(cwd: string, store: TodoStore): void {
-	ensurePiDir(cwd);
+	ensureConfigDir(cwd);
 	const path = getTodosPath(cwd);
 	writeFileSync(path, `${JSON.stringify(store, null, "\t")}\n`, "utf-8");
 }

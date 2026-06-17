@@ -275,7 +275,7 @@ export class InteractiveMode {
 	private loaderStatus: "idle" | "waiting" | "thinking" | "streaming" | "executing" = "idle";
 	private loaderStatusChangedAt = Date.now();
 	private logLoaderTransition(to: string, extra?: string): void {
-		if (!process.env.PI_DEBUG_LOADER) return;
+		if (!process.env.TAU_DEBUG_LOADER) return;
 		const now = Date.now();
 		const elapsed = now - this.loaderStatusChangedAt;
 		const msg = `[${new Date().toISOString()}] ${this.loaderStatus} → ${to} (${elapsed}ms)${extra ? ` ${extra}` : ""}\n`;
@@ -3041,7 +3041,7 @@ export class InteractiveMode {
 			}
 
 			case "tool_execution_end": {
-				if (process.env.PI_DEBUG_TOOL_RESULT) {
+				if (process.env.TAU_DEBUG_TOOL_RESULT) {
 					const r = event.result;
 					fs.appendFileSync(
 						"/tmp/tool-result-end.log",
@@ -3433,7 +3433,7 @@ export class InteractiveMode {
 			new Text(
 				theme.fg(
 					"warning",
-					"This project is not trusted. Project instructions (AGENTS.md/CLAUDE.md), .pi resources, and project packages are ignored. Use /trust to save a trust decision, then restart pi.",
+					"This project is not trusted. Project instructions (AGENTS.md/CLAUDE.md), .tau resources, and project packages are ignored. Use /trust to save a trust decision, then restart tau.",
 				),
 				1,
 				0,
@@ -3793,7 +3793,7 @@ export class InteractiveMode {
 		}
 
 		const currentText = this.editor.getExpandedText?.() ?? this.editor.getText();
-		const tmpFile = path.join(os.tmpdir(), `pi-editor-${Date.now()}.pi.md`);
+		const tmpFile = path.join(os.tmpdir(), `tau-editor-${Date.now()}.tau.md`);
 
 		try {
 			// Write current content to temp file
@@ -4807,7 +4807,7 @@ export class InteractiveMode {
 		const { createRoadmap, roadmapExists } = await import("../../core/roadmap.ts");
 		const cwd = this.cwd || process.cwd();
 		if (roadmapExists(cwd)) {
-			console.log("ROADMAP.md already exists at .pi/ROADMAP.md");
+			console.log("ROADMAP.md already exists at .tau/ROADMAP.md");
 			return;
 		}
 		const path = createRoadmap(cwd);

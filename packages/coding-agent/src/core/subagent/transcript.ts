@@ -2,18 +2,18 @@
  * Subagent transcript persistence.
  *
  * Records agent conversations to disk for debugging and resume support.
- * Transcripts are stored as JSONL files in ~/.pi/agent/transcripts/.
+ * Transcripts are stored as JSONL files in ~/.tau/agent/transcripts/.
  */
 
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import { getAgentDir } from "../../config.ts";
 
 const TRANSCRIPT_DIR_NAME = "transcripts";
 
 function getTranscriptDir(): string {
-	const home = process.env.HOME || process.env.USERPROFILE || "/tmp";
-	return join(home, ".pi", "agent", TRANSCRIPT_DIR_NAME);
+	return join(getAgentDir(), TRANSCRIPT_DIR_NAME);
 }
 
 function ensureTranscriptDir(): string {

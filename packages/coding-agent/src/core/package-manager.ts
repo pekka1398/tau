@@ -39,7 +39,7 @@ const UPDATE_CHECK_CONCURRENCY = 4;
 const GIT_UPDATE_CONCURRENCY = 4;
 
 function isOfflineModeEnabled(): boolean {
-	const value = process.env.PI_OFFLINE;
+	const value = process.env.TAU_OFFLINE;
 	if (!value) return false;
 	return value === "1" || value.toLowerCase() === "true" || value.toLowerCase() === "yes";
 }
@@ -144,7 +144,7 @@ interface GitUpdateTarget extends ConfiguredUpdateSource {
 	parsed: GitSource;
 }
 
-interface PiManifest {
+interface TauManifest {
 	extensions?: string[];
 	skills?: string[];
 	prompts?: string[];
@@ -332,7 +332,7 @@ function collectFiles(
 	return files;
 }
 
-type SkillDiscoveryMode = "pi" | "agents";
+type SkillDiscoveryMode = "tau" | "agents";
 
 function collectSkillEntries(
 	dir: string,
@@ -391,7 +391,7 @@ function collectSkillEntries(
 			}
 
 			const relPath = toPosixPath(relative(root, fullPath));
-			if (mode === "pi" && dir === root && isFile && entry.name.endsWith(".md") && !ig.ignores(relPath)) {
+			if (mode === "tau" && dir === root && isFile && entry.name.endsWith(".md") && !ig.ignores(relPath)) {
 				entries.push(fullPath);
 				continue;
 			}
@@ -521,11 +521,11 @@ function collectAutoThemeEntries(dir: string): string[] {
 	return entries;
 }
 
-function readPiManifestFile(packageJsonPath: string): PiManifest | null {
+function readTauManifestFile(packageJsonPath: string): TauManifest | null {
 	try {
 		const content = readFileSync(packageJsonPath, "utf-8");
-		const pkg = JSON.parse(content) as { pi?: PiManifest };
-		return pkg.pi ?? null;
+		const pkg = JSON.parse(content) as { tau?: TauManifest };
+		return pkg.tau ?? null;
 	} catch {
 		return null;
 	}
@@ -534,7 +534,7 @@ function readPiManifestFile(packageJsonPath: string): PiManifest | null {
 function resolveExtensionEntries(dir: string): string[] | null {
 	const packageJsonPath = join(dir, "package.json");
 	if (existsSync(packageJsonPath)) {
-		const manifest = readPiManifestFile(packageJsonPath);
+		const manifest = readTauManifestFile(packageJsonPath);
 		if (manifest?.extensions?.length) {
 			const entries: string[] = [];
 			for (const extPath of manifest.extensions) {
@@ -621,7 +621,7 @@ function collectAutoExtensionEntries(dir: string): string[] {
  */
 function collectResourceFiles(dir: string, resourceType: ResourceType): string[] {
 	if (resourceType === "skills") {
-		return collectSkillEntries(dir, "pi");
+		return collectSkillEntries(dir, "tau");
 	}
 	if (resourceType === "extensions") {
 		return collectAutoExtensionEntries(dir);
@@ -2043,10 +2043,10 @@ export class DefaultPackageManager implements PackageManager {
 			return true;
 		}
 
-		const manifest = this.readPiManifest(packageRoot);
+		const manifest = this.readTauManifest(packageRoot);
 		if (manifest) {
 			for (const resourceType of RESOURCE_TYPES) {
-				const entries = manifest[resourceType as keyof PiManifest];
+				const entries = manifest[resourceType as keyof TauManifest];
 				this.addManifestEntries(
 					entries,
 					packageRoot,
@@ -2079,8 +2079,8 @@ export class DefaultPackageManager implements PackageManager {
 		target: Map<string, { metadata: PathMetadata; enabled: boolean }>,
 		metadata: PathMetadata,
 	): void {
-		const manifest = this.readPiManifest(packageRoot);
-		const entries = manifest?.[resourceType as keyof PiManifest];
+		const manifest = this.readTauManifest(packageRoot);
+		const entries = manifest?.[resourceType as keyof TauManifest];
 		if (entries) {
 			this.addManifestEntries(entries, packageRoot, resourceType, target, metadata);
 			return;
@@ -2130,8 +2130,8 @@ export class DefaultPackageManager implements PackageManager {
 		packageRoot: string,
 		resourceType: ResourceType,
 	): { allFiles: string[]; enabledByManifest: Set<string> } {
-		const manifest = this.readPiManifest(packageRoot);
-		const entries = manifest?.[resourceType as keyof PiManifest];
+		const manifest = this.readTauManifest(packageRoot);
+		const entries = manifest?.[resourceType as keyof TauManifest];
 		if (entries && entries.length > 0) {
 			const allFiles = this.collectFilesFromManifestEntries(entries, packageRoot, resourceType);
 			const manifestPatterns = entries.filter(isOverridePattern);
@@ -2148,7 +2148,7 @@ export class DefaultPackageManager implements PackageManager {
 		return { allFiles, enabledByManifest: new Set(allFiles) };
 	}
 
-	private readPiManifest(packageRoot: string): PiManifest | null {
+	private readTauManifest(packageRoot: string): TauManifest | null {
 		const packageJsonPath = join(packageRoot, "package.json");
 		if (!existsSync(packageJsonPath)) {
 			return null;
@@ -2156,8 +2156,8 @@ export class DefaultPackageManager implements PackageManager {
 
 		try {
 			const content = readFileSync(packageJsonPath, "utf-8");
-			const pkg = JSON.parse(content) as { pi?: PiManifest };
-			return pkg.pi ?? null;
+			const pkg = JSON.parse(content) as { tau?: TauManifest };
+			return pkg.tau ?? null;
 		} catch {
 			return null;
 		}
@@ -2289,7 +2289,7 @@ export class DefaultPackageManager implements PackageManager {
 		};
 
 		if (projectTrusted) {
-			// Project extensions from .pi/
+			// Project extensions from .tau/
 			addResources(
 				"extensions",
 				collectAutoExtensionEntries(projectDirs.extensions),
@@ -2298,10 +2298,10 @@ export class DefaultPackageManager implements PackageManager {
 				projectBaseDir,
 			);
 
-			// Project skills from .pi/
+			// Project skills from .tau/
 			addResources(
 				"skills",
-				collectAutoSkillEntries(projectDirs.skills, "pi"),
+				collectAutoSkillEntries(projectDirs.skills, "tau"),
 				projectMetadata,
 				projectOverrides.skills,
 				projectBaseDir,
@@ -2341,7 +2341,7 @@ export class DefaultPackageManager implements PackageManager {
 			);
 		}
 
-		// User extensions from ~/.pi/agent/
+		// User extensions from ~/.tau/agent/
 		addResources(
 			"extensions",
 			collectAutoExtensionEntries(userDirs.extensions),
@@ -2350,10 +2350,10 @@ export class DefaultPackageManager implements PackageManager {
 			globalBaseDir,
 		);
 
-		// User skills from ~/.pi/agent/
+		// User skills from ~/.tau/agent/
 		addResources(
 			"skills",
-			collectAutoSkillEntries(userDirs.skills, "pi"),
+			collectAutoSkillEntries(userDirs.skills, "tau"),
 			userMetadata,
 			userOverrides.skills,
 			globalBaseDir,

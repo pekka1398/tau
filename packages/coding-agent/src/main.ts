@@ -500,7 +500,7 @@ async function promptForProjectTrust(
 ): Promise<ProjectTrustPromptResult | undefined> {
 	return showStartupSelector(
 		settingsManager,
-		`Trust project folder?\n${cwd}\n\nThis allows pi to read project instructions (AGENTS.md/CLAUDE.md), load .pi settings and resources, install missing project packages, and execute project extensions.`,
+		`Trust project folder?\n${cwd}\n\nThis allows tau to read project instructions (AGENTS.md/CLAUDE.md), load .tau settings and resources, install missing project packages, and execute project extensions.`,
 		[
 			{ label: "Trust", value: { trusted: true, remember: true } },
 			{ label: "Trust (this session only)", value: { trusted: true, remember: false } },
@@ -548,10 +548,10 @@ export interface MainOptions {
 
 export async function main(args: string[], options?: MainOptions) {
 	resetTimings();
-	const offlineMode = args.includes("--offline") || isTruthyEnvFlag(process.env.PI_OFFLINE);
+	const offlineMode = args.includes("--offline") || isTruthyEnvFlag(process.env.TAU_OFFLINE);
 	if (offlineMode) {
-		process.env.PI_OFFLINE = "1";
-		process.env.PI_SKIP_VERSION_CHECK = "1";
+		process.env.TAU_OFFLINE = "1";
+		process.env.TAU_SKIP_VERSION_CHECK = "1";
 	}
 
 	if (process.platform === "win32") {
@@ -814,9 +814,9 @@ export async function main(args: string[], options?: MainOptions) {
 		process.exit(1);
 	}
 
-	const startupBenchmark = isTruthyEnvFlag(process.env.PI_STARTUP_BENCHMARK);
+	const startupBenchmark = isTruthyEnvFlag(process.env.TAU_STARTUP_BENCHMARK);
 	if (startupBenchmark && appMode !== "interactive") {
-		console.error(chalk.red("Error: PI_STARTUP_BENCHMARK only supports interactive mode"));
+		console.error(chalk.red("Error: TAU_STARTUP_BENCHMARK only supports interactive mode"));
 		process.exit(1);
 	}
 
