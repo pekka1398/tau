@@ -21,7 +21,7 @@ isolated directory outside the repository for local release testing.
 Options:
   --out <dir>          Output directory. Defaults to a new directory under ${tmpdir()}
   --force              Remove --out first if it already exists
-  --skip-check         Do not run npm run check before building
+  --skip-check         Do not run bun run check before building
   --skip-install       Only create tarballs; do not create isolated installs
   --skip-bun-install   Do not create the isolated Bun install
   --help               Show this help
@@ -197,13 +197,13 @@ const bunInstallDirectory = join(outDir, "bun-install");
 const binaryDirectory = join(outDir, "bun");
 mkdirSync(tarballDirectory, { recursive: true });
 
-if (!options.skipCheck) {
-	run("npm", ["run", "check"], { cwd: repoRoot });
+	if (!options.skipCheck) {
+	run("bun", ["run", "check"], { cwd: repoRoot });
 }
 
-for (const pkg of packages) {
-	run("npm", ["run", "clean"], { cwd: pkg.directory });
-	run("npm", ["run", "build"], { cwd: pkg.directory });
+	for (const pkg of packages) {
+	run("bun", ["run", "clean"], { cwd: pkg.directory });
+	run("bun", ["run", "build"], { cwd: pkg.directory });
 }
 
 const tarballs = new Map();
@@ -254,7 +254,7 @@ if (!options.skipInstall) {
 	console.log("\nRun the local Bun binary release from outside the repository:");
 	console.log(`  ${join(binaryDirectory, String(binaryPlatform).startsWith("windows-") ? "pi.exe" : "pi")} --help`);
 
-	console.log("\nIsolated npm install:");
+	console.log("\nIsolated npm install (for testing npm consumers):");
 	console.log(`  ${nodeInstallDirectory}`);
 	console.log("\nRun the locally packed npm CLI from outside the repository:");
 	console.log(`  ${join(nodeInstallDirectory, process.platform === "win32" ? "pi.cmd" : "pi")} --help`);

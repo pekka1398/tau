@@ -58,8 +58,7 @@ packages/ai-dash/config.log
 packages/ai-dash/config.status
 packages/ai-dash/stamp-h1
 
-# Pi sessions / data
-.pi/
+# Tau sessions / data
 .tau/
 
 # Temp / personal

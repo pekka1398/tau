@@ -20,10 +20,8 @@ function printHelp() {
   node scripts/profile-coding-agent-node.mjs [options]
 
 Profiles coding-agent startup with the runtime selected below:
-- npm run profile:tui     -> builds packages/coding-agent and profiles TUI startup with Node
-- npm run profile:rpc     -> builds packages/coding-agent and profiles RPC startup with Node
-- bun run profile:tui     -> profiles TUI startup from src/cli.ts directly with Bun
-- bun run profile:rpc     -> profiles RPC startup from src/cli.ts directly with Bun
+- bun run profile:tui     -> builds packages/coding-agent and profiles TUI startup with Node
+- bun run profile:rpc     -> builds packages/coding-agent and profiles RPC startup with Node
 
 Options:
   --mode <name>          tui or rpc (default: tui)
@@ -282,7 +280,7 @@ async function runBuild() {
 	process.stdout.write("Building packages/tui, packages/ai, packages/agent, and packages/coding-agent...\n");
 	const startedAt = performance.now();
 	const child = spawn(
-		"npm",
+		"bun",
 		[
 			"run",
 			"build",

@@ -61,9 +61,9 @@
 	"scripts": {
 		"clean": "shx rm -rf dist",
 		"generate-models": "tsx scripts/generate-models.ts",
-		"build": "npm run generate-models && tsgo -p tsconfig.build.json",
+		"build": "bun run generate-models && tsgo -p tsconfig.build.json",
 		"test": "vitest --run",
-		"prepublishOnly": "npm run clean && npm run build"
+		"prepublishOnly": "bun run clean && bun run build"
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "0.91.1",
