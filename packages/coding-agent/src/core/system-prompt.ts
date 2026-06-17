@@ -5,8 +5,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import os from "node:os";
 import { join } from "node:path";
-import { CONFIG_DIR_NAME } from "../config.ts";
-import { getDocsPath, getExamplesPath, getReadmePath } from "../config.ts";
+import { getDocsPath, getExamplesPath, getProjectDir, getReadmePath } from "../config.ts";
 import { spawnProcessSync } from "../utils/child-process.ts";
 import { STATIC_SYSTEM_PROMPT } from "./prompts/static-prompt.ts";
 import { formatSkillsForPrompt, type Skill } from "./skills.ts";
@@ -513,7 +512,7 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
 	}
 
 	// Append roadmap reference
-	const roadmapPath = join(options.cwd, CONFIG_DIR_NAME, "ROADMAP.md");
+	const roadmapPath = join(getProjectDir(options.cwd), "ROADMAP.md");
 	if (existsSync(roadmapPath)) {
 		prompt += `\n\n## Project Roadmap\n\nA project roadmap is available at: ${roadmapPath}\n\nThis file contains:\n- Architecture overview (package roles, internal structure)\n- Dependency graph\n- Entry points table ("want to do X → go to Y")\n- File structure (5 levels deep)\n- Important files table (paths, line counts, keywords, descriptions)\n- Tech stack and build commands\n- Coding conventions\n\nIMPORTANT: When reading ROADMAP.md, use \`cat\` to read the ENTIRE file. Do NOT use head/tail/sed to read partial content. The file is large but you must read all of it to understand the full project structure.`;
 	}

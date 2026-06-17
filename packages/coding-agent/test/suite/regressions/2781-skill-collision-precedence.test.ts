@@ -2,6 +2,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { getProjectDir } from "../../../src/config.ts";
 import { DefaultResourceLoader } from "../../../src/core/resource-loader.ts";
 
 describe("issue #2781 skill collision precedence: user skills should override package skills", () => {
@@ -45,7 +46,7 @@ describe("issue #2781 skill collision precedence: user skills should override pa
 	}
 
 	function createProjectSkill(name: string, description: string): string {
-		const skillDir = join(cwd, ".tau", "skills", name);
+		const skillDir = join(getProjectDir(cwd, agentDir), "skills", name);
 		mkdirSync(skillDir, { recursive: true });
 		const skillPath = join(skillDir, "SKILL.md");
 		writeFileSync(skillPath, `---\nname: ${name}\ndescription: ${description}\n---\nProject skill content`);
@@ -53,7 +54,7 @@ describe("issue #2781 skill collision precedence: user skills should override pa
 	}
 
 	function createSettingsWithPackage(pkgDir: string, scope: "user" | "project"): void {
-		const settingsDir = scope === "user" ? agentDir : join(cwd, ".tau");
+		const settingsDir = scope === "user" ? agentDir : getProjectDir(cwd, agentDir);
 		mkdirSync(settingsDir, { recursive: true });
 		writeFileSync(join(settingsDir, "settings.json"), JSON.stringify({ packages: [pkgDir] }, null, 2));
 	}

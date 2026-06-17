@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import lockfile from "proper-lockfile";
-import { CONFIG_DIR_NAME } from "../config.ts";
+import { getProjectDir } from "../config.ts";
 import { canonicalizePath, resolvePath } from "../utils/paths.ts";
 
 export type ProjectTrustDecision = boolean | null;
@@ -96,7 +96,7 @@ function withTrustFileLock<T>(path: string, fn: () => T): T {
 
 export function hasProjectTrustInputs(cwd: string): boolean {
 	let currentDir = canonicalizePath(resolvePath(cwd));
-	if (existsSync(join(currentDir, CONFIG_DIR_NAME))) {
+	if (existsSync(getProjectDir(currentDir))) {
 		return true;
 	}
 

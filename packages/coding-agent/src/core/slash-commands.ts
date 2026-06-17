@@ -35,6 +35,6 @@ export const BUILTIN_SLASH_COMMANDS: ReadonlyArray<BuiltinSlashCommand> = [
 	{ name: "reload", description: "Reload keybindings, extensions, skills, prompts, and themes" },
 	{ name: "discord", description: "Bridge session to Discord for remote control" },
 	{ name: "todo", description: "Manage project todos: /todo list|add|done|show|summary" },
-	{ name: "roadmap", description: "Generate project roadmap (.tau/ROADMAP.md)" },
+	{ name: "roadmap", description: "Generate project roadmap" },
 	{ name: "quit", description: `Quit ${APP_NAME}` },
 ];

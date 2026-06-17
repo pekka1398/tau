@@ -1,4 +1,5 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { getProjectDir } from "../src/config.ts";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -46,9 +47,9 @@ describe("ProjectTrustStore", () => {
 	it("detects project trust inputs", () => {
 		expect(hasProjectTrustInputs(cwd)).toBe(false);
 
-		mkdirSync(join(cwd, ".tau"), { recursive: true });
+		mkdirSync(getProjectDir(cwd, agentDir), { recursive: true });
 		expect(hasProjectTrustInputs(cwd)).toBe(true);
-		rmSync(join(cwd, ".tau"), { recursive: true, force: true });
+		rmSync(getProjectDir(cwd, agentDir), { recursive: true, force: true });
 
 		writeFileSync(join(cwd, "AGENTS.md"), "Project instructions");
 		expect(hasProjectTrustInputs(cwd)).toBe(true);

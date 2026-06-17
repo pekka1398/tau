@@ -1,13 +1,13 @@
 /**
  * Project todo/issue tracking.
  *
- * Stores todos in .tau/todos.json at the project root.
+ * Stores todos in the project directory under ~/.tau/agent/projects/.
  * Accessible via CLI (`tau todo`), slash command (`/todo`), and agent tools.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { CONFIG_DIR_NAME } from "../config.ts";
+import { ensureProjectDir, getProjectDir } from "../config.ts";
 
 export type TodoStatus = "open" | "in_progress" | "done" | "cancelled";
 export type TodoPriority = "critical" | "high" | "medium" | "low";
@@ -29,14 +29,11 @@ export interface TodoStore {
 }
 
 function getTodosPath(cwd: string): string {
-	return join(cwd, CONFIG_DIR_NAME, "todos.json");
+	return join(getProjectDir(cwd), "todos.json");
 }
 
 function ensureConfigDir(cwd: string): void {
-	const dir = join(cwd, CONFIG_DIR_NAME);
-	if (!existsSync(dir)) {
-		mkdirSync(dir, { recursive: true });
-	}
+	ensureProjectDir(cwd);
 }
 
 /**

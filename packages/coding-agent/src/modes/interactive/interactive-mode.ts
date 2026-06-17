@@ -3433,7 +3433,7 @@ export class InteractiveMode {
 			new Text(
 				theme.fg(
 					"warning",
-					"This project is not trusted. Project instructions (AGENTS.md/CLAUDE.md), .tau resources, and project packages are ignored. Use /trust to save a trust decision, then restart tau.",
+					"This project is not trusted. Project instructions (AGENTS.md/CLAUDE.md), project resources, and project packages are ignored. Use /trust to save a trust decision, then restart tau.",
 				),
 				1,
 				0,
@@ -4807,7 +4807,7 @@ export class InteractiveMode {
 		const { createRoadmap, roadmapExists } = await import("../../core/roadmap.ts");
 		const cwd = this.cwd || process.cwd();
 		if (roadmapExists(cwd)) {
-			console.log("ROADMAP.md already exists at .tau/ROADMAP.md");
+			console.log("ROADMAP.md already exists in project directory");
 			return;
 		}
 		const path = createRoadmap(cwd);

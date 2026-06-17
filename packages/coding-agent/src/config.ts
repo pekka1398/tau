@@ -1,9 +1,9 @@
-import { accessSync, constants, existsSync, readFileSync, realpathSync } from "fs";
+import { accessSync, constants, existsSync, mkdirSync, readFileSync, realpathSync } from "fs";
 import { homedir } from "os";
 import { basename, dirname, join, resolve, sep, win32 } from "path";
 import { fileURLToPath } from "url";
 import { spawnProcessSync } from "./utils/child-process.ts";
-import { normalizePath } from "./utils/paths.ts";
+import { normalizePath, resolvePath } from "./utils/paths.ts";
 
 // =============================================================================
 // Package Detection
@@ -491,6 +491,26 @@ export function getAgentDir(): string {
 		return expandTildePath(envDir);
 	}
 	return join(homedir(), CONFIG_DIR_NAME, "agent");
+}
+
+/** Encode a cwd path into a safe directory name (e.g., /home/user/proj → --home-user-proj--) */
+export function encodeCwdForPath(cwd: string): string {
+	const resolved = resolvePath(cwd);
+	return `--${resolved.replace(/^[/\\]/, "").replace(/[/\\:]/g, "-")}--`;
+}
+
+/** Get the project-local data directory (e.g., ~/.tau/agent/projects/--home-user-proj--) */
+export function getProjectDir(cwd: string, agentDir?: string): string {
+	return join(agentDir ?? getAgentDir(), "projects", encodeCwdForPath(cwd));
+}
+
+/** Ensure the project directory exists and return its path */
+export function ensureProjectDir(cwd: string, agentDir?: string): string {
+	const dir = getProjectDir(cwd, agentDir);
+	if (!existsSync(dir)) {
+		mkdirSync(dir, { recursive: true });
+	}
+	return dir;
 }
 
 /** Get path to user's custom themes directory */

@@ -89,7 +89,7 @@ function printPackageCommandHelp(command: PackageCommand): void {
 Install a package and add it to settings.
 
 Options:
-  -l, --local       Install project-locally (.tau/settings.json)
+  -l, --local       Install project-locally (project settings)
   -a, --approve     Trust project-local files for this command
   -na, --no-approve Ignore project-local files for this command
 
@@ -111,7 +111,7 @@ Remove a package and its source from settings.
 Alias: ${APP_NAME} uninstall <source> [-l]
 
 Options:
-  -l, --local       Remove from project settings (.tau/settings.json)
+  -l, --local       Remove from project settings (project settings)
   -a, --approve     Trust project-local files for this command
   -na, --no-approve Ignore project-local files for this command
 

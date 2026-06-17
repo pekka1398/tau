@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
+import { getProjectDir } from "../src/config.ts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { SettingsManager } from "../src/core/settings-manager.ts";
 
@@ -25,7 +26,7 @@ describe("SettingsManager - External Edit Preservation", () => {
 			rmSync(testDir, { recursive: true });
 		}
 		mkdirSync(agentDir, { recursive: true });
-		mkdirSync(join(projectDir, ".tau"), { recursive: true });
+		mkdirSync(getProjectDir(projectDir, agentDir), { recursive: true });
 	});
 
 	afterEach(() => {
@@ -100,7 +101,7 @@ describe("SettingsManager - External Edit Preservation", () => {
 	});
 
 	it("should preserve external project settings changes when updating unrelated project field", async () => {
-		const projectSettingsPath = join(projectDir, ".tau", "settings.json");
+		const projectSettingsPath = join(getProjectDir(projectDir, agentDir), "settings.json");
 		writeFileSync(
 			projectSettingsPath,
 			JSON.stringify({
@@ -124,7 +125,7 @@ describe("SettingsManager - External Edit Preservation", () => {
 	});
 
 	it("should let in-memory project changes override external changes for the same project field", async () => {
-		const projectSettingsPath = join(projectDir, ".tau", "settings.json");
+		const projectSettingsPath = join(getProjectDir(projectDir, agentDir), "settings.json");
 		writeFileSync(
 			projectSettingsPath,
 			JSON.stringify({

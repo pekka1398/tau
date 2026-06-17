@@ -492,7 +492,7 @@ export function createSubagentToolDefinition(
 			"  - parallel: { tasks } — multiple agents concurrently",
 			"  - chain: { chain } — sequential with {previous} placeholder",
 			'Default agent scope is "user" (from ~/.tau/agent/agents).',
-			"To use project-local agents in .tau/agents, set agentScope: 'both'.",
+			"To use project-local agents, set agentScope: 'both'.",
 			"Set run_in_background: true to run without blocking the main agent.",
 		].join(" "),
 		parameters: SubagentParams,

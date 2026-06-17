@@ -25,7 +25,7 @@ export const xlsxConverter: Converter = {
 		try {
 			XLSX = await import("xlsx");
 		} catch {
-			throw new Error("xlsx package not installed. Run: npm install in .tau/extensions/omni-tool/");
+			throw new Error("xlsx package not installed. Run: npm install in the omni-tool extension directory");
 		}
 
 		const buffer = await readFile(filePath);

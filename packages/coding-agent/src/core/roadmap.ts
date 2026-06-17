@@ -1,17 +1,17 @@
 /**
  * Project roadmap management.
  *
- * Creates and maintains .tau/ROADMAP.md — a structured overview of the project
+ * Creates and maintains a ROADMAP.md — a structured overview of the project
  * that agents can reference to understand file layout and important files.
  */
 
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { CONFIG_DIR_NAME } from "../config.ts";
+import { ensureProjectDir, getProjectDir } from "../config.ts";
 
 function getRoadmapPath(cwd: string): string {
-	return join(cwd, CONFIG_DIR_NAME, "ROADMAP.md");
+	return join(getProjectDir(cwd), "ROADMAP.md");
 }
 
 /**
@@ -213,11 +213,8 @@ function extractDescription(content: string, _filePath: string): string {
 export function createRoadmap(cwd: string): string {
 	const roadmapPath = getRoadmapPath(cwd);
 
-	// Ensure config directory exists
-	const configDir = join(cwd, CONFIG_DIR_NAME);
-	if (!existsSync(configDir)) {
-		mkdirSync(configDir, { recursive: true });
-	}
+	// Ensure project directory exists
+	ensureProjectDir(cwd);
 
 	const fileTree = generateFileTree(cwd);
 	const fileTable = generateFileTable(cwd);

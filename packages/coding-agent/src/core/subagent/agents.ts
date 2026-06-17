@@ -4,7 +4,7 @@
  * Discovers agent definitions from markdown files in:
  * - Built-in: hardcoded agent definitions
  * - User directory: ~/.tau/agent/agents/*.md
- * - Project directory: <project>/.tau/agents/*.md
+ * - Project directory: ~/.tau/agent/projects/<encoded-cwd>/agents/*.md
  *
  * Each agent is a markdown file with YAML frontmatter:
  * ---
@@ -21,7 +21,7 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { CONFIG_DIR_NAME, getAgentDir } from "../../config.ts";
+import { getAgentDir, getProjectDir } from "../../config.ts";
 import { parseFrontmatter } from "../../utils/frontmatter.ts";
 import { getBuiltInAgents } from "./built-in-agents.ts";
 
@@ -148,7 +148,7 @@ function isDirectory(p: string): boolean {
 function findNearestProjectAgentsDir(cwd: string): string | null {
 	let currentDir = cwd;
 	while (true) {
-		const candidate = join(currentDir, CONFIG_DIR_NAME, "agents");
+		const candidate = join(getProjectDir(currentDir), "agents");
 		if (isDirectory(candidate)) return candidate;
 
 		const parentDir = dirname(currentDir);

@@ -7,6 +7,7 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { getProjectDir } from "../src/config.ts";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -469,7 +470,7 @@ describe("DefaultPackageManager git update", () => {
 			createCommit(remoteDir, "extension.ts", "// v2", "Second commit");
 
 			// The project-scope install path should not exist before or after update
-			const projectGitDir = join(tempDir, ".tau", "git", "github.com", "test", "extension");
+			const projectGitDir = join(getProjectDir(tempDir, agentDir), "git", "github.com", "test", "extension");
 			expect(existsSync(projectGitDir)).toBe(false);
 
 			await packageManager.update(gitSource);
