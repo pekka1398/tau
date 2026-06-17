@@ -9,8 +9,8 @@ cd "$SCRIPT_DIR"
 echo "==> Running autogen..."
 ./autogen.sh
 
-echo "==> Running configure..."
-./configure
+echo "==> Running configure (static)..."
+CFLAGS="-static" LDFLAGS="-static" ./configure
 
 echo "==> Building..."
 make -j"$(nproc)"

@@ -62,10 +62,6 @@ export class FooterComponent implements Component {
 		this.session = session;
 	}
 
-	setAutoCompactEnabled(_enabled: boolean): void {
-		// TODO: wire up auto-compact indicator
-	}
-
 	setThinkingHidden(hidden: boolean): void {
 		this.thinkingHidden = hidden;
 	}

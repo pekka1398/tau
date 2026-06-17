@@ -934,6 +934,34 @@ export class SessionManager {
 		}
 	}
 
+	/**
+	 * Rebuild session entries from a list of messages.
+	 * Keeps the session header, replaces everything else.
+	 * Used by compaction (Approach A) to rewrite the session after summarization.
+	 */
+	rebuildFromMessages(messages: AgentMessage[]): void {
+		// Keep only the session header
+		const header = this.fileEntries.find((e) => e.type === "session");
+		this.fileEntries = header ? [header] : [];
+		this.byId.clear();
+		this.labelsById.clear();
+		this.labelTimestampsById.clear();
+		this.leafId = null;
+		this.flushed = false;
+
+		// Append each message as a new entry
+		for (const message of messages) {
+			// Skip message types that aren't directly persistable via appendMessage
+			// (compactionSummary, branchSummary should not appear in rebuilt messages)
+			if (message.role === "compactionSummary" || message.role === "branchSummary") continue;
+			this.appendMessage(message as Message | CustomMessage | BashExecutionMessage);
+		}
+
+		// Rewrite the entire session file
+		this._rewriteFile();
+		this.flushed = true;
+	}
+
 	private _appendEntry(entry: SessionEntry): void {
 		this.fileEntries.push(entry);
 		this.byId.set(entry.id, entry);

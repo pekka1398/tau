@@ -11,7 +11,7 @@
 
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { AssistantMessage, ToolCall, ToolResultMessage } from "@earendil-works/pi-ai";
-import { Client, Events, GatewayIntentBits, type TextChannel, type Message } from "discord.js";
+import { Client, Events, GatewayIntentBits, type Message, type TextChannel } from "discord.js";
 import type { AgentSession, AgentSessionEvent } from "./agent-session.ts";
 import type {
 	BashExecutionMessage,

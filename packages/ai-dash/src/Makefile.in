@@ -139,10 +139,9 @@ am__depfiles_remade = ./$(DEPDIR)/alias.Po ./$(DEPDIR)/arith_yacc.Po \
 	./$(DEPDIR)/mystring.Po ./$(DEPDIR)/options.Po \
 	./$(DEPDIR)/output.Po ./$(DEPDIR)/parser.Po \
 	./$(DEPDIR)/redir.Po ./$(DEPDIR)/show.Po ./$(DEPDIR)/system.Po \
-	./$(DEPDIR)/trap.Po ./$(DEPDIR)/var.Po \
-	bltin/$(DEPDIR)/edit.Po bltin/$(DEPDIR)/printf.Po \
-	bltin/$(DEPDIR)/rm.Po bltin/$(DEPDIR)/test.Po \
-	bltin/$(DEPDIR)/times.Po
+	./$(DEPDIR)/trap.Po ./$(DEPDIR)/var.Po bltin/$(DEPDIR)/edit.Po \
+	bltin/$(DEPDIR)/printf.Po bltin/$(DEPDIR)/rm.Po \
+	bltin/$(DEPDIR)/test.Po bltin/$(DEPDIR)/times.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)

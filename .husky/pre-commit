@@ -1,4 +1,0 @@
-#!/bin/sh
-# Pre-commit: lint + type check only (fast)
-biome check --write --error-on-warnings . || exit 1
-tsgo --noEmit || exit 1

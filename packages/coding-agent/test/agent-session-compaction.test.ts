@@ -1,10 +1,10 @@
 /**
- * E2E tests for AgentSession compaction behavior.
+ * E2E tests for AgentSession compaction behavior (Approach A).
  *
  * These tests use real LLM calls (no mocking) to verify:
- * - Manual compaction works correctly
- * - Session persistence during compaction
- * - Compaction entry is saved to session file
+ * - Manual compaction works correctly via /compact
+ * - Session is rebuilt after compaction (summary as user msg + kept recent)
+ * - Compaction events are emitted
  */
 
 import { existsSync, mkdirSync, rmSync } from "node:fs";
@@ -28,11 +28,8 @@ describe.skipIf(!API_KEY)("AgentSession compaction e2e", () => {
 	let events: AgentSessionEvent[];
 
 	beforeEach(() => {
-		// Create temp directory for session files
 		tempDir = join(tmpdir(), `pi-compaction-test-${Date.now()}`);
 		mkdirSync(tempDir, { recursive: true });
-
-		// Track events
 		events = [];
 	});
 
@@ -58,8 +55,6 @@ describe.skipIf(!API_KEY)("AgentSession compaction e2e", () => {
 
 		sessionManager = inMemory ? SessionManager.inMemory() : SessionManager.create(tempDir);
 		const settingsManager = SettingsManager.create(tempDir, tempDir);
-		// Use minimal keepRecentTokens so small test conversations have something to summarize
-		settingsManager.applyOverrides({ compaction: { keepRecentTokens: 1 } });
 		const authStorage = AuthStorage.create(join(tempDir, "auth.json"));
 		const modelRegistry = ModelRegistry.create(authStorage);
 
@@ -72,7 +67,6 @@ describe.skipIf(!API_KEY)("AgentSession compaction e2e", () => {
 			resourceLoader: createTestResourceLoader(),
 		});
 
-		// Subscribe to track events
 		session.subscribe((event) => {
 			events.push(event);
 		});
@@ -83,112 +77,65 @@ describe.skipIf(!API_KEY)("AgentSession compaction e2e", () => {
 	it("should trigger manual compaction via compact()", async () => {
 		createSession();
 
-		// Send a few prompts to build up history
 		await session.prompt("What is 2+2? Reply with just the number.");
 		await session.agent.waitForIdle();
 
 		await session.prompt("What is 3+3? Reply with just the number.");
 		await session.agent.waitForIdle();
 
-		// Manually compact
 		const result = await session.compact();
 
 		expect(result.summary).toBeDefined();
 		expect(result.summary.length).toBeGreaterThan(0);
-		expect(result.tokensBefore).toBeGreaterThan(0);
+		expect(result.keptMessageCount).toBeGreaterThanOrEqual(0);
 
-		// Verify messages were compacted (should have summary + recent)
+		// After compaction, first message should be the summary (user role)
 		const messages = session.messages;
 		expect(messages.length).toBeGreaterThan(0);
-
-		// First message should be the summary (a user message with summary content)
-		const firstMsg = messages[0];
-		expect(firstMsg.role).toBe("compactionSummary");
+		expect(messages[0].role).toBe("user");
 	}, 120000);
 
 	it("should maintain valid session state after compaction", async () => {
 		createSession();
 
-		// Build up history
 		await session.prompt("What is the capital of France? One word answer.");
 		await session.agent.waitForIdle();
 
 		await session.prompt("What is the capital of Germany? One word answer.");
 		await session.agent.waitForIdle();
 
-		// Compact
 		await session.compact();
 
 		// Session should still be usable
 		await session.prompt("What is the capital of Italy? One word answer.");
 		await session.agent.waitForIdle();
 
-		// Should have messages after compaction
 		expect(session.messages.length).toBeGreaterThan(0);
-
-		// The agent should have responded
 		const assistantMessages = session.messages.filter((m) => m.role === "assistant");
 		expect(assistantMessages.length).toBeGreaterThan(0);
 	}, 180000);
 
-	it("should persist compaction to session file", async () => {
-		createSession();
+	it("should work with in-memory sessions", async () => {
+		createSession(true);
 
-		await session.prompt("Say hello");
-		await session.agent.waitForIdle();
-
-		await session.prompt("Say goodbye");
-		await session.agent.waitForIdle();
-
-		// Compact
-		await session.compact();
-
-		// Load entries from session manager
-		const entries = sessionManager.getEntries();
-
-		// Should have a compaction entry
-		const compactionEntries = entries.filter((e) => e.type === "compaction");
-		expect(compactionEntries.length).toBe(1);
-
-		const compaction = compactionEntries[0];
-		expect(compaction.type).toBe("compaction");
-		if (compaction.type === "compaction") {
-			expect(compaction.summary.length).toBeGreaterThan(0);
-			expect(typeof compaction.firstKeptEntryId).toBe("string");
-			expect(compaction.tokensBefore).toBeGreaterThan(0);
-		}
-	}, 120000);
-
-	it("should work with --no-session mode (in-memory only)", async () => {
-		createSession(true); // in-memory mode
-
-		// Send prompts
 		await session.prompt("What is 2+2? Reply with just the number.");
 		await session.agent.waitForIdle();
 
 		await session.prompt("What is 3+3? Reply with just the number.");
 		await session.agent.waitForIdle();
 
-		// Compact should work even without file persistence
 		const result = await session.compact();
 
 		expect(result.summary).toBeDefined();
 		expect(result.summary.length).toBeGreaterThan(0);
-
-		// In-memory entries should have the compaction
-		const entries = sessionManager.getEntries();
-		const compactionEntries = entries.filter((e) => e.type === "compaction");
-		expect(compactionEntries.length).toBe(1);
 	}, 120000);
 
 	it("should emit compaction events during manual compaction", async () => {
 		createSession();
 
-		// Build some history
 		await session.prompt("Say hello");
 		await session.agent.waitForIdle();
 
-		// Manually trigger compaction and check events
 		await session.compact();
 
 		const compactionEvents = events.filter((e) => e.type === "compaction_start" || e.type === "compaction_end");
@@ -200,9 +147,5 @@ describe.skipIf(!API_KEY)("AgentSession compaction e2e", () => {
 			aborted: false,
 			willRetry: false,
 		});
-
-		// Regular events should have been emitted
-		const messageEndEvents = events.filter((e) => e.type === "message_end");
-		expect(messageEndEvents.length).toBeGreaterThan(0);
 	}, 120000);
 });

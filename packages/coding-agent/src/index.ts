@@ -29,24 +29,21 @@ export {
 export {
 	type BranchPreparation,
 	type BranchSummaryResult,
+	COMPACT_PROMPT,
 	type CollectEntriesResult,
 	type CompactionResult,
-	type CutPointResult,
-	calculateContextTokens,
 	collectEntriesForBranchSummary,
-	compact,
-	DEFAULT_COMPACTION_SETTINGS,
+	effectiveChars,
 	estimateTokens,
-	type FileOperations,
-	findCutPoint,
-	findTurnStartIndex,
+	extractAssistantText,
+	findSplitPoint,
 	type GenerateBranchSummaryOptions,
 	generateBranchSummary,
-	generateSummary,
-	getLastAssistantUsage,
+	KEEP_RECENT_CHARS,
 	prepareBranchEntries,
-	serializeConversation,
-	shouldCompact,
+	rebuildMessages,
+	type SplitPoint,
+	totalMessageChars,
 } from "./core/compaction/index.ts";
 export { createEventBus, type EventBus, type EventBusController } from "./core/event-bus.ts";
 // Extension system
@@ -192,7 +189,6 @@ export {
 	type ThinkingLevelChangeEntry,
 } from "./core/session-manager.ts";
 export {
-	type CompactionSettings,
 	type ImageSettings,
 	type PackageSource,
 	type RetrySettings,
