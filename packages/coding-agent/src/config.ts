@@ -348,8 +348,9 @@ export function getPackageDir(): string {
 	}
 
 	if (isBunBinary) {
-		// Bun binary: process.execPath points to the compiled executable
-		return dirname(process.execPath);
+		// Bun binary: supporting files (themes, assets, docs) live in ~/.tau/
+		// while the executable itself is in ~/.local/bin/
+		return join(homedir(), ".tau");
 	}
 	// Node.js: walk up from __dirname until we find package.json
 	let dir = __dirname;
