@@ -1943,7 +1943,7 @@ export class DefaultPackageManager implements PackageManager {
 		}
 		if (scope === "project") {
 			this.assertProjectTrustedForScope(scope);
-			return join(this.cwd, CONFIG_DIR_NAME, "npm", "node_modules", source.name);
+			return join(getProjectDir(this.cwd), "npm", "node_modules", source.name);
 		}
 		return join(this.agentDir, "npm", "node_modules", source.name);
 	}
