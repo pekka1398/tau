@@ -40,6 +40,7 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
+#include "compat.h"
 #ifdef HAVE_PATHS_H
 #include <paths.h>
 #endif

@@ -14,22 +14,8 @@
 		"check:pinned-deps": "node scripts/check-pinned-deps.mjs",
 		"check:shrinkwrap": "node scripts/generate-coding-agent-shrinkwrap.mjs --check",
 		"check:ts-imports": "node scripts/check-ts-relative-imports.mjs",
-		"profile:tui": "node scripts/profile-coding-agent-node.mjs --mode tui",
-		"profile:rpc": "node scripts/profile-coding-agent-node.mjs --mode rpc",
 		"start": "bun run build && TAU_DEBUG_LOADER=1 TAU_DEBUG_TOOL_RESULT=1 bun packages/coding-agent/dist/cli.js --provider openrouter --model xiaomi/mimo-v2.5-pro",
-		"test": "bun run --workspaces test",
-		"version:patch": "bunx npm version patch -ws --no-git-tag-version && node scripts/sync-versions.js && bun install",
-		"version:minor": "bunx npm version minor -ws --no-git-tag-version && node scripts/sync-versions.js && bun install",
-		"version:major": "bunx npm version major -ws --no-git-tag-version && node scripts/sync-versions.js && bun install",
-		"version:set": "bunx npm version -ws",
-		"prepublishOnly": "bun run clean && bun run build && bun run check",
-		"publish": "bun run prepublishOnly && node scripts/publish.mjs",
-		"publish:dry": "bun run prepublishOnly && node scripts/publish.mjs --dry-run",
-		"release:local": "node scripts/local-release.mjs",
-		"shrinkwrap:coding-agent": "node scripts/generate-coding-agent-shrinkwrap.mjs",
-		"release:patch": "node scripts/release.mjs patch",
-		"release:minor": "node scripts/release.mjs minor",
-		"release:major": "node scripts/release.mjs major"
+		"test": "bun run --workspaces test"
 	},
 	"devDependencies": {
 		"@anthropic-ai/sandbox-runtime": "0.0.26",
