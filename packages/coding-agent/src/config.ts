@@ -438,13 +438,13 @@ export function getBundledInteractiveAssetPath(name: string): string {
 }
 
 // =============================================================================
-// App Config (from package.json piConfig)
+// App Config (from package.json tauConfig)
 // =============================================================================
 
 interface PackageJson {
 	name?: string;
 	version?: string;
-	piConfig?: {
+	tauConfig?: {
 		name?: string;
 		configDir?: string;
 	};
@@ -458,11 +458,11 @@ try {
 	if (err.code !== "ENOENT") throw e;
 }
 
-const piConfigName: string | undefined = pkg.piConfig?.name;
+const tauConfigName: string | undefined = pkg.tauConfig?.name;
 export const PACKAGE_NAME: string = pkg.name || "@earendil-works/tau-coding-agent";
-export const APP_NAME: string = piConfigName || "tau";
-export const APP_TITLE: string = piConfigName ? APP_NAME : "π";
-export const CONFIG_DIR_NAME: string = pkg.piConfig?.configDir || ".tau";
+export const APP_NAME: string = tauConfigName || "tau";
+export const APP_TITLE: string = tauConfigName ? APP_NAME : "π";
+export const CONFIG_DIR_NAME: string = pkg.tauConfig?.configDir || ".tau";
 export const VERSION: string = pkg.version || "0.0.0";
 
 // e.g., TAU_CODING_AGENT_DIR

@@ -1125,7 +1125,7 @@ export class TUI extends Container {
 	}
 
 	private _drLog(msg: string): void {
-		if (process.env.PI_DEBUG_TOOL_RESULT) {
+		if (process.env.TAU_DEBUG_TOOL_RESULT) {
 			fs.appendFileSync("/tmp/tui-render.log", `[${new Date().toISOString()}] ${msg}\n`);
 		}
 	}
@@ -1194,10 +1194,10 @@ export class TUI extends Container {
 			this.previousHeight = height;
 		};
 
-		const debugRedraw = process.env.PI_DEBUG_REDRAW === "1";
+		const debugRedraw = process.env.TAU_DEBUG_REDRAW === "1";
 		const logRedraw = (reason: string): void => {
 			if (!debugRedraw) return;
-			const logPath = path.join(os.homedir(), ".pi", "agent", "pi-debug.log");
+			const logPath = path.join(os.homedir(), ".tau", "agent", "tau-debug.log");
 			const msg = `[${new Date().toISOString()}] fullRender: ${reason} (prev=${this.previousLines.length}, new=${newLines.length}, height=${height})\n`;
 			fs.appendFileSync(logPath, msg);
 		};
@@ -1373,7 +1373,7 @@ export class TUI extends Container {
 			const isImage = isImageLine(line);
 			if (!isImage && visibleWidth(line) > width) {
 				// Log all lines to crash file for debugging
-				const crashLogPath = path.join(os.homedir(), ".pi", "agent", "pi-crash.log");
+				const crashLogPath = path.join(os.homedir(), ".tau", "agent", "tau-crash.log");
 				const crashData = [
 					`Crash at ${new Date().toISOString()}`,
 					`Terminal width: ${width}`,
