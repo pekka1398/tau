@@ -199,8 +199,8 @@ describe("SessionManager custom flat session directory", () => {
 		session.appendMessage({
 			role: "assistant",
 			content: [{ type: "text", text: `reply to ${label}` }],
-			api: "anthropic-messages",
-			provider: "anthropic",
+			api: "openai-completions",
+			provider: "openrouter",
 			model: "test",
 			usage: {
 				input: 1,

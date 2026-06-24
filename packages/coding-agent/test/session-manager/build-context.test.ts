@@ -19,8 +19,8 @@ function msg(id: string, parentId: string | null, role: "user" | "assistant", te
 		message: {
 			role,
 			content: [{ type: "text", text }],
-			api: "anthropic-messages",
-			provider: "anthropic",
+			api: "openai-completions",
+			provider: "openrouter",
 			model: "claude-test",
 			usage: {
 				input: 1,
@@ -102,7 +102,7 @@ describe("buildSessionContext", () => {
 		it("tracks model from assistant message", () => {
 			const entries: SessionEntry[] = [msg("1", null, "user", "hello"), msg("2", "1", "assistant", "hi")];
 			const ctx = buildSessionContext(entries);
-			expect(ctx.model).toEqual({ provider: "anthropic", modelId: "claude-test" });
+			expect(ctx.model).toEqual({ provider: "openrouter", modelId: "claude-test" });
 		});
 
 		it("tracks model from model change entry", () => {
@@ -113,7 +113,7 @@ describe("buildSessionContext", () => {
 			];
 			const ctx = buildSessionContext(entries);
 			// Assistant message overwrites model change
-			expect(ctx.model).toEqual({ provider: "anthropic", modelId: "claude-test" });
+			expect(ctx.model).toEqual({ provider: "openrouter", modelId: "claude-test" });
 		});
 	});
 

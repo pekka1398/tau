@@ -40,8 +40,8 @@ function createModel(): Model<"openai-responses"> {
 	return {
 		id: "mock",
 		name: "mock",
-		api: "openai-responses",
-		provider: "openai",
+		api: "openai-completions",
+		provider: "openrouter",
 		baseUrl: "https://example.invalid",
 		reasoning: false,
 		input: ["text"],
@@ -58,8 +58,8 @@ function createAssistantMessage(
 	return {
 		role: "assistant",
 		content,
-		api: "openai-responses",
-		provider: "openai",
+		api: "openai-completions",
+		provider: "openrouter",
 		model: "mock",
 		usage: createUsage(),
 		stopReason,

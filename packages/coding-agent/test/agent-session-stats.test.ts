@@ -8,7 +8,7 @@ import { SessionManager } from "../src/core/session-manager.ts";
 import { SettingsManager } from "../src/core/settings-manager.ts";
 import { createTestResourceLoader } from "./utilities.ts";
 
-const model = getModel("anthropic", "claude-sonnet-4-5")!;
+const model = getModel("openrouter", "anthropic/claude-sonnet-4.5")!;
 
 function createUsage(totalTokens: number): Usage {
 	return {
@@ -52,7 +52,7 @@ function createSession() {
 	const settingsManager = SettingsManager.inMemory();
 	const sessionManager = SessionManager.inMemory();
 	const authStorage = AuthStorage.inMemory();
-	authStorage.setRuntimeApiKey("anthropic", "test-key");
+	authStorage.setRuntimeApiKey("openrouter", "test-key");
 	const session = new AgentSession({
 		agent: new Agent({
 			getApiKey: () => "test-key",

@@ -2,12 +2,11 @@
  * Shared test utilities for coding-agent tests.
  */
 
-import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { Agent } from "@earendil-works/tau-agent-core";
-import { getModel, type OAuthCredentials, type OAuthProvider } from "@earendil-works/tau-ai";
-import { getOAuthApiKey } from "@earendil-works/tau-ai/oauth";
+import { getModel } from "@earendil-works/tau-ai";
 import { AgentSession } from "../src/core/agent-session.ts";
 import { AuthStorage } from "../src/core/auth-storage.ts";
 import { createEventBus } from "../src/core/event-bus.ts";
@@ -19,14 +18,11 @@ import { SessionManager } from "../src/core/session-manager.ts";
 import { SettingsManager } from "../src/core/settings-manager.ts";
 import { createCodingTools } from "../src/index.ts";
 
-/**
- * API key for authenticated tests. Tests using this should be wrapped in
- * describe.skipIf(!API_KEY)
- */
-export const API_KEY = process.env.ANTHROPIC_OAUTH_TOKEN || process.env.ANTHROPIC_API_KEY;
+/** API key for authenticated OpenRouter tests. Tests using this should be wrapped in describe.skipIf(!API_KEY). */
+export const API_KEY = process.env.OPENROUTER_API_KEY;
 
 // ============================================================================
-// OAuth API key resolution from ~/.tau/agent/auth.json
+// API key resolution from ~/.tau/agent/auth.json
 // ============================================================================
 
 const AUTH_PATH = join(homedir(), ".tau", "agent", "auth.json");
@@ -36,11 +32,7 @@ type ApiKeyCredential = {
 	key: string;
 };
 
-type OAuthCredentialEntry = {
-	type: "oauth";
-} & OAuthCredentials;
-
-type AuthCredential = ApiKeyCredential | OAuthCredentialEntry;
+type AuthCredential = ApiKeyCredential;
 
 type AuthStorageData = Record<string, AuthCredential>;
 
@@ -56,20 +48,8 @@ function loadAuthStorage(): AuthStorageData {
 	}
 }
 
-function saveAuthStorage(storage: AuthStorageData): void {
-	const configDir = dirname(AUTH_PATH);
-	if (!existsSync(configDir)) {
-		mkdirSync(configDir, { recursive: true, mode: 0o700 });
-	}
-	writeFileSync(AUTH_PATH, JSON.stringify(storage, null, 2), "utf-8");
-	chmodSync(AUTH_PATH, 0o600);
-}
-
 /**
  * Resolve API key for a provider from ~/.tau/agent/auth.json
- *
- * For API key credentials, returns the key directly.
- * For OAuth credentials, returns the access token (refreshing if expired and saving back).
  *
  */
 export async function resolveApiKey(provider: string): Promise<string | undefined> {
@@ -81,28 +61,6 @@ export async function resolveApiKey(provider: string): Promise<string | undefine
 	if (entry.type === "api_key") {
 		return entry.key;
 	}
-
-	if (entry.type === "oauth") {
-		// Build OAuthCredentials record for getOAuthApiKey
-		const oauthCredentials: Record<string, OAuthCredentials> = {};
-		for (const [key, value] of Object.entries(storage)) {
-			if (value.type === "oauth") {
-				const { type: _, ...creds } = value;
-				oauthCredentials[key] = creds;
-			}
-		}
-
-		const result = await getOAuthApiKey(provider as OAuthProvider, oauthCredentials);
-		if (!result) return undefined;
-
-		// Save refreshed credentials back to auth.json
-		storage[provider] = { type: "oauth", ...result.newCredentials };
-		saveAuthStorage(storage);
-
-		return result.apiKey;
-	}
-
-	return undefined;
 }
 
 /**
@@ -113,12 +71,12 @@ export function hasAuthForProvider(provider: string): boolean {
 	return provider in storage;
 }
 
-/** Path to the real pi agent config directory */
+/** Path to the real Tau agent config directory. */
 export const TAU_AGENT_DIR = join(homedir(), ".tau", "agent");
 
 /**
  * Get an AuthStorage instance backed by ~/.tau/agent/auth.json
- * Use this for tests that need real OAuth credentials.
+ * Use this for tests that need real OpenRouter credentials.
  */
 export function getRealAuthStorage(): AuthStorage {
 	return AuthStorage.create(AUTH_PATH);
@@ -138,9 +96,9 @@ export function assistantMsg(text: string) {
 	return {
 		role: "assistant" as const,
 		content: [{ type: "text" as const, text }],
-		api: "anthropic-messages" as const,
-		provider: "anthropic",
-		model: "test",
+		api: "openai-completions" as const,
+		provider: "openrouter",
+		model: "test/openrouter",
 		usage: {
 			input: 1,
 			output: 1,
@@ -232,10 +190,10 @@ export function createTestResourceLoader(options: CreateTestResourceLoaderOption
  * Use this for e2e tests that need real LLM calls.
  */
 export function createTestSession(options: TestSessionOptions = {}): TestSessionContext {
-	const tempDir = join(tmpdir(), `pi-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+	const tempDir = join(tmpdir(), `tau-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 	mkdirSync(tempDir, { recursive: true });
 
-	const model = getModel("anthropic", "claude-sonnet-4-5")!;
+	const model = getModel("openrouter", "anthropic/claude-sonnet-4.5")!;
 	const agent = new Agent({
 		getApiKey: () => API_KEY,
 		initialState: {

@@ -110,8 +110,8 @@ describe("SessionManager.newSession with custom id", () => {
 					message: {
 						role: "assistant",
 						content: [{ type: "text", text: "hello" }],
-						api: "openai-responses",
-						provider: "openai",
+						api: "openai-completions",
+						provider: "openrouter",
 						model: "gpt-5.4",
 						usage: {
 							input: 0,

@@ -41,10 +41,8 @@ describe("config value env var syntax migration", () => {
 			path.join(agentDir, "auth.json"),
 			`${JSON.stringify(
 				{
-					anthropic: { type: "api_key", key: "ANTHROPIC_API_KEY" },
-					openai: { type: "api_key", key: "$OPENAI_API_KEY" },
+					openrouter: { type: "api_key", key: "OPENROUTER_API_KEY" },
 					opencode: { type: "api_key", key: "public" },
-					github: { type: "oauth", access: "ACCESS_TOKEN", refresh: "REFRESH_TOKEN", expires: 1 },
 				},
 				null,
 				2,
@@ -59,13 +57,11 @@ describe("config value env var syntax migration", () => {
 			string,
 			Record<string, unknown>
 		>;
-		expect(migrated.anthropic.key).toBe("$ANTHROPIC_API_KEY");
-		expect(migrated.openai.key).toBe("$OPENAI_API_KEY");
+		expect(migrated.openrouter.key).toBe("$OPENROUTER_API_KEY");
 		expect(migrated.opencode.key).toBe("public");
-		expect(migrated.github.access).toBe("ACCESS_TOKEN");
 		const logMessage = String(logSpy.mock.calls[0]?.[0] ?? "");
 		expect(logMessage).toContain("explicit $ENV_VAR syntax");
-		expect(logMessage).toContain('auth.json["anthropic"].key: ANTHROPIC_API_KEY -> $ANTHROPIC_API_KEY');
+		expect(logMessage).toContain('auth.json["openrouter"].key: OPENROUTER_API_KEY -> $OPENROUTER_API_KEY');
 	});
 
 	it("rewrites legacy uppercase models.json API key and header values", () => {

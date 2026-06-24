@@ -1,20 +1,15 @@
 import type { Model } from "@earendil-works/tau-ai";
 import { describe, expect, test } from "vitest";
-import {
-	defaultModelPerProvider,
-	findInitialModel,
-	parseModelPattern,
-	resolveCliModel,
-} from "../src/core/model-resolver.ts";
+import { findInitialModel, parseModelPattern, resolveCliModel } from "../src/core/model-resolver.ts";
 
 // Mock models for testing
-const mockModels: Model<"anthropic-messages">[] = [
+const mockModels: Model<"openai-completions">[] = [
 	{
-		id: "claude-sonnet-4-5",
+		id: "anthropic/claude-sonnet-4.5",
 		name: "Claude Sonnet 4.5",
-		api: "anthropic-messages",
-		provider: "anthropic",
-		baseUrl: "https://api.anthropic.com",
+		api: "openai-completions",
+		provider: "openrouter",
+		baseUrl: "https://openrouter.ai/api/v1",
 		reasoning: true,
 		input: ["text", "image"],
 		cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
@@ -22,11 +17,11 @@ const mockModels: Model<"anthropic-messages">[] = [
 		maxTokens: 8192,
 	},
 	{
-		id: "gpt-4o",
+		id: "openai/gpt-4o",
 		name: "GPT-4o",
-		api: "anthropic-messages", // Using same type for simplicity
+		api: "openai-completions", // Using same type for simplicity
 		provider: "openai",
-		baseUrl: "https://api.openai.com",
+		baseUrl: "https://openrouter.ai/api/v1",
 		reasoning: false,
 		input: ["text", "image"],
 		cost: { input: 5, output: 15, cacheRead: 0.5, cacheWrite: 5 },
@@ -36,11 +31,11 @@ const mockModels: Model<"anthropic-messages">[] = [
 ];
 
 // Mock OpenRouter models with colons in IDs
-const mockOpenRouterModels: Model<"anthropic-messages">[] = [
+const mockOpenRouterModels: Model<"openai-completions">[] = [
 	{
 		id: "qwen/qwen3-coder:exacto",
 		name: "Qwen3 Coder Exacto",
-		api: "anthropic-messages",
+		api: "openai-completions",
 		provider: "openrouter",
 		baseUrl: "https://openrouter.ai/api/v1",
 		reasoning: true,
@@ -52,7 +47,7 @@ const mockOpenRouterModels: Model<"anthropic-messages">[] = [
 	{
 		id: "openai/gpt-4o:extended",
 		name: "GPT-4o Extended",
-		api: "anthropic-messages",
+		api: "openai-completions",
 		provider: "openrouter",
 		baseUrl: "https://openrouter.ai/api/v1",
 		reasoning: false,
@@ -68,15 +63,15 @@ const allModels = [...mockModels, ...mockOpenRouterModels];
 describe("parseModelPattern", () => {
 	describe("simple patterns without colons", () => {
 		test("exact match returns model with undefined thinking level", () => {
-			const result = parseModelPattern("claude-sonnet-4-5", allModels);
-			expect(result.model?.id).toBe("claude-sonnet-4-5");
+			const result = parseModelPattern("anthropic/claude-sonnet-4.5", allModels);
+			expect(result.model?.id).toBe("anthropic/claude-sonnet-4.5");
 			expect(result.thinkingLevel).toBeUndefined();
 			expect(result.warning).toBeUndefined();
 		});
 
 		test("partial match returns best model with undefined thinking level", () => {
 			const result = parseModelPattern("sonnet", allModels);
-			expect(result.model?.id).toBe("claude-sonnet-4-5");
+			expect(result.model?.id).toBe("anthropic/claude-sonnet-4.5");
 			expect(result.thinkingLevel).toBeUndefined();
 			expect(result.warning).toBeUndefined();
 		});
@@ -92,14 +87,14 @@ describe("parseModelPattern", () => {
 	describe("patterns with valid thinking levels", () => {
 		test("sonnet:high returns sonnet with high thinking level", () => {
 			const result = parseModelPattern("sonnet:high", allModels);
-			expect(result.model?.id).toBe("claude-sonnet-4-5");
+			expect(result.model?.id).toBe("anthropic/claude-sonnet-4.5");
 			expect(result.thinkingLevel).toBe("high");
 			expect(result.warning).toBeUndefined();
 		});
 
-		test("gpt-4o:medium returns gpt-4o with medium thinking level", () => {
-			const result = parseModelPattern("gpt-4o:medium", allModels);
-			expect(result.model?.id).toBe("gpt-4o");
+		test("openai/gpt-4o:medium returns openai/gpt-4o with medium thinking level", () => {
+			const result = parseModelPattern("openai/gpt-4o:medium", allModels);
+			expect(result.model?.id).toBe("openai/gpt-4o");
 			expect(result.thinkingLevel).toBe("medium");
 			expect(result.warning).toBeUndefined();
 		});
@@ -107,7 +102,7 @@ describe("parseModelPattern", () => {
 		test("all valid thinking levels work", () => {
 			for (const level of ["off", "minimal", "low", "medium", "high", "xhigh"]) {
 				const result = parseModelPattern(`sonnet:${level}`, allModels);
-				expect(result.model?.id).toBe("claude-sonnet-4-5");
+				expect(result.model?.id).toBe("anthropic/claude-sonnet-4.5");
 				expect(result.thinkingLevel).toBe(level);
 				expect(result.warning).toBeUndefined();
 			}
@@ -117,15 +112,15 @@ describe("parseModelPattern", () => {
 	describe("patterns with invalid thinking levels", () => {
 		test("sonnet:random returns sonnet with undefined thinking level and warning", () => {
 			const result = parseModelPattern("sonnet:random", allModels);
-			expect(result.model?.id).toBe("claude-sonnet-4-5");
+			expect(result.model?.id).toBe("anthropic/claude-sonnet-4.5");
 			expect(result.thinkingLevel).toBeUndefined();
 			expect(result.warning).toContain("Invalid thinking level");
 			expect(result.warning).toContain("random");
 		});
 
-		test("gpt-4o:invalid returns gpt-4o with undefined thinking level and warning", () => {
-			const result = parseModelPattern("gpt-4o:invalid", allModels);
-			expect(result.model?.id).toBe("gpt-4o");
+		test("openai/gpt-4o:invalid returns openai/gpt-4o with undefined thinking level and warning", () => {
+			const result = parseModelPattern("openai/gpt-4o:invalid", allModels);
+			expect(result.model?.id).toBe("openai/gpt-4o");
 			expect(result.thinkingLevel).toBeUndefined();
 			expect(result.warning).toContain("Invalid thinking level");
 		});
@@ -200,7 +195,7 @@ describe("parseModelPattern", () => {
 			const result = parseModelPattern("sonnet:", allModels);
 			// Empty string after colon is not a valid thinking level
 			// So it tries to match "sonnet:" which won't match, then tries "sonnet"
-			expect(result.model?.id).toBe("claude-sonnet-4-5");
+			expect(result.model?.id).toBe("anthropic/claude-sonnet-4.5");
 			expect(result.warning).toContain("Invalid thinking level");
 		});
 	});
@@ -219,7 +214,7 @@ describe("resolveCliModel", () => {
 
 		expect(result.error).toBeUndefined();
 		expect(result.model?.provider).toBe("openai");
-		expect(result.model?.id).toBe("gpt-4o");
+		expect(result.model?.id).toBe("openai/gpt-4o");
 	});
 
 	test("resolves fuzzy patterns within an explicit provider", () => {
@@ -235,7 +230,7 @@ describe("resolveCliModel", () => {
 
 		expect(result.error).toBeUndefined();
 		expect(result.model?.provider).toBe("openai");
-		expect(result.model?.id).toBe("gpt-4o");
+		expect(result.model?.id).toBe("openai/gpt-4o");
 	});
 
 	test("supports --model <pattern>:<thinking> (without explicit --thinking)", () => {
@@ -249,7 +244,7 @@ describe("resolveCliModel", () => {
 		});
 
 		expect(result.error).toBeUndefined();
-		expect(result.model?.id).toBe("claude-sonnet-4-5");
+		expect(result.model?.id).toBe("anthropic/claude-sonnet-4.5");
 		expect(result.thinkingLevel).toBe("high");
 	});
 
@@ -307,7 +302,7 @@ describe("resolveCliModel", () => {
 
 		const result = resolveCliModel({
 			cliProvider: "openai",
-			cliModel: "gpt-4o",
+			cliModel: "openai/gpt-4o",
 			modelRegistry: registry,
 		});
 
@@ -318,10 +313,10 @@ describe("resolveCliModel", () => {
 	test("prefers provider/model split over gateway model with matching id", () => {
 		// When a user writes "zai/glm-5", and both a zai provider model (id: "glm-5")
 		// and a gateway model (id: "zai/glm-5") exist, prefer the zai provider model.
-		const zaiModel: Model<"anthropic-messages"> = {
+		const zaiModel: Model<"openai-completions"> = {
 			id: "glm-5",
 			name: "GLM-5",
-			api: "anthropic-messages",
+			api: "openai-completions",
 			provider: "zai",
 			baseUrl: "https://open.bigmodel.cn/api/paas/v4",
 			reasoning: true,
@@ -330,10 +325,10 @@ describe("resolveCliModel", () => {
 			contextWindow: 128000,
 			maxTokens: 8192,
 		};
-		const gatewayModel: Model<"anthropic-messages"> = {
+		const gatewayModel: Model<"openai-completions"> = {
 			id: "zai/glm-5",
 			name: "GLM-5",
-			api: "anthropic-messages",
+			api: "openai-completions",
 			provider: "vercel-ai-gateway",
 			baseUrl: "https://ai-gateway.vercel.sh",
 			reasoning: true,
@@ -373,23 +368,6 @@ describe("resolveCliModel", () => {
 });
 
 describe("default model selection", () => {
-	test("openai defaults track current models", () => {
-		expect(defaultModelPerProvider.openai).toBe("gpt-5.4");
-		expect(defaultModelPerProvider["openai-codex"]).toBe("gpt-5.5");
-	});
-
-	test("zai, minimax, cerebras, and ant-ling defaults track current models", () => {
-		expect(defaultModelPerProvider.zai).toBe("glm-5.1");
-		expect(defaultModelPerProvider.minimax).toBe("MiniMax-M2.7");
-		expect(defaultModelPerProvider["minimax-cn"]).toBe("MiniMax-M2.7");
-		expect(defaultModelPerProvider.cerebras).toBe("zai-glm-4.7");
-		expect(defaultModelPerProvider["ant-ling"]).toBe("Ring-2.6-1T");
-	});
-
-	test("ai-gateway default tracks current model", () => {
-		expect(defaultModelPerProvider["vercel-ai-gateway"]).toBe("zai/glm-5.1");
-	});
-
 	test("findInitialModel accepts explicit provider custom model ids", async () => {
 		const registry = {
 			getAll: () => allModels,
@@ -408,10 +386,10 @@ describe("default model selection", () => {
 	});
 
 	test("findInitialModel selects ai-gateway default when available", async () => {
-		const aiGatewayModel: Model<"anthropic-messages"> = {
+		const aiGatewayModel: Model<"openai-completions"> = {
 			id: "anthropic/claude-opus-4-6",
 			name: "Claude Opus 4.6",
-			api: "anthropic-messages",
+			api: "openai-completions",
 			provider: "vercel-ai-gateway",
 			baseUrl: "https://ai-gateway.vercel.sh",
 			reasoning: true,

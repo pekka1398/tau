@@ -11,8 +11,8 @@ function createAssistantMessage(content: AssistantMessage["content"]): Assistant
 	return {
 		role: "assistant",
 		content,
-		api: "openai-responses",
-		provider: "openai",
+		api: "openai-completions",
+		provider: "openrouter",
 		model: "gpt-4o-mini",
 		usage: {
 			input: 0,
