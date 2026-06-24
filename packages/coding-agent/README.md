@@ -11,23 +11,23 @@ npm install -g
 Or use the compiled binary (no Node.js required):
 
 ```bash
-pi --version
+tau --version
 ```
 
 ## Usage
 
 ```bash
 # Interactive mode
-pi
+tau
 
 # Single command
-pi -p "What does this project do?"
+tau -p "What does this project do?"
 
 # Pipe input
-cat error.log | pi -p "Explain this error"
+cat error.log | tau -p "Explain this error"
 
 # JSON output
-pi --mode json "List all TypeScript files"
+tau --mode json "List all TypeScript files"
 ```
 
 ## Tools
@@ -57,7 +57,7 @@ pi --mode json "List all TypeScript files"
 
 ## Configuration
 
-Settings stored in `~/.pi/agent/settings.json`:
+Settings stored in `~/.tau/agent/settings.json`:
 
 ```json
 {

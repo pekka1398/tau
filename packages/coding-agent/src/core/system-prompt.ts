@@ -517,11 +517,11 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
 		prompt += `\n\n## Project Roadmap\n\nA project roadmap is available at: ${roadmapPath}\n\nThis file contains:\n- Architecture overview (package roles, internal structure)\n- Dependency graph\n- Entry points table ("want to do X → go to Y")\n- File structure (5 levels deep)\n- Important files table (paths, line counts, keywords, descriptions)\n- Tech stack and build commands\n- Coding conventions\n\nIMPORTANT: When reading ROADMAP.md, use \`cat\` to read the ENTIRE file. Do NOT use head/tail/sed to read partial content. The file is large but you must read all of it to understand the full project structure.`;
 	}
 
-	// Pi documentation paths (resolved at runtime)
+	// Tau documentation paths (resolved at runtime)
 	const readmePath = getReadmePath();
 	const docsPath = getDocsPath();
 	const examplesPath = getExamplesPath();
-	prompt += `\n\nPi documentation (read only when the user asks about pi itself):`;
+	prompt += `\n\nTau documentation (read only when the user asks about tau itself):`;
 	prompt += `\n- Main documentation: ${readmePath}`;
 	prompt += `\n- Additional docs: ${docsPath}`;
 	prompt += `\n- Examples: ${examplesPath}`;

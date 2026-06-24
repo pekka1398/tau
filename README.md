@@ -9,7 +9,7 @@ Tau is a terminal-based AI coding agent that uses bash as its primary tool. It r
 **Key features:**
 - **Bash-only architecture** — all file operations through a sandboxed shell (ai-dash)
 - **Sub-agent system** — fork mode, worktree isolation, tool inheritance, transcript persistence
-- **Multi-provider** — OpenRouter with 250+ models
+- **OpenRouter-only LLM access** — one provider surface for chat, images, and model routing
 - **Bun runtime** — compiled to a single 96MB binary, no Node.js required
 - **TUI** — interactive terminal UI with themes, keybindings, streaming output
 - **Project management** — built-in todo system and auto-generated roadmap
@@ -21,17 +21,17 @@ Tau is a terminal-based AI coding agent that uses bash as its primary tool. It r
 npm install -g
 
 # Or use the compiled binary
-pi --version
+tau --version
 
 # Run interactively
-pi
+tau
 
 # Run a single command
-pi -p "Read package.json and tell me the version"
+tau -p "Read package.json and tell me the version"
 
 # Project management
-pi todo list
-pi todo add "Fix the bug" --priority high --tag bug
+tau todo list
+tau todo add "Fix the bug" --priority high --tag bug
 ```
 
 ## Architecture

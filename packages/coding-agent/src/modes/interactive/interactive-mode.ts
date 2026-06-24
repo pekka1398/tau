@@ -170,13 +170,6 @@ function isDeadTerminalError(error: unknown): boolean {
 	return code !== undefined && DEAD_TERMINAL_ERROR_CODES.has(code);
 }
 
-const ANTHROPIC_SUBSCRIPTION_AUTH_WARNING =
-	"Anthropic subscription auth is active. Third-party harness usage draws from extra usage and is billed per token, not your Claude plan limits. Manage extra usage at https://claude.ai/settings/usage.";
-
-function isAnthropicSubscriptionAuthKey(apiKey: string | undefined): boolean {
-	return typeof apiKey === "string" && apiKey.startsWith("sk-ant-oat");
-}
-
 function _isUnknownModel(model: Model<any> | undefined): boolean {
 	return !!model && model.provider === "unknown" && model.id === "unknown" && model.api === "unknown";
 }
@@ -295,7 +288,6 @@ export class InteractiveMode {
 	private lastEscapeTime = 0;
 	private changelogMarkdown: string | undefined = undefined;
 	private startupNoticesShown = false;
-	private anthropicSubscriptionWarningShown = false;
 
 	// Status line tracking (for mutating immediately-sequential status updates)
 	private lastStatusSpacer: Spacer | undefined = undefined;
@@ -784,8 +776,6 @@ export class InteractiveMode {
 		if (modelFallbackMessage) {
 			this.showWarning(modelFallbackMessage);
 		}
-
-		void this.maybeWarnAboutAnthropicSubscriptionAuth();
 
 		// Process initial messages
 		if (initialMessage) {
@@ -3739,7 +3729,6 @@ export class InteractiveMode {
 				const thinkingStr =
 					result.model.reasoning && result.thinkingLevel !== "off" ? ` (thinking: ${result.thinkingLevel})` : "";
 				this.showStatus(`Switched to ${result.model.name || result.model.id}${thinkingStr}`);
-				void this.maybeWarnAboutAnthropicSubscriptionAuth(result.model);
 			}
 		} catch (error) {
 			this.showError(error instanceof Error ? error.message : String(error));
@@ -4093,7 +4082,6 @@ export class InteractiveMode {
 					clearOnShrink: this.settingsManager.getClearOnShrink(),
 					showTerminalProgress: this.settingsManager.getShowTerminalProgress(),
 					showSemanticZones: this.settingsManager.getShowSemanticZones(),
-					warnings: this.settingsManager.getWarnings(),
 				},
 				{
 					onShowImagesChange: (enabled) => {
@@ -4216,9 +4204,6 @@ export class InteractiveMode {
 						this.settingsManager.setShowSemanticZones(enabled);
 						this.rebuildChatFromMessages();
 					},
-					onWarningsChange: (warnings) => {
-						this.settingsManager.setWarnings(warnings);
-					},
 					onCancel: () => {
 						done();
 						this.ui.requestRender();
@@ -4242,7 +4227,6 @@ export class InteractiveMode {
 				this.footer.invalidate();
 				this.updateEditorBorderColor();
 				this.showStatus(`Model: ${model.id}`);
-				void this.maybeWarnAboutAnthropicSubscriptionAuth(model);
 				this.checkDaxnutsEasterEgg(model);
 			} catch (error) {
 				this.showError(error instanceof Error ? error.message : String(error));
@@ -4278,31 +4262,6 @@ export class InteractiveMode {
 		this.footerDataProvider.setAvailableProviderCount(uniqueProviders.size);
 	}
 
-	private async maybeWarnAboutAnthropicSubscriptionAuth(
-		model: Model<any> | undefined = this.session.model,
-	): Promise<void> {
-		if (this.settingsManager.getWarnings().anthropicExtraUsage === false) {
-			return;
-		}
-		if (this.anthropicSubscriptionWarningShown) {
-			return;
-		}
-		if (!model || model.provider !== "anthropic") {
-			return;
-		}
-
-		try {
-			const apiKey = await this.session.modelRegistry.getApiKeyForProvider(model.provider);
-			if (!isAnthropicSubscriptionAuthKey(apiKey)) {
-				return;
-			}
-			this.anthropicSubscriptionWarningShown = true;
-			this.showWarning(ANTHROPIC_SUBSCRIPTION_AUTH_WARNING);
-		} catch {
-			// Ignore auth lookup failures for warning-only checks.
-		}
-	}
-
 	private showTrustSelector(): void {
 		const cwd = this.sessionManager.getCwd();
 		const trustStore = new ProjectTrustStore(this.runtimeHost.services.agentDir);
@@ -4316,7 +4275,7 @@ export class InteractiveMode {
 					trustStore.set(cwd, trusted);
 					done();
 					this.showStatus(
-						`Saved trust decision: ${trusted ? "trusted" : "untrusted"}. Restart pi for this to take effect.`,
+						`Saved trust decision: ${trusted ? "trusted" : "untrusted"}. Restart tau for this to take effect.`,
 					);
 				},
 				onCancel: () => {
@@ -4343,7 +4302,6 @@ export class InteractiveMode {
 						this.updateEditorBorderColor();
 						done();
 						this.showStatus(`Model: ${model.id}`);
-						void this.maybeWarnAboutAnthropicSubscriptionAuth(model);
 						this.checkDaxnutsEasterEgg(model);
 					} catch (error) {
 						done();
