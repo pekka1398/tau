@@ -24,11 +24,20 @@ export const KEEP_RECENT_CHARS = 50_000;
 export const COMPACT_PROMPT =
 	"Please summarize the entire conversation above into a structured summary. " +
 	"Use this format:\n\n" +
-	"## Goal\n[What is the user trying to accomplish?]\n\n" +
-	"## Progress\n### Done\n- [x] [Completed items]\n### In Progress\n- [ ] [Current work]\n\n" +
-	"## Key Decisions\n- **[Decision]**: [Rationale]\n\n" +
-	"## Next Steps\n1. [What should happen next]\n\n" +
-	"## Critical Context\n- [File paths, function names, error messages, etc.]\n\n" +
+	"## 🎯 Core Objective\n[1-2 sentences: what is being developed, refactored, or fixed]\n\n" +
+	"## 🏗 Tech Stack & Constraints\n[Key languages, frameworks, core libraries, design patterns, coding conventions]\n\n" +
+	"## 📂 Affected Files\n" +
+	"- `path/to/file.ext`: [what changed or why it matters]\n" +
+	"- `path/to/file2.ext`: [same]\n\n" +
+	"## ✅ Done\n" +
+	"- [completed items]\n\n" +
+	"## 🚀 Next Steps\n" +
+	"1. [immediate next task]\n" +
+	"2. [following task]\n\n" +
+	"## ⚠️ Known Issues & Gotchas\n" +
+	"- [bugs, unresolved errors, special logic constraints, or \"None\"]\n\n" +
+	"## Key Decisions\n" +
+	"- **[Decision]**: [Rationale]\n\n" +
 	"Do NOT use any tools. Only output the summary as text.";
 
 // ============================================================================
@@ -205,6 +214,47 @@ export function findSplitPoint(messages: AgentMessage[], keepRecentChars: number
  * @param keptMessages - The recent messages to keep
  * @returns New messages array: [summary as user message, ...keptMessages]
  */
+/**
+ * Strip a message to only include content counted by effectiveChars.
+ * - user: keep text only
+ * - assistant: keep text + toolCall name/args, drop thinking
+ * - toolResult: drop entirely
+ * - bashExecution: keep command only, drop output
+ * - custom: keep text only
+ * - branchSummary, compactionSummary: drop entirely
+ */
+function stripToEffective(message: AgentMessage): AgentMessage | null {
+	switch (message.role) {
+		case "user": {
+			const content = message.content;
+			if (typeof content === "string") return message;
+			const stripped = content.filter((b) => b.type === "text" && b.text);
+			return stripped.length > 0 ? { ...message, content: stripped } : null;
+		}
+		case "assistant": {
+			const stripped = message.content.filter(
+				(b) => (b.type === "text" && b.text) || b.type === "toolCall",
+			);
+			return stripped.length > 0 ? { ...message, content: stripped } : null;
+		}
+		case "bashExecution":
+			return { ...message, output: "" };
+		case "custom": {
+			const content = message.content;
+			if (typeof content === "string") return message;
+			const stripped = content.filter((b) => b.type === "text" && b.text);
+			return stripped.length > 0 ? { ...message, content: stripped } : null;
+		}
+		// branchSummary, compactionSummary — keep as-is (context from previous compactions)
+		case "branchSummary":
+		case "compactionSummary":
+			return message;
+		// toolResult — drop entirely
+		default:
+			return null;
+	}
+}
+
 export function rebuildMessages(summaryText: string, keptMessages: AgentMessage[]): AgentMessage[] {
 	const summaryMessage: AgentMessage = {
 		role: "user",
@@ -217,7 +267,11 @@ export function rebuildMessages(summaryText: string, keptMessages: AgentMessage[
 		timestamp: Date.now(),
 	};
 
-	return [summaryMessage, ...keptMessages];
+	const stripped = keptMessages
+		.map(stripToEffective)
+		.filter((m): m is AgentMessage => m !== null);
+
+	return [summaryMessage, ...stripped];
 }
 
 // ============================================================================

@@ -466,7 +466,7 @@ function createClient(
 		Object.assign(headers, optionsHeaders);
 	}
 
-	if (process.env.PI_HTTP_LOG === "1") {
+	if (process.env.TAU_HTTP_LOG === "1") {
 		const realFetch = globalThis.fetch;
 		let _logger: any;
 		let _reqId = 0;

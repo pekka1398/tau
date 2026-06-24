@@ -359,7 +359,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			if (httpDebugEnabled) {
 				const payloadBytes = Buffer.byteLength(JSON.stringify(context), "utf-8");
 				appendFileSync(
-					"/tmp/pi-http-debug.log",
+					"/tmp/tau-http-debug.log",
 					`[${new Date().toISOString()}] streamFn: model=${model.id} ` +
 						`provider=${model.provider} payload=${(payloadBytes / 1024).toFixed(0)}KB ` +
 						`messages=${context.messages.length} tools=${context.tools?.length ?? 0}\n`,
@@ -380,7 +380,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					}
 					if (httpDebugEnabled) {
 						appendFileSync(
-							"/tmp/pi-http-debug.log",
+							"/tmp/tau-http-debug.log",
 							`[${new Date().toISOString()}] onResponse: status=${response.status} ` +
 								`since_request_start=${elapsed}ms model=${m.id} provider=${m.provider}\n`,
 						);
@@ -404,7 +404,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 			if (httpDebugEnabled) {
 				appendFileSync(
-					"/tmp/pi-http-debug.log",
+					"/tmp/tau-http-debug.log",
 					`[${new Date().toISOString()}] streamFn: model=${model.id} ` +
 						`provider=${model.provider} payload_chars=${JSON.stringify(context).length}\n`,
 				);
@@ -416,24 +416,21 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			// Dump API request (only new messages, not full history)
 			dumpLogger?.logRequest(model.id, model.provider, payload as Record<string, unknown>);
 
-			// Full request body dump (TAU_DEBUG_HTTP=2 for body, TAU_DEBUG_HTTP=3 for body+headers)
-			const onPayloadDebugEnabled = process.env.TAU_DEBUG_HTTP === "1";
+		// Full request body dump (TAU_DEBUG_HTTP=2 for body, TAU_DEBUG_HTTP=3 for body+headers)
 			const onPayloadDebugLevel = Number.parseInt(process.env.TAU_DEBUG_HTTP ?? "0", 10);
-			if (onPayloadDebugEnabled) {
-				if (onPayloadDebugLevel >= 2) {
-					const body = JSON.stringify(payload, null, onPayloadDebugLevel >= 3 ? 2 : undefined);
-					const ts = new Date().toISOString().replace(/[:.]/g, "-");
-					const dumpPath = `/tmp/pi-request-${ts}.json`;
-					try {
-						const { writeFileSync } = await import("node:fs");
-						writeFileSync(dumpPath, body);
-						appendFileSync(
-							"/tmp/pi-http-debug.log",
-							`[${new Date().toISOString()}] FULL REQUEST BODY dumped to ${dumpPath} (${(body.length / 1024).toFixed(0)}KB)\n`,
-						);
-					} catch {
-						/* silent */
-					}
+			if (onPayloadDebugLevel >= 2) {
+				const body = JSON.stringify(payload, null, onPayloadDebugLevel >= 3 ? 2 : undefined);
+				const ts = new Date().toISOString().replace(/[:.]/g, "-");
+				const dumpPath = `/tmp/tau-request-${ts}.json`;
+				try {
+					const { writeFileSync } = await import("node:fs");
+					writeFileSync(dumpPath, body);
+					appendFileSync(
+						"/tmp/tau-http-debug.log",
+						`[${new Date().toISOString()}] FULL REQUEST BODY dumped to ${dumpPath} (${(body.length / 1024).toFixed(0)}KB)\n`,
+					);
+				} catch {
+					/* silent */
 				}
 			}
 
