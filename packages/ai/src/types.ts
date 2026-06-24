@@ -74,14 +74,10 @@ export interface StreamOptions {
 	/**
 	 * Optional custom HTTP headers to include in API requests.
 	 * Merged with provider defaults; caller values override default headers.
-	 * On AWS Bedrock these are injected via a Smithy `build`-step middleware so
-	 * they are covered by SigV4 signing; reserved headers (`x-amz-*`,
-	 * `authorization`, `host`) are silently ignored to preserve SigV4 / bearer auth.
 	 */
 	headers?: Record<string, string>;
 	/**
-	 * HTTP request timeout in milliseconds for providers/SDKs that support it.
-	 * For example, OpenAI and Anthropic SDK clients default to 10 minutes.
+	 * HTTP request timeout in milliseconds.
 	 */
 	timeoutMs?: number;
 	/**
@@ -91,8 +87,7 @@ export interface StreamOptions {
 	 */
 	websocketConnectTimeoutMs?: number;
 	/**
-	 * Maximum retry attempts for providers/SDKs that support client-side retries.
-	 * For example, OpenAI and Anthropic SDK clients default to 2.
+	 * Maximum retry attempts for client-side retries.
 	 */
 	maxRetries?: number;
 	/**
@@ -105,16 +100,13 @@ export interface StreamOptions {
 	maxRetryDelayMs?: number;
 	/**
 	 * Optional metadata to include in API requests.
-	 * Providers extract the fields they understand and ignore the rest.
-	 * For example, Anthropic uses `user_id` for abuse tracking and rate limiting.
+	 * OpenRouter and upstream providers may ignore unsupported fields.
 	 */
 	metadata?: Record<string, unknown>;
 	/**
 	 * Service tier for cost/latency tradeoffs (via OpenRouter).
 	 * "flex" = lower cost, higher latency.
 	 * "priority" = faster, higher cost.
-	 * Only supported by OpenAI, Google Vertex, and Google AI Studio.
-	 * Providers that don't support this ignore it silently.
 	 */
 	serviceTier?: "flex" | "priority";
 }
@@ -223,7 +215,7 @@ export interface ToolCall {
 	id: string;
 	name: string;
 	arguments: Record<string, any>;
-	thoughtSignature?: string; // Google-specific: opaque signature for reusing thought context
+	thoughtSignature?: string;
 }
 
 export interface Usage {
@@ -385,64 +377,6 @@ export interface OpenAICompletionsCompat {
 	supportsLongCacheRetention?: boolean;
 }
 
-/** Compatibility settings for OpenAI Responses APIs. */
-export interface OpenAIResponsesCompat {
-	/** Whether the provider supports the `developer` role (vs `system`). Default: true. */
-	supportsDeveloperRole?: boolean;
-	/** Whether to send the OpenAI `session_id` cache-affinity header from `options.sessionId` when caching is enabled. Default: true. */
-	sendSessionIdHeader?: boolean;
-	/** Whether the provider supports `prompt_cache_retention: "24h"`. Default: true. */
-	supportsLongCacheRetention?: boolean;
-}
-
-/** Compatibility settings for Anthropic Messages-compatible APIs. */
-export interface AnthropicMessagesCompat {
-	/**
-	 * Whether the provider accepts per-tool `eager_input_streaming`.
-	 * When false, the Anthropic provider omits `tools[].eager_input_streaming`
-	 * and sends the legacy `fine-grained-tool-streaming-2025-05-14` beta header
-	 * for tool-enabled requests.
-	 * Default: true.
-	 */
-	supportsEagerToolInputStreaming?: boolean;
-	/** Whether the provider supports Anthropic long cache retention (`cache_control.ttl: "1h"`). Default: true. */
-	supportsLongCacheRetention?: boolean;
-	/**
-	 * Whether to send the `x-session-affinity` header from `options.sessionId`
-	 * when caching is enabled. Required for providers like Fireworks that use
-	 * session affinity for prompt cache routing (requests to the same replica
-	 * maximize cache hits).
-	 * Default: false.
-	 */
-	sendSessionAffinityHeaders?: boolean;
-	/**
-	 * Whether the provider supports Anthropic-style `cache_control` markers on
-	 * tool definitions. When false, `cache_control` is omitted from tool params.
-	 * Some Anthropic-compatible providers (e.g., Fireworks) do not support this
-	 * field on tools and may reject or ignore it.
-	 * Default: true.
-	 */
-	supportsCacheControlOnTools?: boolean;
-	/**
-	 * Whether the model accepts the Anthropic `temperature` request field.
-	 * Claude Opus 4.7+ rejects non-default temperature values.
-	 * Default: true.
-	 */
-	supportsTemperature?: boolean;
-	/**
-	 * Whether to force adaptive thinking (`thinking.type: "adaptive"` plus
-	 * `output_config.effort`) regardless of the model id. Built-in models that
-	 * require adaptive thinking set this in generated metadata. Custom
-	 * Anthropic-compatible providers can set this to `true` for any model whose
-	 * upstream requires the adaptive format. Set to `false` to
-	 * opt out on overridden built-in models.
-	 * Default: false.
-	 */
-	forceAdaptiveThinking?: boolean;
-	/** Whether to replay empty thinking signatures as `signature: ""` instead of converting thinking to text. Default: false. */
-	allowEmptySignature?: boolean;
-}
-
 /**
  * OpenRouter provider routing preferences.
  * Controls which upstream providers OpenRouter routes requests to.
@@ -524,9 +458,9 @@ export interface OpenRouterRouting {
  * @see https://vercel.com/docs/ai-gateway/models-and-providers/provider-options
  */
 export interface VercelGatewayRouting {
-	/** List of provider slugs to exclusively use for this request (e.g., ["bedrock", "anthropic"]). */
+	/** List of provider slugs to exclusively use for this request. */
 	only?: string[];
-	/** List of provider slugs to try in order (e.g., ["anthropic", "openai"]). */
+	/** List of provider slugs to try in order. */
 	order?: string[];
 }
 
@@ -554,13 +488,7 @@ export interface Model<TApi extends Api> {
 	maxTokens: number;
 	headers?: Record<string, string>;
 	/** Compatibility overrides for OpenAI-compatible APIs. If not set, auto-detected from baseUrl. */
-	compat?: TApi extends "openai-completions"
-		? OpenAICompletionsCompat
-		: TApi extends "openai-responses"
-			? OpenAIResponsesCompat
-			: TApi extends "anthropic-messages"
-				? AnthropicMessagesCompat
-				: never;
+	compat?: OpenAICompletionsCompat;
 }
 
 export interface ImagesModel<TApi extends ImagesApi>

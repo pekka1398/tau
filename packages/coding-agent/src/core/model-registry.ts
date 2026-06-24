@@ -3,7 +3,6 @@
  */
 
 import {
-	type AnthropicMessagesCompat,
 	type Api,
 	type AssistantMessageEventStream,
 	type Context,
@@ -12,7 +11,6 @@ import {
 	type KnownProvider,
 	type Model,
 	type OpenAICompletionsCompat,
-	type OpenAIResponsesCompat,
 	registerApiProvider,
 	resetApiProviders,
 	type SimpleStreamOptions,
@@ -115,6 +113,8 @@ const OpenAICompletionsCompatSchema = Type.Object({
 			Type.Literal("zai"),
 			Type.Literal("qwen"),
 			Type.Literal("qwen-chat-template"),
+			Type.Literal("string-thinking"),
+			Type.Literal("ant-ling"),
 		]),
 	),
 	cacheControlFormat: Type.Optional(Type.Literal("anthropic")),
@@ -123,26 +123,6 @@ const OpenAICompletionsCompatSchema = Type.Object({
 	supportsStrictMode: Type.Optional(Type.Boolean()),
 	supportsLongCacheRetention: Type.Optional(Type.Boolean()),
 });
-
-const OpenAIResponsesCompatSchema = Type.Object({
-	supportsDeveloperRole: Type.Optional(Type.Boolean()),
-	sendSessionIdHeader: Type.Optional(Type.Boolean()),
-	supportsLongCacheRetention: Type.Optional(Type.Boolean()),
-});
-
-const AnthropicMessagesCompatSchema = Type.Object({
-	supportsEagerToolInputStreaming: Type.Optional(Type.Boolean()),
-	supportsLongCacheRetention: Type.Optional(Type.Boolean()),
-	sendSessionAffinityHeaders: Type.Optional(Type.Boolean()),
-	supportsCacheControlOnTools: Type.Optional(Type.Boolean()),
-	forceAdaptiveThinking: Type.Optional(Type.Boolean()),
-});
-
-const ProviderCompatSchema = Type.Union([
-	OpenAICompletionsCompatSchema,
-	OpenAIResponsesCompatSchema,
-	AnthropicMessagesCompatSchema,
-]);
 
 // Schema for custom model definition
 // Most fields are optional with sensible defaults for local models (Ollama, LM Studio, etc.)
@@ -165,7 +145,7 @@ const ModelDefinitionSchema = Type.Object({
 	contextWindow: Type.Optional(Type.Number()),
 	maxTokens: Type.Optional(Type.Number()),
 	headers: Type.Optional(Type.Record(Type.String(), Type.String())),
-	compat: Type.Optional(ProviderCompatSchema),
+	compat: Type.Optional(OpenAICompletionsCompatSchema),
 });
 
 // Schema for per-model overrides (all fields optional, merged with built-in model)
@@ -185,7 +165,7 @@ const ModelOverrideSchema = Type.Object({
 	contextWindow: Type.Optional(Type.Number()),
 	maxTokens: Type.Optional(Type.Number()),
 	headers: Type.Optional(Type.Record(Type.String(), Type.String())),
-	compat: Type.Optional(ProviderCompatSchema),
+	compat: Type.Optional(OpenAICompletionsCompatSchema),
 });
 
 type ModelOverride = Static<typeof ModelOverrideSchema>;
@@ -196,7 +176,7 @@ const ProviderConfigSchema = Type.Object({
 	apiKey: Type.Optional(Type.String({ minLength: 1 })),
 	api: Type.Optional(Type.String({ minLength: 1 })),
 	headers: Type.Optional(Type.Record(Type.String(), Type.String())),
-	compat: Type.Optional(ProviderCompatSchema),
+	compat: Type.Optional(OpenAICompletionsCompatSchema),
 	authHeader: Type.Optional(Type.Boolean()),
 	models: Type.Optional(Type.Array(ModelDefinitionSchema)),
 	modelOverrides: Type.Optional(Type.Record(Type.String(), ModelOverrideSchema)),
@@ -337,9 +317,9 @@ function mergeCompat(
 ): Model<Api>["compat"] | undefined {
 	if (!overrideCompat) return baseCompat;
 
-	const base = baseCompat as OpenAICompletionsCompat | OpenAIResponsesCompat | AnthropicMessagesCompat | undefined;
-	const override = overrideCompat as OpenAICompletionsCompat | OpenAIResponsesCompat | AnthropicMessagesCompat;
-	const merged = { ...base, ...override } as OpenAICompletionsCompat | OpenAIResponsesCompat | AnthropicMessagesCompat;
+	const base = baseCompat as OpenAICompletionsCompat | undefined;
+	const override = overrideCompat as OpenAICompletionsCompat;
+	const merged = { ...base, ...override } as OpenAICompletionsCompat;
 
 	const baseCompletions = base as OpenAICompletionsCompat | undefined;
 	const overrideCompletions = override as OpenAICompletionsCompat;
@@ -683,7 +663,7 @@ export class ModelRegistry {
 
 	/**
 	 * Get only models that have auth configured.
-	 * This is a fast check that doesn't refresh OAuth tokens.
+	 * This is a fast check that does not resolve credentials.
 	 */
 	getAvailable(): Model<Api>[] {
 		return this.models.filter((m) => this.hasConfiguredAuth(m));
@@ -833,16 +813,11 @@ export class ModelRegistry {
 		return providerApiKey ? resolveConfigValueUncached(providerApiKey) : undefined;
 	}
 
-	isUsingOAuth(_model: Model<Api>): boolean {
-		return false;
-	}
-
 	/**
 	 * Register a provider dynamically (from extensions).
 	 *
 	 * If provider has models: replaces all existing models for this provider.
 	 * If provider has only baseUrl/headers: overrides existing models' URLs.
-	 * If provider has oauth: registers OAuth provider for /login support.
 	 */
 	registerProvider(providerName: string, config: ProviderConfigInput): void {
 		const migratedConfig = migrateLegacyRegisterProviderConfigValues(providerName, config);
@@ -856,7 +831,7 @@ export class ModelRegistry {
 	 *
 	 * Removes the provider from the registry and reloads models from disk so that
 	 * built-in models overridden by this provider are restored to their original state.
-	 * Also resets dynamic OAuth and API stream registrations before reapplying
+	 * Also resets dynamic API stream registrations before reapplying
 	 * remaining dynamic providers.
 	 * Has no effect if the provider was never registered.
 	 */
@@ -898,7 +873,7 @@ export class ModelRegistry {
 			throw new Error(`Provider ${providerName}: "baseUrl" is required when defining models.`);
 		}
 		if (!config.apiKey) {
-			throw new Error(`Provider ${providerName}: "apiKey" or "oauth" is required when defining models.`);
+			throw new Error(`Provider ${providerName}: "apiKey" is required when defining models.`);
 		}
 
 		for (const modelDef of config.models) {

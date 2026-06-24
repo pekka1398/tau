@@ -443,14 +443,6 @@ export class AgentSession {
 			return { apiKey: result.apiKey, headers: result.headers };
 		}
 
-		const isOAuth = this._modelRegistry.isUsingOAuth(model);
-		if (isOAuth) {
-			throw new Error(
-				`Authentication failed for "${model.provider}". ` +
-					`Credentials may have expired or network is unavailable. ` +
-					`Run '/login ${model.provider}' to re-authenticate.`,
-			);
-		}
 		throw new Error(`No API key found for ${model.provider}. Set OPENROUTER_API_KEY environment variable.`);
 	}
 
@@ -1090,14 +1082,6 @@ export class AgentSession {
 			}
 
 			if (!this._modelRegistry.hasConfiguredAuth(this.model)) {
-				const isOAuth = this._modelRegistry.isUsingOAuth(this.model);
-				if (isOAuth) {
-					throw new Error(
-						`Authentication failed for "${this.model.provider}". ` +
-							`Credentials may have expired or network is unavailable. ` +
-							`Run '/login ${this.model.provider}' to re-authenticate.`,
-					);
-				}
 				throw new Error(
 					`No API key found for ${this.model.provider}. Set OPENROUTER_API_KEY environment variable.`,
 				);
@@ -1745,7 +1729,6 @@ export class AgentSession {
 	abortBranchSummary(): void {
 		this._branchSummaryAbortController?.abort();
 	}
-
 
 	async bindExtensions(bindings: ExtensionBindings): Promise<void> {
 		if (bindings.uiContext !== undefined) {

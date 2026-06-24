@@ -332,8 +332,4 @@ export class AuthStorage {
 
 		return undefined;
 	}
-
-	getOAuthProviders() {
-		return [];
-	}
 }
