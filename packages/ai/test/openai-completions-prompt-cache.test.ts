@@ -13,6 +13,7 @@ interface FakeOpenAIClientOptions {
 interface CapturedCompletionsPayload {
 	prompt_cache_key?: string;
 	prompt_cache_retention?: "24h" | "in-memory" | null;
+	session_id?: string;
 }
 
 const mockState = vi.hoisted(() => ({
@@ -80,7 +81,7 @@ describe("openai-completions prompt caching", () => {
 	});
 
 	function createModel(overrides: Partial<Model<"openai-completions">> = {}): Model<"openai-completions"> {
-		const { compat: _compat, ...baseModel } = getModel("openai", "gpt-4o-mini");
+		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini");
 		return {
 			...(baseModel as Omit<Model<"openai-completions">, "api">),
 			api: "openai-completions",
@@ -111,10 +112,11 @@ describe("openai-completions prompt caching", () => {
 		};
 	}
 
-	it("sets prompt_cache_key for direct OpenAI requests when caching is enabled", async () => {
+	it("sends OpenRouter session_id for sticky routing when a session is active", async () => {
 		const { payload } = await captureRequest({ sessionId: "session-123" });
 
-		expect(payload?.prompt_cache_key).toBe("session-123");
+		expect(payload?.session_id).toBe("session-123");
+		expect(payload?.prompt_cache_key).toBeUndefined();
 		expect(payload?.prompt_cache_retention).toBeUndefined();
 	});
 
@@ -123,13 +125,6 @@ describe("openai-completions prompt caching", () => {
 
 		expect(payload?.prompt_cache_key).toBe("session-456");
 		expect(payload?.prompt_cache_retention).toBe("24h");
-	});
-
-	it("clamps prompt_cache_key to OpenAI's 64-character limit", async () => {
-		const sessionId = "x".repeat(67);
-		const { payload } = await captureRequest({ sessionId });
-
-		expect(payload?.prompt_cache_key).toBe("x".repeat(64));
 	});
 
 	it("omits prompt cache fields when cacheRetention is none", async () => {

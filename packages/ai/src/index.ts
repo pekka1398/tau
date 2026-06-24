@@ -7,6 +7,7 @@ export * from "./image-models.ts";
 export * from "./images.ts";
 export * from "./images-api-registry.ts";
 export * from "./models.ts";
+export * from "./providers/faux.ts";
 export * from "./providers/images/register-builtins.ts";
 export type { OpenAICompletionsOptions } from "./providers/openai-completions.ts";
 export * from "./providers/register-builtins.ts";

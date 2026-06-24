@@ -1,60 +1,41 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { findEnvKeys, getEnvApiKey } from "../src/env-api-keys.ts";
 
-const originalCopilotGitHubToken = process.env.COPILOT_GITHUB_TOKEN;
-const originalGhToken = process.env.GH_TOKEN;
-const originalGitHubToken = process.env.GITHUB_TOKEN;
-const originalZaiCodingCnApiKey = process.env.ZAI_CODING_CN_API_KEY;
+const originalOpenRouterApiKey = process.env.OPENROUTER_API_KEY;
+const originalAnthropicApiKey = process.env.ANTHROPIC_API_KEY;
+const originalGoogleApiKey = process.env.GOOGLE_API_KEY;
 
 afterEach(() => {
-	if (originalCopilotGitHubToken === undefined) {
-		delete process.env.COPILOT_GITHUB_TOKEN;
+	if (originalOpenRouterApiKey === undefined) {
+		delete process.env.OPENROUTER_API_KEY;
 	} else {
-		process.env.COPILOT_GITHUB_TOKEN = originalCopilotGitHubToken;
+		process.env.OPENROUTER_API_KEY = originalOpenRouterApiKey;
 	}
-
-	if (originalGhToken === undefined) {
-		delete process.env.GH_TOKEN;
+	if (originalAnthropicApiKey === undefined) {
+		delete process.env.ANTHROPIC_API_KEY;
 	} else {
-		process.env.GH_TOKEN = originalGhToken;
+		process.env.ANTHROPIC_API_KEY = originalAnthropicApiKey;
 	}
-
-	if (originalGitHubToken === undefined) {
-		delete process.env.GITHUB_TOKEN;
+	if (originalGoogleApiKey === undefined) {
+		delete process.env.GOOGLE_API_KEY;
 	} else {
-		process.env.GITHUB_TOKEN = originalGitHubToken;
-	}
-
-	if (originalZaiCodingCnApiKey === undefined) {
-		delete process.env.ZAI_CODING_CN_API_KEY;
-	} else {
-		process.env.ZAI_CODING_CN_API_KEY = originalZaiCodingCnApiKey;
+		process.env.GOOGLE_API_KEY = originalGoogleApiKey;
 	}
 });
 
 describe("environment API keys", () => {
-	it("does not treat generic GitHub tokens as GitHub Copilot credentials", () => {
-		delete process.env.COPILOT_GITHUB_TOKEN;
-		process.env.GH_TOKEN = "gh-token";
-		process.env.GITHUB_TOKEN = "github-token";
+	it("resolves OpenRouter credentials from OPENROUTER_API_KEY", () => {
+		process.env.OPENROUTER_API_KEY = "openrouter-token";
 
-		expect(findEnvKeys("github-copilot")).toBeUndefined();
-		expect(getEnvApiKey("github-copilot")).toBeUndefined();
+		expect(findEnvKeys("openrouter")).toEqual(["OPENROUTER_API_KEY"]);
+		expect(getEnvApiKey("openrouter")).toBe("openrouter-token");
 	});
 
-	it("resolves GitHub Copilot credentials from COPILOT_GITHUB_TOKEN", () => {
-		process.env.COPILOT_GITHUB_TOKEN = "copilot-token";
-		process.env.GH_TOKEN = "gh-token";
-		process.env.GITHUB_TOKEN = "github-token";
+	it("does not resolve API keys for removed direct providers", () => {
+		process.env.ANTHROPIC_API_KEY = "anthropic-token";
+		process.env.GOOGLE_API_KEY = "google-token";
 
-		expect(findEnvKeys("github-copilot")).toEqual(["COPILOT_GITHUB_TOKEN"]);
-		expect(getEnvApiKey("github-copilot")).toBe("copilot-token");
-	});
-
-	it("resolves ZAI China Coding Plan credentials from ZAI_CODING_CN_API_KEY", () => {
-		process.env.ZAI_CODING_CN_API_KEY = "zai-coding-cn-token";
-
-		expect(findEnvKeys("zai-coding-cn")).toEqual(["ZAI_CODING_CN_API_KEY"]);
-		expect(getEnvApiKey("zai-coding-cn")).toBe("zai-coding-cn-token");
+		expect(findEnvKeys("anthropic")).toBeUndefined();
+		expect(getEnvApiKey("google")).toBeUndefined();
 	});
 });
