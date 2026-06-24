@@ -989,5 +989,4 @@ describe("openai-completions tool_choice", () => {
 		expect(params.reasoning).toEqual({ effort: "high" });
 		expect(params.reasoning_effort).toBeUndefined();
 	});
-
 });

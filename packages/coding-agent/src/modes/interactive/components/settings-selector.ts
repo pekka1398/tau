@@ -413,8 +413,8 @@ export class SettingsSelectorComponent extends Container {
 			10,
 			getSettingsListTheme(),
 			(id, newValue) => {
-			switch (id) {
-				case "show-images":
+				switch (id) {
+					case "show-images":
 						callbacks.onShowImagesChange(newValue === "true");
 						break;
 					case "image-width-cells":

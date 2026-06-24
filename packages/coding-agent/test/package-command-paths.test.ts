@@ -91,7 +91,10 @@ describe("package commands", () => {
 
 	it("skips untrusted project package settings", async () => {
 		mkdirSync(getProjectDir(projectDir, agentDir), { recursive: true });
-		writeFileSync(join(getProjectDir(projectDir, agentDir), "settings.json"), JSON.stringify({ packages: ["npm:@project/pkg"] }));
+		writeFileSync(
+			join(getProjectDir(projectDir, agentDir), "settings.json"),
+			JSON.stringify({ packages: ["npm:@project/pkg"] }),
+		);
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
 		try {
@@ -107,7 +110,10 @@ describe("package commands", () => {
 
 	it("uses remembered project trust for list", async () => {
 		mkdirSync(getProjectDir(projectDir, agentDir), { recursive: true });
-		writeFileSync(join(getProjectDir(projectDir, agentDir), "settings.json"), JSON.stringify({ packages: ["npm:@project/pkg"] }));
+		writeFileSync(
+			join(getProjectDir(projectDir, agentDir), "settings.json"),
+			JSON.stringify({ packages: ["npm:@project/pkg"] }),
+		);
 		new ProjectTrustStore(agentDir).set(projectDir, true);
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -126,7 +132,10 @@ describe("package commands", () => {
 
 	it("overrides remembered trust for list with --no-approve", async () => {
 		mkdirSync(getProjectDir(projectDir, agentDir), { recursive: true });
-		writeFileSync(join(getProjectDir(projectDir, agentDir), "settings.json"), JSON.stringify({ packages: ["npm:@project/pkg"] }));
+		writeFileSync(
+			join(getProjectDir(projectDir, agentDir), "settings.json"),
+			JSON.stringify({ packages: ["npm:@project/pkg"] }),
+		);
 		new ProjectTrustStore(agentDir).set(projectDir, true);
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -144,7 +153,10 @@ describe("package commands", () => {
 
 	it("approves project trust for list with --approve", async () => {
 		mkdirSync(getProjectDir(projectDir, agentDir), { recursive: true });
-		writeFileSync(join(getProjectDir(projectDir, agentDir), "settings.json"), JSON.stringify({ packages: ["npm:@project/pkg"] }));
+		writeFileSync(
+			join(getProjectDir(projectDir, agentDir), "settings.json"),
+			JSON.stringify({ packages: ["npm:@project/pkg"] }),
+		);
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
 		try {

@@ -35,7 +35,7 @@ export const COMPACT_PROMPT =
 	"1. [immediate next task]\n" +
 	"2. [following task]\n\n" +
 	"## ⚠️ Known Issues & Gotchas\n" +
-	"- [bugs, unresolved errors, special logic constraints, or \"None\"]\n\n" +
+	'- [bugs, unresolved errors, special logic constraints, or "None"]\n\n' +
 	"## Key Decisions\n" +
 	"- **[Decision]**: [Rationale]\n\n" +
 	"Do NOT use any tools. Only output the summary as text.";
@@ -232,9 +232,7 @@ function stripToEffective(message: AgentMessage): AgentMessage | null {
 			return stripped.length > 0 ? { ...message, content: stripped } : null;
 		}
 		case "assistant": {
-			const stripped = message.content.filter(
-				(b) => (b.type === "text" && b.text) || b.type === "toolCall",
-			);
+			const stripped = message.content.filter((b) => (b.type === "text" && b.text) || b.type === "toolCall");
 			return stripped.length > 0 ? { ...message, content: stripped } : null;
 		}
 		case "bashExecution":
@@ -267,9 +265,7 @@ export function rebuildMessages(summaryText: string, keptMessages: AgentMessage[
 		timestamp: Date.now(),
 	};
 
-	const stripped = keptMessages
-		.map(stripToEffective)
-		.filter((m): m is AgentMessage => m !== null);
+	const stripped = keptMessages.map(stripToEffective).filter((m): m is AgentMessage => m !== null);
 
 	return [summaryMessage, ...stripped];
 }

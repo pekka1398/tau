@@ -416,7 +416,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			// Dump API request (only new messages, not full history)
 			dumpLogger?.logRequest(model.id, model.provider, payload as Record<string, unknown>);
 
-		// Full request body dump (TAU_DEBUG_HTTP=2 for body, TAU_DEBUG_HTTP=3 for body+headers)
+			// Full request body dump (TAU_DEBUG_HTTP=2 for body, TAU_DEBUG_HTTP=3 for body+headers)
 			const onPayloadDebugLevel = Number.parseInt(process.env.TAU_DEBUG_HTTP ?? "0", 10);
 			if (onPayloadDebugLevel >= 2) {
 				const body = JSON.stringify(payload, null, onPayloadDebugLevel >= 3 ? 2 : undefined);

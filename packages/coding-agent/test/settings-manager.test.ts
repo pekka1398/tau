@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
-import { getProjectDir } from "../src/config.ts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { getProjectDir } from "../src/config.ts";
 import { DEFAULT_HTTP_IDLE_TIMEOUT_MS } from "../src/core/http-dispatcher.ts";
 import { SettingsManager } from "../src/core/settings-manager.ts";
 
@@ -218,7 +218,10 @@ describe("SettingsManager", () => {
 	describe("project trust", () => {
 		it("should skip project settings when project is not trusted", () => {
 			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ theme: "global" }));
-			writeFileSync(join(getProjectDir(projectDir, agentDir), "settings.json"), JSON.stringify({ theme: "project" }));
+			writeFileSync(
+				join(getProjectDir(projectDir, agentDir), "settings.json"),
+				JSON.stringify({ theme: "project" }),
+			);
 
 			const manager = SettingsManager.create(projectDir, agentDir, { projectTrusted: false });
 
@@ -229,7 +232,10 @@ describe("SettingsManager", () => {
 
 		it("should reload project settings after trust changes to true", () => {
 			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ theme: "global" }));
-			writeFileSync(join(getProjectDir(projectDir, agentDir), "settings.json"), JSON.stringify({ theme: "project" }));
+			writeFileSync(
+				join(getProjectDir(projectDir, agentDir), "settings.json"),
+				JSON.stringify({ theme: "project" }),
+			);
 			const manager = SettingsManager.create(projectDir, agentDir, { projectTrusted: false });
 
 			manager.setProjectTrusted(true);
@@ -305,7 +311,10 @@ describe("SettingsManager", () => {
 
 		it("should use merged global and project settings", () => {
 			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ httpIdleTimeoutMs: 300000 }));
-			writeFileSync(join(getProjectDir(projectDir, agentDir), "settings.json"), JSON.stringify({ httpIdleTimeoutMs: 0 }));
+			writeFileSync(
+				join(getProjectDir(projectDir, agentDir), "settings.json"),
+				JSON.stringify({ httpIdleTimeoutMs: 0 }),
+			);
 
 			const manager = SettingsManager.create(projectDir, agentDir);
 
@@ -368,7 +377,10 @@ describe("SettingsManager", () => {
 
 		it("should return project sessionDir, overriding global", () => {
 			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ sessionDir: "/global/sessions" }));
-			writeFileSync(join(getProjectDir(projectDir, agentDir), "settings.json"), JSON.stringify({ sessionDir: "./sessions" }));
+			writeFileSync(
+				join(getProjectDir(projectDir, agentDir), "settings.json"),
+				JSON.stringify({ sessionDir: "./sessions" }),
+			);
 			const manager = SettingsManager.create(projectDir, agentDir);
 			expect(manager.getSessionDir()).toBe("./sessions");
 		});

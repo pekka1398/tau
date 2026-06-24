@@ -2,11 +2,11 @@ import type { AgentMessage } from "@earendil-works/tau-agent-core";
 import { describe, expect, it } from "vitest";
 import {
 	COMPACT_PROMPT,
-	KEEP_RECENT_CHARS,
 	effectiveChars,
 	extractAssistantText,
 	findSplitPoint,
 	hasEffectiveContent,
+	KEEP_RECENT_CHARS,
 	rebuildMessages,
 	totalMessageChars,
 } from "../src/core/compaction/index.ts";
@@ -23,7 +23,14 @@ function assistantMsg(text: string): AgentMessage {
 	return {
 		role: "assistant",
 		content: [{ type: "text", text }],
-		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+		usage: {
+			input: 0,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 0,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		},
 		stopReason: "end_turn",
 		api: "openai",
 		provider: "openrouter",
@@ -36,7 +43,14 @@ function assistantWithToolCall(toolName: string, args: Record<string, unknown>):
 	return {
 		role: "assistant",
 		content: [{ type: "toolCall", name: toolName, arguments: args, id: "tc1" }],
-		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+		usage: {
+			input: 0,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 0,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		},
 		stopReason: "tool_use",
 		api: "openai",
 		provider: "openrouter",
@@ -46,14 +60,28 @@ function assistantWithToolCall(toolName: string, args: Record<string, unknown>):
 }
 
 function toolResultMsg(text: string): AgentMessage {
-	return { role: "toolResult", content: [{ type: "text", text }], toolCallId: "tc1", toolName: "bash", isError: false, timestamp: Date.now() };
+	return {
+		role: "toolResult",
+		content: [{ type: "text", text }],
+		toolCallId: "tc1",
+		toolName: "bash",
+		isError: false,
+		timestamp: Date.now(),
+	};
 }
 
 function thinkingMsg(thinking: string): AgentMessage {
 	return {
 		role: "assistant",
 		content: [{ type: "thinking", thinking }],
-		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+		usage: {
+			input: 0,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 0,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		},
 		stopReason: "end_turn",
 		api: "openai",
 		provider: "openrouter",
@@ -82,7 +110,14 @@ describe("effectiveChars", () => {
 				{ type: "thinking", thinking: "a very long thinking block" },
 				{ type: "text", text: "short" },
 			],
-			usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+			usage: {
+				input: 0,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
+				totalTokens: 0,
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			},
 			stopReason: "end_turn",
 			api: "openai",
 			provider: "openrouter",
@@ -154,8 +189,18 @@ describe("extractAssistantText", () => {
 	it("concatenates multiple text blocks", () => {
 		const msg: AgentMessage = {
 			role: "assistant",
-			content: [{ type: "text", text: "hello" }, { type: "text", text: "world" }],
-			usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+			content: [
+				{ type: "text", text: "hello" },
+				{ type: "text", text: "world" },
+			],
+			usage: {
+				input: 0,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
+				totalTokens: 0,
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			},
 			stopReason: "end_turn",
 			api: "openai",
 			provider: "openrouter",
@@ -173,7 +218,14 @@ describe("extractAssistantText", () => {
 				{ type: "text", text: "answer" },
 				{ type: "toolCall", name: "bash", arguments: { command: "ls" }, id: "tc1" },
 			],
-			usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+			usage: {
+				input: 0,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
+				totalTokens: 0,
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			},
 			stopReason: "tool_use",
 			api: "openai",
 			provider: "openrouter",

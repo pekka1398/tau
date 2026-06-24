@@ -10,6 +10,7 @@ export {
 	createBashToolDefinition,
 	createLocalBashOperations,
 } from "./bash.ts";
+export { createEditRedirectToolDefinition } from "./edit-redirect.ts";
 export { createTranscribeToolDefinition } from "./transcribe.ts";
 export {
 	DEFAULT_MAX_BYTES,
@@ -22,7 +23,6 @@ export {
 	truncateTail,
 } from "./truncate.ts";
 export { createVisionToolDefinition } from "./vision.ts";
-export { createEditRedirectToolDefinition } from "./edit-redirect.ts";
 
 import type { AgentTool } from "@earendil-works/tau-agent-core";
 import { createSubagentToolDefinition, type SubagentToolOptions } from "../subagent/tool.ts";

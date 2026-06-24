@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
-import { getProjectDir } from "../src/config.ts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { getProjectDir } from "../src/config.ts";
 import { SettingsManager } from "../src/core/settings-manager.ts";
 
 /**

@@ -1134,5 +1134,4 @@ export class SettingsManager {
 	getCodeBlockIndent(): string {
 		return this.settings.markdown?.codeBlockIndent ?? "  ";
 	}
-
 }

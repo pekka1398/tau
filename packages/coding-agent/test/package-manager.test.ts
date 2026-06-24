@@ -1,10 +1,10 @@
 import { EventEmitter } from "node:events";
-import { getProjectDir } from "../src/config.ts";
 import { mkdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getProjectDir } from "../src/config.ts";
 import { DefaultPackageManager, type ProgressEvent, type ResolvedResource } from "../src/core/package-manager.ts";
 import { SettingsManager } from "../src/core/settings-manager.ts";
 
@@ -2071,7 +2071,13 @@ export default function(api) { api.registerTool({ name: "test", description: "te
 			);
 			expect(runCommandSpy).toHaveBeenCalledWith(
 				"npm",
-				["install", "example@latest", "--prefix", join(getProjectDir(tempDir, agentDir), "npm"), "--legacy-peer-deps"],
+				[
+					"install",
+					"example@latest",
+					"--prefix",
+					join(getProjectDir(tempDir, agentDir), "npm"),
+					"--legacy-peer-deps",
+				],
 				undefined,
 			);
 		});

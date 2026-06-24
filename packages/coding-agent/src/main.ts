@@ -5,6 +5,9 @@
  * createAgentSession() options. The SDK does the heavy lifting.
  */
 
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { type ImageContent, modelsAreEqual } from "@earendil-works/tau-ai";
 import { ProcessTerminal, setKeybindings, TUI } from "@earendil-works/tau-tui";
@@ -14,9 +17,6 @@ import { processFileArguments } from "./cli/file-processor.ts";
 import { buildInitialMessage } from "./cli/initial-message.ts";
 import { listModels } from "./cli/list-models.ts";
 import { selectSession } from "./cli/session-picker.ts";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { homedir } from "node:os";
 import { ENV_SESSION_DIR, expandTildePath, getAgentDir, getPackageDir, VERSION } from "./config.ts";
 import { type CreateAgentSessionRuntimeFactory, createAgentSessionRuntime } from "./core/agent-session-runtime.ts";
 import {
@@ -559,7 +559,10 @@ function loadTauEnv(): void {
 			const eqIndex = trimmed.indexOf("=");
 			if (eqIndex === -1) continue;
 			const key = trimmed.slice(0, eqIndex).trim();
-			const value = trimmed.slice(eqIndex + 1).trim().replace(/^["']|["']$/g, "");
+			const value = trimmed
+				.slice(eqIndex + 1)
+				.trim()
+				.replace(/^["']|["']$/g, "");
 			if (!(key in process.env)) {
 				process.env[key] = value;
 			}
