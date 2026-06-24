@@ -524,13 +524,17 @@ export class DefaultResourceLoader implements ResourceLoader {
 
 	private applyExtensionSourceInfo(extensions: Extension[], metadataByPath: Map<string, PathMetadata>): void {
 		for (const extension of extensions) {
+			const extensionPath = extension.path ?? "<inline-extension>";
+			const commands = extension.commands instanceof Map ? extension.commands : new Map<string, unknown>();
+			const tools = extension.tools instanceof Map ? extension.tools : new Map<string, unknown>();
+
 			extension.sourceInfo =
-				this.findSourceInfoForPath(extension.path, undefined, metadataByPath) ??
-				this.getDefaultSourceInfoForPath(extension.path);
-			for (const command of extension.commands.values()) {
+				this.findSourceInfoForPath(extensionPath, undefined, metadataByPath) ??
+				this.getDefaultSourceInfoForPath(extensionPath);
+			for (const command of commands.values()) {
 				command.sourceInfo = extension.sourceInfo;
 			}
-			for (const tool of extension.tools.values()) {
+			for (const tool of tools.values()) {
 				tool.sourceInfo = extension.sourceInfo;
 			}
 		}
@@ -818,29 +822,33 @@ export class DefaultResourceLoader implements ResourceLoader {
 		const flagOwners = new Map<string, string>();
 
 		for (const ext of extensions) {
+			const extensionPath = ext.path ?? "<inline-extension>";
+			const tools = ext.tools instanceof Map ? ext.tools : new Map<string, unknown>();
+			const flags = ext.flags instanceof Map ? ext.flags : new Map<string, unknown>();
+
 			// Check tools
-			for (const toolName of ext.tools.keys()) {
+			for (const toolName of tools.keys()) {
 				const existingOwner = toolOwners.get(toolName);
-				if (existingOwner && existingOwner !== ext.path) {
+				if (existingOwner && existingOwner !== extensionPath) {
 					conflicts.push({
-						path: ext.path,
+						path: extensionPath,
 						message: `Tool "${toolName}" conflicts with ${existingOwner}`,
 					});
 				} else {
-					toolOwners.set(toolName, ext.path);
+					toolOwners.set(toolName, extensionPath);
 				}
 			}
 
 			// Check flags
-			for (const flagName of ext.flags.keys()) {
+			for (const flagName of flags.keys()) {
 				const existingOwner = flagOwners.get(flagName);
-				if (existingOwner && existingOwner !== ext.path) {
+				if (existingOwner && existingOwner !== extensionPath) {
 					conflicts.push({
-						path: ext.path,
+						path: extensionPath,
 						message: `Flag "--${flagName}" conflicts with ${existingOwner}`,
 					});
 				} else {
-					flagOwners.set(flagName, ext.path);
+					flagOwners.set(flagName, extensionPath);
 				}
 			}
 		}
