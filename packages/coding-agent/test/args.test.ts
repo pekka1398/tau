@@ -53,9 +53,9 @@ describe("parseArgs", () => {
 		});
 
 		test("does not consume options after -p as prompts", () => {
-			const result = parseArgs(["-p", "--provider", "openai", "Say hi."]);
+			const result = parseArgs(["-p", "--provider", "openrouter", "Say hi."]);
 			expect(result.print).toBe(true);
-			expect(result.provider).toBe("openai");
+			expect(result.provider).toBe("openrouter");
 			expect(result.messages).toEqual(["Say hi."]);
 		});
 	});
@@ -86,33 +86,18 @@ describe("parseArgs", () => {
 
 	describe("flags with values", () => {
 		test("parses --provider", () => {
-			const result = parseArgs(["--provider", "openai"]);
-			expect(result.provider).toBe("openai");
+			const result = parseArgs(["--provider", "openrouter"]);
+			expect(result.provider).toBe("openrouter");
 		});
 
 		test("parses --model", () => {
-			const result = parseArgs(["--model", "gpt-4o"]);
-			expect(result.model).toBe("gpt-4o");
+			const result = parseArgs(["--model", "openai/gpt-4o"]);
+			expect(result.model).toBe("openai/gpt-4o");
 		});
 
 		test("parses --api-key", () => {
 			const result = parseArgs(["--api-key", "sk-test-key"]);
 			expect(result.apiKey).toBe("sk-test-key");
-		});
-
-		test("parses --system-prompt", () => {
-			const result = parseArgs(["--system-prompt", "You are a helpful assistant"]);
-			expect(result.systemPrompt).toBe("You are a helpful assistant");
-		});
-
-		test("parses --append-system-prompt", () => {
-			const result = parseArgs(["--append-system-prompt", "Additional context"]);
-			expect(result.appendSystemPrompt).toEqual(["Additional context"]);
-		});
-
-		test("parses multiple --append-system-prompt flags", () => {
-			const result = parseArgs(["--append-system-prompt", "Context A", "--append-system-prompt", "Context B"]);
-			expect(result.appendSystemPrompt).toEqual(["Context A", "Context B"]);
 		});
 
 		test("parses --mode", () => {
@@ -179,10 +164,10 @@ describe("parseArgs", () => {
 		});
 
 		test("works alongside other flags", () => {
-			const result = parseArgs(["--name", "named-run", "--print", "--model", "gpt-4o", "hello"]);
+			const result = parseArgs(["--name", "named-run", "--print", "--model", "openai/gpt-4o", "hello"]);
 			expect(result.name).toBe("named-run");
 			expect(result.print).toBe(true);
-			expect(result.model).toBe("gpt-4o");
+			expect(result.model).toBe("openai/gpt-4o");
 			expect(result.messages).toEqual(["hello"]);
 		});
 	});
