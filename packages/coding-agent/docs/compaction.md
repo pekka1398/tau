@@ -338,7 +338,7 @@ tau.on("session_before_compact", async (event, ctx) => {
 });
 ```
 
-See [custom-compaction.ts](../examples/extensions/custom-compaction.ts) for a complete example using a different model.
+Extensions can implement `session_before_compact` when a project needs a custom summary strategy or model.
 
 ### session_before_tree
 

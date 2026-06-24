@@ -4,14 +4,13 @@ Tau runs with all permissions by default, but in some cases, you will want to ha
 
 There are two general options. You can either
 1. run the whole `tau` process inside an isolated environment, or
-2. run `tau` on the host and route tool execution into an isolated environment.
+2. build an extension that routes selected tool execution into an isolated environment.
 
 ## Choose a pattern
 
 | Pattern | What is isolated | Best for | Notes |
 | --- | --- | --- | --- |
 | OpenShell | Whole `tau` process in a policy-controlled sandbox | Local or remote managed sandbox | Requires an OpenShell gateway |
-| Gondolin extension | Built-in tools and `!` commands | Local micro-VM isolation while keeping auth on host | See [`examples/extensions/gondolin/`](../examples/extensions/gondolin/). |
 | Plain Docker | Whole `tau` process in a local container | Simple local isolation | Provider API keys enter the container. |
 
 Extensions run wherever the `tau` process runs. If you run host `tau` with a tool-routing extension, other custom extension tools still run on the host unless they also delegate their operations.
@@ -50,32 +49,6 @@ OpenShell providers can keep raw model API keys outside the sandbox.
 When inference routing is configured, code inside the sandbox can call `https://inference.local`, and the gateway injects the configured provider credentials upstream.
 Keep OpenRouter API credentials outside the sandbox when routing tool execution through a container.
 
-## Gondolin
-
-[Gondolin](https://github.com/earendil-works/gondolin) is a local Linux micro-VM.
-Use the [example extension](../examples/extensions/gondolin) when you want Tau on the host but all built-in tools routed into the VM.
-
-Setup:
-
-```bash
-cp -R packages/coding-agent/examples/extensions/gondolin ~/.tau/agent/extensions/gondolin
-cd ~/.tau/agent/extensions/gondolin
-npm install --ignore-scripts
-```
-
-Run from the project you want mounted:
-
-```bash
-cd /path/to/project
-tau -e ~/.tau/agent/extensions/gondolin
-```
-
-The extension mounts the host cwd at `/workspace` in the VM and overrides `read`, `write`, `edit`, `bash`, `grep`, `find`, and `ls`.
-User `!` commands are routed into the VM, as well.
-File changes under `/workspace` write through to the host.
-
-Requirements: Node.js >= 23.6.0 for `@earendil-works/gondolin`, plus QEMU (requires installation through your package manager).
-
 ## Plain Docker
 
 Run the whole `tau` process in Docker when you want the simplest local container boundary.
@@ -106,6 +79,6 @@ docker run --rm -it \
   tau-sandbox
 ```
 
-The `-v "$PWD:/workspace"` mounts your current directory into the container at /workspace such that reads and writes in `/workspace` inside Docker directly affect your host files, like in the Gondolin example.
+The `-v "$PWD:/workspace"` mount means reads and writes in `/workspace` inside Docker directly affect your host files.
 
 Use a named volume for `/root/.tau/agent` if you want container-local settings and sessions. Mounting your host `~/.tau/agent` exposes host auth and session files to the container.

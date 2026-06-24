@@ -1,22 +1,11 @@
 # Examples
 
-Example code for tau-coding-agent SDK and extensions.
+Example code for the tau-coding-agent SDK.
 
 ## Directories
 
 ### [sdk/](sdk/)
 Programmatic usage via `createAgentSession()`. Shows how to customize models, prompts, tools, extensions, and session management.
-
-### [extensions/](extensions/)
-Example extensions demonstrating:
-- Lifecycle event handlers (tool interception, safety gates, context modifications)
-- Custom tools (todo lists, questions, subagents, output truncation)
-- Commands and keyboard shortcuts
-- Custom UI (footers, headers, editors, overlays)
-- Git integration (checkpoints, auto-commit)
-- System prompt modifications and custom compaction
-- External integrations (SSH, file watchers, system theme sync)
-- OpenRouter model selection and SDK control
 
 ## Documentation
 
