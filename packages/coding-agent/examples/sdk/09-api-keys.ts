@@ -1,5 +1,5 @@
 /**
- * API Keys and OAuth
+ * API Keys
  *
  * Configure API key resolution via AuthStorage and ModelRegistry.
  */
@@ -31,8 +31,8 @@ const { session: customAuthSession } = await createAgentSession({
 console.log("Session with custom auth storage location");
 customAuthSession.dispose();
 
-// Runtime API key override (not persisted to disk)
-authStorage.setRuntimeApiKey("anthropic", "sk-my-temp-key");
+// Runtime OpenRouter API key override (not persisted to disk)
+authStorage.setRuntimeApiKey("openrouter", "sk-or-my-temp-key");
 const { session: runtimeKeySession } = await createAgentSession({
 	sessionManager: SessionManager.inMemory(),
 	authStorage,

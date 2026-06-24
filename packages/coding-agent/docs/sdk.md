@@ -407,18 +407,18 @@ If no model is provided:
 
 > See [examples/sdk/02-custom-model.ts](../examples/sdk/02-custom-model.ts)
 
-### API Keys and OAuth
+### API Keys
 
 API key resolution priority (handled by AuthStorage):
 1. Runtime overrides (via `setRuntimeApiKey`, not persisted)
-2. Stored credentials in `auth.json` (API keys or OAuth tokens)
-3. Environment variables (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, etc.)
-4. Fallback resolver (for custom provider keys from `models.json`)
+2. Stored credentials in `auth.json`
+3. `OPENROUTER_API_KEY`
+4. Fallback resolver from OpenRouter entries in `models.json`
 
 ```typescript
 import { AuthStorage, ModelRegistry } from "@earendil-works/pi-coding-agent";
 
-// Default: uses ~/.pi/agent/auth.json and ~/.pi/agent/models.json
+// Default: uses ~/.tau/agent/auth.json and ~/.tau/agent/models.json
 const authStorage = AuthStorage.create();
 const modelRegistry = ModelRegistry.create(authStorage);
 
@@ -445,7 +445,7 @@ const { session } = await createAgentSession({
 const simpleRegistry = ModelRegistry.inMemory(authStorage);
 ```
 
-> See [examples/sdk/09-api-keys-and-oauth.ts](../examples/sdk/09-api-keys-and-oauth.ts)
+> See [examples/sdk/09-api-keys.ts](../examples/sdk/09-api-keys.ts)
 
 ### System Prompt
 

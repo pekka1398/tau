@@ -91,21 +91,21 @@ RUN apt-get update \
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
 WORKDIR /workspace
-ENTRYPOINT ["pi"]
+ENTRYPOINT ["tau"]
 ```
 
 Build and run:
 
 ```bash
-docker build -t pi-sandbox -f Dockerfile.pi .
+docker build -t tau-sandbox -f Dockerfile.pi .
 
 docker run --rm -it \
-  -e ANTHROPIC_API_KEY \
+  -e OPENROUTER_API_KEY \
   -v "$PWD:/workspace" \
-  -v pi-agent-home:/root/.pi/agent \
-  pi-sandbox
+  -v tau-agent-home:/root/.tau/agent \
+  tau-sandbox
 ```
 
 The `-v "$PWD:/workspace"` mounts your current directory into the container at /workspace such that reads and writes in `/workspace` inside Docker directly affect your host files, like in the Gondolin example.
 
-Use a named volume for `/root/.pi/agent` if you want container-local settings and sessions. Mounting your host `~/.pi/agent` exposes host auth and session files to the container.
+Use a named volume for `/root/.tau/agent` if you want container-local settings and sessions. Mounting your host `~/.tau/agent` exposes host auth and session files to the container.

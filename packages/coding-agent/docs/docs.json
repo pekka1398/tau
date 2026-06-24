@@ -71,10 +71,6 @@
         {
           "title": "Custom Models",
           "path": "models.md"
-        },
-        {
-          "title": "Custom Providers",
-          "path": "custom-provider.md"
         }
       ]
     },

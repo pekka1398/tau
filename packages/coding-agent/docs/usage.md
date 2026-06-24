@@ -1,4 +1,4 @@
-# Using Pi
+# Using Tau
 
 This page collects day-to-day usage details that do not fit on the quickstart page.
 
@@ -35,7 +35,6 @@ Type `/` in the editor to open command completion. Extensions can register custo
 
 | Command | Description |
 |---------|-------------|
-| `/login`, `/logout` | Manage OAuth or API-key credentials |
 | `/model` | Switch models |
 | `/scoped-models` | Enable/disable models for Ctrl+P cycling |
 | `/settings` | Thinking level, theme, message delivery, transport |
@@ -53,7 +52,7 @@ Type `/` in the editor to open command completion. Extensions can register custo
 | `/reload` | Reload keybindings, extensions, skills, prompts, and context files |
 | `/hotkeys` | Show all keyboard shortcuts |
 | `/changelog` | Display version history |
-| `/quit` | Quit pi |
+| `/quit` | Quit Tau |
 
 ## Message Queue
 
@@ -64,21 +63,21 @@ You can submit messages while the agent is still working:
 - **Escape** aborts and restores queued messages to the editor.
 - **Alt+Up** retrieves queued messages back to the editor.
 
-On Windows Terminal, Alt+Enter is fullscreen by default. Remap it as described in [Terminal setup](terminal-setup.md) if you want pi to receive the shortcut.
+On Windows Terminal, Alt+Enter is fullscreen by default. Remap it as described in [Terminal setup](terminal-setup.md) if you want Tau to receive the shortcut.
 
 Configure delivery in [Settings](settings.md) with `steeringMode` and `followUpMode`.
 
 ## Sessions
 
-Sessions are saved automatically to `~/.pi/agent/sessions/`, organized by working directory.
+Sessions are saved automatically to `~/.tau/agent/sessions/`, organized by working directory.
 
 ```bash
-pi -c                  # Continue most recent session
-pi -r                  # Browse and select a session
-pi --no-session        # Ephemeral mode; do not save
-pi --name "my task"    # Set session display name at startup
-pi --session <path|id> # Use a specific session file or session ID
-pi --fork <path|id>    # Fork a session into a new session file
+tau -c                  # Continue most recent session
+tau -r                  # Browse and select a session
+tau --no-session        # Ephemeral mode; do not save
+tau --name "my task"    # Set session display name at startup
+tau --session <path|id> # Use a specific session file or session ID
+tau --fork <path|id>    # Fork a session into a new session file
 ```
 
 Useful session commands:
@@ -93,9 +92,9 @@ See [Sessions](sessions.md) and [Compaction](compaction.md) for details.
 
 ## Context Files
 
-Pi loads `AGENTS.md` or `CLAUDE.md` at startup from:
+Tau loads `AGENTS.md` at startup from:
 
-- `~/.pi/agent/AGENTS.md` for global instructions
+- `~/.tau/agent/AGENTS.md` for global instructions
 - parent directories, walking up from the current working directory when the project is trusted
 - the current directory when the project is trusted
 
@@ -105,14 +104,14 @@ Use context files for project conventions, commands, safety rules, and preferenc
 
 Replace the default system prompt with:
 
-- `.pi/SYSTEM.md` for a project
-- `~/.pi/agent/SYSTEM.md` globally
+- `.tau/SYSTEM.md` for a project
+- `~/.tau/agent/SYSTEM.md` globally
 
 Append to the default prompt without replacing it with `APPEND_SYSTEM.md` in either location.
 
 ### Project Trust
 
-On interactive startup, pi asks before trusting a project folder that contains project-local inputs and has no saved decision in `~/.pi/agent/trust.json`. Trusting a project allows pi to read project instructions (`AGENTS.md`/`CLAUDE.md`), load `.pi/settings.json` and `.pi` resources, install missing project packages, and execute project extensions.
+On interactive startup, Tau asks before trusting a project folder that contains project-local inputs and has no saved decision in `~/.tau/agent/trust.json`. Trusting a project allows Tau to read project instructions (`AGENTS.md`), load `.tau/settings.json` and `.tau` resources, install missing project packages, and execute project extensions.
 
 Non-interactive modes (`-p`, `--mode json`, and `--mode rpc`) do not show a trust prompt. Without a saved trust decision, they ignore project-local inputs unless `--approve`/`-a` is passed. Use `--no-approve`/`-na` to ignore project-local inputs for one run even when the project is trusted.
 
