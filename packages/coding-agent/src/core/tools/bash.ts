@@ -540,7 +540,7 @@ export function createBashToolDefinition(
 				spawnContext.env.PYTHONUNBUFFERED = "1";
 			}
 
-			const output = new OutputAccumulator({ tempFilePrefix: "pi-bash" });
+			const output = new OutputAccumulator({ tempFilePrefix: "tau-bash" });
 			let updateTimer: NodeJS.Timeout | undefined;
 			let updateDirty = false;
 			let lastUpdateAt = 0;

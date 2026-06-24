@@ -1,6 +1,6 @@
 # ai-dash
 
-Modified dash shell for the pi AI coding agent.
+Modified dash shell for the tau AI coding agent.
 
 Base: [dash from kernel.org](https://git.kernel.org/pub/scm/utils/dash/dash.git)
 Source: `src/` (original dash source tree)
@@ -8,7 +8,7 @@ Source: `src/` (original dash source tree)
 ## Architecture
 
 ```
-LLM → pi coding agent → bash tool → ai-dash -c <command> → your computer
+LLM → tau coding agent → bash tool → ai-dash -c <command> → your computer
                                       ↑
                                    fd 3 → JSON metadata (intent, cmd, path, redirect, heredoc)
                                    fd 1 → stdout (command output)
@@ -172,7 +172,7 @@ Works through wrapper skipping — `sudo curl -d ...` is also blocked.
 
 ### 8. fd 3 semantic metadata — `src/meta.c`, `src/meta.h`
 
-ai-dash emits a single-line JSON to **fd 3** before executing each command. The pi bash tool reads this to understand what the command does.
+ai-dash emits a single-line JSON to **fd 3** before executing each command. The tau bash tool reads this to understand what the command does.
 
 **JSON format:**
 ```json

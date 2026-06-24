@@ -55,7 +55,7 @@ export class TaskManager {
 		onStdout?: (data: Buffer) => void;
 	}): string {
 		const id = this.generateTaskId();
-		const outputPath = join(tmpdir(), `pi-task-${id}.log`);
+		const outputPath = join(tmpdir(), `tau-task-${id}.log`);
 		const stream = createWriteStream(outputPath);
 
 		const task: BackgroundTask = {

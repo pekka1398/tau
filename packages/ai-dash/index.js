@@ -6,7 +6,7 @@ export const AI_DASH = resolveAiDash();
 
 function resolveAiDash() {
 	// 1. Next to the running executable (bun compile case)
-	//    process.execPath = the pi binary, ai-dash is copied alongside
+	//    process.execPath = the tau binary, ai-dash is copied alongside
 	const execDir = dirname(process.execPath);
 	const alongside = join(execDir, "ai-dash");
 	if (existsSync(alongside)) return alongside;

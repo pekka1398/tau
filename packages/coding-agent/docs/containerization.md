@@ -1,20 +1,20 @@
 # Containerization
 
-Pi runs with all permissions by default, but in some cases, you will want to have more control over what directories Pi can write to and which accesses it has.
+Tau runs with all permissions by default, but in some cases, you will want to have more control over what directories Tau can write to and which accesses it has.
 
 There are two general options. You can either
-1. run the whole `pi` process inside an isolated environment, or
-2. run `pi` on the host and route tool execution into an isolated environment.
+1. run the whole `tau` process inside an isolated environment, or
+2. run `tau` on the host and route tool execution into an isolated environment.
 
 ## Choose a pattern
 
 | Pattern | What is isolated | Best for | Notes |
 | --- | --- | --- | --- |
-| OpenShell | Whole `pi` process in a policy-controlled sandbox | Local or remote managed sandbox | Requires an OpenShell gateway |
+| OpenShell | Whole `tau` process in a policy-controlled sandbox | Local or remote managed sandbox | Requires an OpenShell gateway |
 | Gondolin extension | Built-in tools and `!` commands | Local micro-VM isolation while keeping auth on host | See [`examples/extensions/gondolin/`](../examples/extensions/gondolin/). |
-| Plain Docker | Whole `pi` process in a local container | Simple local isolation | Provider API keys enter the container. |
+| Plain Docker | Whole `tau` process in a local container | Simple local isolation | Provider API keys enter the container. |
 
-Extensions run wherever the `pi` process runs. If you run host `pi` with a tool-routing extension, other custom extension tools still run on the host unless they also delegate their operations.
+Extensions run wherever the `tau` process runs. If you run host `tau` with a tool-routing extension, other custom extension tools still run on the host unless they also delegate their operations.
 
 ## OpenShell
 
@@ -29,26 +29,26 @@ openshell gateway add <gateway-url> --name <name>
 openshell gateway select <name>
 ```
 
-Launch `pi` inside an OpenShell sandbox:
+Launch `tau` inside an OpenShell sandbox:
 
 ```bash
-openshell sandbox create --name pi-sandbox --from pi -- pi
+openshell sandbox create --name tau-sandbox --from tau -- tau
 ```
 
-In this pattern, the whole `pi` process runs inside the sandbox.
+In this pattern, the whole `tau` process runs inside the sandbox.
 Built-in tools, `!` commands, and extension tools execute inside the OpenShell boundary.
 
 If the gateway is remote, project files are not bind-mounted from the host, meaning writes in the sandbox are not reflected on your machine.
 Clone the repository inside the sandbox or use OpenShell file transfer commands:
 
 ```bash
-openshell sandbox upload pi-sandbox ./repo /workspace
-openshell sandbox download pi-sandbox /workspace/repo ./repo-out
+openshell sandbox upload tau-sandbox ./repo /workspace
+openshell sandbox download tau-sandbox /workspace/repo ./repo-out
 ```
 
 OpenShell providers can keep raw model API keys outside the sandbox.
 When inference routing is configured, code inside the sandbox can call `https://inference.local`, and the gateway injects the configured provider credentials upstream.
-Configure Pi to use the corresponding OpenAI-compatible or Anthropic-compatible endpoint if you want model traffic to use this route.
+Keep OpenRouter API credentials outside the sandbox when routing tool execution through a container.
 
 ## Gondolin
 
@@ -78,9 +78,9 @@ Requirements: Node.js >= 23.6.0 for `@earendil-works/gondolin`, plus QEMU (requi
 
 ## Plain Docker
 
-Run the whole `pi` process in Docker when you want the simplest local container boundary.
+Run the whole `tau` process in Docker when you want the simplest local container boundary.
 
-`Dockerfile.pi`:
+`Dockerfile.tau`:
 
 ```dockerfile
 FROM node:24-bookworm-slim
@@ -97,7 +97,7 @@ ENTRYPOINT ["tau"]
 Build and run:
 
 ```bash
-docker build -t tau-sandbox -f Dockerfile.pi .
+docker build -t tau-sandbox -f Dockerfile.tau .
 
 docker run --rm -it \
   -e OPENROUTER_API_KEY \

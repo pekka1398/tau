@@ -50,7 +50,7 @@ const modelRegistry = ModelRegistry.create(authStorage);
 const { session } = await createAgentSession({ authStorage, modelRegistry });
 
 // Custom model
-const model = getModel("anthropic", "claude-opus-4-5");
+const model = getModel("openrouter", "anthropic/claude-opus-4.5");
 const { session } = await createAgentSession({ model, thinkingLevel: "high", authStorage, modelRegistry });
 
 // Modify prompt
@@ -72,7 +72,7 @@ const { session } = await createAgentSession({
 
 // Full control
 const customAuth = AuthStorage.create("/my/app/auth.json");
-customAuth.setRuntimeApiKey("anthropic", process.env.MY_KEY!);
+customAuth.setRuntimeApiKey("openrouter", process.env.MY_KEY!);
 const customRegistry = ModelRegistry.create(customAuth);
 
 const resourceLoader = new DefaultResourceLoader({

@@ -16,14 +16,13 @@ const EXTENSIONS_DOC_URL =
 	"https://github.com/earendil-works/tau-mono/blob/main/packages/coding-agent/docs/extensions.md";
 
 /**
- * Migrate legacy oauth.json and settings.json apiKeys to auth.json.
+ * Migrate legacy settings.json apiKeys to auth.json.
  *
  * @returns Array of provider names that were migrated
  */
 export function migrateAuthToAuthJson(): string[] {
 	const agentDir = getAgentDir();
 	const authPath = join(agentDir, "auth.json");
-	const oauthPath = join(agentDir, "oauth.json");
 	const settingsPath = join(agentDir, "settings.json");
 
 	// Skip if auth.json already exists
@@ -31,20 +30,6 @@ export function migrateAuthToAuthJson(): string[] {
 
 	const migrated: Record<string, unknown> = {};
 	const providers: string[] = [];
-
-	// Migrate oauth.json
-	if (existsSync(oauthPath)) {
-		try {
-			const oauth = JSON.parse(readFileSync(oauthPath, "utf-8"));
-			for (const [provider, cred] of Object.entries(oauth)) {
-				migrated[provider] = { type: "oauth", ...(cred as object) };
-				providers.push(provider);
-			}
-			renameSync(oauthPath, `${oauthPath}.migrated`);
-		} catch {
-			// Skip on error
-		}
-	}
 
 	// Migrate settings.json apiKeys
 	if (existsSync(settingsPath)) {
@@ -348,7 +333,7 @@ function migrateToolsToBin(): void {
 
 /**
  * Check for deprecated hooks/ and tools/ directories.
- * Note: tools/ may contain fd/rg binaries extracted by pi, so only warn if it has other files.
+ * Note: tools/ may contain fd/rg binaries extracted by Tau, so only warn if it has other files.
  */
 function checkDeprecatedExtensionDirs(baseDir: string, label: string): string[] {
 	const hooksDir = join(baseDir, "hooks");

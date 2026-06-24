@@ -1,33 +1,33 @@
 # Todo
 
-Pi includes a built-in project todo/issue tracker. Todos are stored in `.pi/todos.json` at the project root and are accessible via CLI, interactive mode, and agents.
+Tau includes a built-in project todo/issue tracker. Todos are stored in `.tau/todos.json` at the project root and are accessible via CLI, interactive mode, and agents.
 
 ## CLI Usage
 
 ```bash
 # List todos
-pi todo list                          # all todos, sorted by priority
-pi todo list --status open            # filter by status
-pi todo list --priority high          # filter by priority
-pi todo list --tag bug                # filter by tag
+tau todo list                          # all todos, sorted by priority
+tau todo list --status open            # filter by status
+tau todo list --priority high          # filter by priority
+tau todo list --tag bug                # filter by tag
 
 # Add a todo
-pi todo add "Fix TUI scroll bug"
-pi todo add "Add unit tests" --priority high --tag testing --desc "Cover subagent fork mode"
+tau todo add "Fix TUI scroll bug"
+tau todo add "Add unit tests" --priority high --tag testing --desc "Cover subagent fork mode"
 
 # Update status
-pi todo done t-003                    # mark as done
-pi todo update t-003 --status in_progress
-pi todo update t-003 --priority critical
+tau todo done t-003                    # mark as done
+tau todo update t-003 --status in_progress
+tau todo update t-003 --priority critical
 
 # View details
-pi todo show t-007
+tau todo show t-007
 
 # Delete
-pi todo delete t-007
+tau todo delete t-007
 
 # Summary
-pi todo summary
+tau todo summary
 ```
 
 ## Interactive Mode
@@ -64,12 +64,12 @@ In the TUI, use the `/todo` slash command:
 Tags are freeform strings, comma-separated when adding:
 
 ```bash
-pi todo add "Bug fix" --tag bug,tui,urgent
+tau todo add "Bug fix" --tag bug,tui,urgent
 ```
 
 ## Storage Format
 
-Todos are stored in `.pi/todos.json`:
+Todos are stored in `.tau/todos.json`:
 
 ```json
 {
@@ -103,14 +103,14 @@ Agents can read and update todos. In the system prompt, agents see the todo tool
 
 ```bash
 # All open bugs
-pi todo list --status open --tag bug
+tau todo list --status open --tag bug
 
 # Critical items only
-pi todo list --priority critical
+tau todo list --priority critical
 
 # What's in progress
-pi todo list --status in_progress
+tau todo list --status in_progress
 
 # Count by status
-pi todo summary
+tau todo summary
 ```

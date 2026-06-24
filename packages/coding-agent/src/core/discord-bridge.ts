@@ -1,8 +1,8 @@
 /**
- * Discord Bridge — control Pi from your phone via Discord.
+ * Discord Bridge — control Tau from your phone via Discord.
  *
  * Architecture:
- *   Phone Discord <-> Discord API <-> This bot (local) <-> Pi AgentSession
+ *   Phone Discord <-> Discord API <-> This bot (local) <-> Tau AgentSession
  *
  * Each /discord call creates a new Discord channel.
  * Conversation history is synced on connect.
@@ -25,7 +25,7 @@ type DiscordTextChannel = TextChannel;
 type DiscordMessage = Message;
 
 const DISCORD_MAX_LENGTH = 2000;
-const CHANNEL_PREFIX = "pi-";
+const CHANNEL_PREFIX = "tau-";
 const POLL_INTERVAL_MS = 1500;
 
 // ============================================================================
@@ -211,7 +211,7 @@ async function ensureClient(token: string, statusCb?: (msg: string) => void): Pr
 		intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
 	});
 
-	// Handle inbound messages from Discord → Pi
+	// Handle inbound messages from Discord → Tau
 	client.on(Events.MessageCreate, async (msg: DiscordMessage) => {
 		if (msg.author.id === client!.user?.id) return;
 		const session = activeSessions.get(msg.channelId);
@@ -273,7 +273,7 @@ export async function startDiscordBridge(
 	const channel = await guild.channels.create({
 		name: `${CHANNEL_PREFIX}${dateStr}`,
 		type: 0, // GuildText
-		topic: "Pi remote control session",
+		topic: "Tau remote control session",
 	});
 
 	// Sync existing messages (last 30)
@@ -317,7 +317,7 @@ export async function startDiscordBridge(
 		await pollNewMessages(channel.id);
 	}, POLL_INTERVAL_MS);
 
-	await sendToChannel(channel, "🟢 **Pi bridge connected!** Send messages here to control Pi.");
+	await sendToChannel(channel, "🟢 **Tau bridge connected!** Send messages here to control Tau.");
 	return channel.id;
 }
 
@@ -332,7 +332,7 @@ export async function stopDiscordBridge(channelId: string): Promise<void> {
 	if (session.watcherInterval) clearInterval(session.watcherInterval);
 	activeSessions.delete(channelId);
 
-	await sendToChannel(session.channel, "🔴 **Pi bridge disconnected.**").catch(() => {});
+	await sendToChannel(session.channel, "🔴 **Tau bridge disconnected.**").catch(() => {});
 
 	if (activeSessions.size === 0 && client) {
 		client.destroy();
@@ -386,7 +386,7 @@ async function handleSessionEvent(channelId: string, event: AgentSessionEvent): 
 			if (msg.role === "assistant") {
 				// Send accumulated streaming text
 				if (bridge.streamingBuffer.trim()) {
-					await sendToChannelChunked(bridge.channel, `**Pi:** ${bridge.streamingBuffer.trim()}`);
+					await sendToChannelChunked(bridge.channel, `**Tau:** ${bridge.streamingBuffer.trim()}`);
 				}
 				// Send tool call summaries
 				const assistantMsg = msg as AssistantMessage;
@@ -487,7 +487,7 @@ function batchMessages(msgs: AgentMessage[]): string[] {
 		if (msg.role === "user") {
 			line = `**You:** ${formatted}`;
 		} else if (msg.role === "assistant") {
-			line = `**Pi:** ${formatted}`;
+			line = `**Tau:** ${formatted}`;
 		} else if (msg.role === "bashExecution") {
 			line = formatted; // Already formatted
 		} else {

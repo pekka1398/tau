@@ -171,7 +171,7 @@ function initDumpLogger(agentDir: string, sessionId: string): void {
  * // With explicit model
  * import { getModel } from '@earendil-works/tau-ai';
  * const { session } = await createAgentSession({
- *   model: getModel('anthropic', 'claude-opus-4-5'),
+ *   model: getModel('openrouter', 'anthropic/claude-opus-4.5'),
  *   thinkingLevel: 'high',
  * });
  *

@@ -190,7 +190,7 @@ When a `Focusable` component has focus, TUI:
 3. Positions the hardware terminal cursor at that location
 4. Shows the hardware cursor only when `showHardwareCursor` is enabled
 
-The cursor remains hidden by default. This keeps the fake cursor rendering, while still positioning the hardware cursor for terminals that track IME candidate windows with hidden cursors. Some terminals require a visible hardware cursor for IME positioning; enable it with the `TUI` constructor option, `setShowHardwareCursor(true)`, or `PI_HARDWARE_CURSOR=1`. The `Editor` and `Input` built-in components already implement this interface.
+The cursor remains hidden by default. This keeps the fake cursor rendering, while still positioning the hardware cursor for terminals that track IME candidate windows with hidden cursors. Some terminals require a visible hardware cursor for IME positioning; enable it with the `TUI` constructor option, `setShowHardwareCursor(true)`, or `TAU_HARDWARE_CURSOR=1`. The `Editor` and `Input` built-in components already implement this interface.
 
 **Container components with embedded inputs:** When a container component (dialog, selector, etc.) contains an `Input` or `Editor` child, the container must implement `Focusable` and propagate the focus state to the child:
 
@@ -784,10 +784,10 @@ npx tsx test/chat-simple.ts
 
 ### Debug logging
 
-Set `PI_TUI_WRITE_LOG` to capture the raw ANSI stream written to stdout.
+Set `TAU_TUI_WRITE_LOG` to capture the raw ANSI stream written to stdout.
 
 ```bash
-PI_TUI_WRITE_LOG=/tmp/tui-ansi.log npx tsx test/chat-simple.ts
+TAU_TUI_WRITE_LOG=/tmp/tui-ansi.log npx tsx test/chat-simple.ts
 ```
 
 ### Debugging rendering issues
@@ -804,13 +804,13 @@ When components don't update correctly on screen, the issue is usually one of:
 
 ```bash
 # Capture raw ANSI output for post-mortem analysis
-PI_TUI_WRITE_LOG=/tmp/tui-ansi.log
+TAU_TUI_WRITE_LOG=/tmp/tui-ansi.log
 
 # Force full re-render when content shrinks (bypasses differential rendering)
-PI_CLEAR_ON_SHRINK=1
+TAU_CLEAR_ON_SHRINK=1
 
 # Enable TUI render path logging (shows which rendering strategy was used)
-PI_DEBUG_REDRAW=1
+TAU_DEBUG_REDRAW=1
 ```
 
 **Debugging checklist for component rendering:**
@@ -818,8 +818,8 @@ PI_DEBUG_REDRAW=1
 - Check if the component's `render()` returns the expected number of lines
 - Check if cached state (e.g., `collapsedStyledOutput`) is `null` when it should be
 - Check if `hideComponent` flag is set correctly
-- Use `PI_CLEAR_ON_SHRINK=1` to rule out differential rendering issues
-- Use `PI_TUI_WRITE_LOG` to capture the actual ANSI output and compare with expected
+- Use `TAU_CLEAR_ON_SHRINK=1` to rule out differential rendering issues
+- Use `TAU_TUI_WRITE_LOG` to capture the actual ANSI output and compare with expected
 
 ### Common pitfall: early return without clearing cached state
 

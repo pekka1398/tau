@@ -6,7 +6,7 @@ See [AGENTS.md](https://github.com/pekka1398/tau/blob/main/AGENTS.md) for additi
 
 ```bash
 git clone https://github.com/pekka1398/tau
-cd pi-mono
+cd tau
 npm install
 npm run build
 ```
@@ -14,10 +14,10 @@ npm run build
 Run from source:
 
 ```bash
-/path/to/pi-mono/pi-test.sh
+/path/to/tau/tau-test.sh
 ```
 
-The script can be run from any directory. Pi keeps the caller's current working directory.
+The script can be run from any directory. Tau keeps the caller's current working directory.
 
 ## Forking / Rebranding
 
@@ -25,9 +25,9 @@ Configure via `package.json`:
 
 ```json
 {
-  "piConfig": {
-    "name": "pi",
-    "configDir": ".pi"
+  "tauConfig": {
+    "name": "tau",
+    "configDir": ".tau"
   }
 }
 ```
@@ -48,7 +48,7 @@ Never use `__dirname` directly for package assets.
 
 ## Debug Command
 
-`/debug` (hidden) writes to `~/.pi/agent/pi-debug.log`:
+`/debug` (hidden) writes to `~/.tau/agent/tau-debug.log`:
 - Rendered TUI lines with ANSI codes
 - Last messages sent to the LLM
 
@@ -90,12 +90,12 @@ ai-dash (fd3 metadata)
 ### Debug environment variables
 
 ```bash
-PI_DEBUG_TOOL_RESULT=1   # Enable all debug logs below
-PI_DEBUG_LOADER=1        # Loader state machine transitions
-PI_CLEAR_ON_SHRINK=1     # Force full re-render on content shrink
+TAU_DEBUG_TOOL_RESULT=1   # Enable all debug logs below
+TAU_DEBUG_LOADER=1        # Loader state machine transitions
+TAU_CLEAR_ON_SHRINK=1     # Force full re-render on content shrink
 ```
 
-### Debug log files (created when PI_DEBUG_TOOL_RESULT=1)
+### Debug log files (created when TAU_DEBUG_TOOL_RESULT=1)
 
 | File | What it logs |
 |------|-------------|
@@ -115,7 +115,7 @@ When hiding a result via early return, BOTH must be cleared. `component.clear()`
 
 ### Common debug flow
 
-1. Run with `PI_DEBUG_TOOL_RESULT=1`
+1. Run with `TAU_DEBUG_TOOL_RESULT=1`
 2. Check `/tmp/bash-rebuild.log` — did the intent check run? Did it return early?
 3. Check `/tmp/bash-render.log` — does `collapsedStyledOutput` still exist after the intent check?
 4. Check `/tmp/tui-render.log` — did the TUI re-render after the component was cleared?

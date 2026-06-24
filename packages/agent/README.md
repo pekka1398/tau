@@ -17,7 +17,7 @@ import { getModel } from "@earendil-works/tau-ai";
 const agent = new Agent({
   initialState: {
     systemPrompt: "You are a helpful assistant.",
-    model: getModel("anthropic", "claude-sonnet-4-20250514"),
+    model: getModel("openrouter", "anthropic/claude-sonnet-4.5"),
   },
 });
 
@@ -187,7 +187,7 @@ const agent = new Agent({
   // Session ID for provider caching
   sessionId: "session-123",
 
-  // Dynamic API key resolution (for expiring OAuth tokens)
+  // Dynamic API key resolution (for runtime-provided keys)
   getApiKey: async (provider) => refreshToken(),
 
   // Tool execution mode: "parallel" (default) or "sequential"

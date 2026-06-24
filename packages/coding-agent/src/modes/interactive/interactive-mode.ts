@@ -200,8 +200,6 @@ function _hasDefaultModelProvider(providerId: string): providerId is keyof typeo
 	return providerId in defaultModelPerProvider;
 }
 
-const _BEDROCK_PROVIDER_ID = "amazon-bedrock";
-
 const _BUILT_IN_MODEL_PROVIDERS = new Set<string>(getProviders());
 
 /**

@@ -1,6 +1,6 @@
 # Subagent System
 
-Pi's subagent system allows the main agent to delegate tasks to specialized sub-agents with isolated context. Sub-agents run in-process (not as child processes) and share the same LLM provider infrastructure as the main agent.
+Tau's subagent system allows the main agent to delegate tasks to specialized sub-agents with isolated context. Sub-agents run in-process (not as child processes) and share the same LLM provider infrastructure as the main agent.
 
 ## Architecture
 
@@ -41,7 +41,7 @@ Agent discovery from markdown files with YAML frontmatter.
 
 | Export | Purpose |
 |--------|---------|
-| `discoverAgents(cwd, scope)` | Scan `~/.pi/agent/agents/*.md` and `<project>/.pi/agents/*.md` |
+| `discoverAgents(cwd, scope)` | Scan `~/.tau/agent/agents/*.md` and `<project>/.tau/agents/*.md` |
 | `AgentConfig` | Parsed agent definition (name, description, tools, model, systemPrompt) |
 | `AgentScope` | `"user"` / `"project"` / `"both"` |
 
@@ -147,7 +147,7 @@ Main agent turn:
 
 ## Comparison with Claude Code's Subagent
 
-| Feature | Pi | Claude Code |
+| Feature | Tau | Claude Code |
 |---------|-----|-------------|
 | Execution | In-process (agentLoop) | In-process (query loop) |
 | Sync mode | Yes | Yes |
