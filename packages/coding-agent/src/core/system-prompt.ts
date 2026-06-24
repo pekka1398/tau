@@ -7,10 +7,9 @@ import os from "node:os";
 import { join } from "node:path";
 import { getDocsPath, getExamplesPath, getProjectDir, getReadmePath } from "../config.ts";
 import { spawnProcessSync } from "../utils/child-process.ts";
-import { STATIC_SYSTEM_PROMPT } from "./prompts/static-prompt.ts";
 import { formatSkillsForPrompt, type Skill } from "./skills.ts";
 
-const STATIC_PROMPT = STATIC_SYSTEM_PROMPT;
+const STATIC_PROMPT = readFileSync(new URL("./prompts/static-system-prompt.md", import.meta.url), "utf-8");
 
 export interface BuildSystemPromptOptions {
 	/** Working directory. */
