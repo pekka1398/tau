@@ -468,25 +468,23 @@ const { session } = await createAgentSession({ resourceLoader: loader });
 
 Specify which built-in tools to enable:
 
-- Built-in tool names: `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`
-- Default built-ins: `read`, `bash`, `edit`, `write`
+- Built-in tool names: `bash`, `edit`, `subagent`, `transcribe`, `vision`
+- Default built-ins: `bash`, `edit`, `subagent`, `transcribe`, `vision`
 - `noTools: "all"` disables all tools
 - `noTools: "builtin"` disables default built-ins while keeping extension and custom tools enabled
 - `excludeTools` disables specific built-in, extension, or custom tool names after any `tools` allowlist is applied
 
-The `edit` tool returns `details.diff` for Tau's TUI display and `details.patch` as a standard unified patch for SDK consumers.
-
 ```typescript
 import { createAgentSession } from "@earendil-works/tau-coding-agent";
 
-// Read-only mode
+// Disable shell and edit tools for review-oriented runs
 const { session } = await createAgentSession({
-  tools: ["read", "grep", "find", "ls"],
+  excludeTools: ["bash", "edit"],
 });
 
 // Pick specific tools
 const { session } = await createAgentSession({
-  tools: ["read", "bash", "grep"],
+  tools: ["bash", "subagent"],
 });
 
 // Disable one tool while keeping the rest available

@@ -10,8 +10,8 @@
  * ---
  * name: reviewer
  * description: Code review agent
- * tools: read,grep,ls
- * model: gpt-4
+ * tools: bash,edit
+ * model: inherit
  * maxTurns: 50
  * background: false
  * isolation: worktree

@@ -40,6 +40,9 @@ type RenderSessionContextThis = {
 	session: { retryAttempt: number };
 	toolOutputExpanded: boolean;
 	isInitialized: boolean;
+	logLoaderTransition(status: string, reason: string): void;
+	updateLoaderMessage(): void;
+	startLoaderTick(): void;
 	updateEditorBorderColor(): void;
 	getRegisteredToolDefinition(toolName: string): undefined;
 	addMessageToChat(message: AgentMessage, options?: { populateHistory?: boolean }): void;
@@ -68,6 +71,9 @@ function createFakeInteractiveModeThis(): RenderSessionContextThis {
 		session: { retryAttempt: 0 },
 		toolOutputExpanded: false,
 		isInitialized: true,
+		logLoaderTransition: vi.fn(),
+		updateLoaderMessage: vi.fn(),
+		startLoaderTick: vi.fn(),
 		updateEditorBorderColor: vi.fn(),
 		getRegisteredToolDefinition: (_toolName: string) => undefined,
 		addMessageToChat(message: AgentMessage) {
