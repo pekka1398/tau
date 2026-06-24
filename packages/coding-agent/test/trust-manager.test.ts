@@ -47,9 +47,9 @@ describe("ProjectTrustStore", () => {
 	it("detects project trust inputs", () => {
 		expect(hasProjectTrustInputs(cwd)).toBe(false);
 
-		mkdirSync(getProjectDir(cwd, agentDir), { recursive: true });
+		mkdirSync(getProjectDir(cwd), { recursive: true });
 		expect(hasProjectTrustInputs(cwd)).toBe(true);
-		rmSync(getProjectDir(cwd, agentDir), { recursive: true, force: true });
+		rmSync(getProjectDir(cwd), { recursive: true, force: true });
 
 		writeFileSync(join(cwd, "AGENTS.md"), "Project instructions");
 		expect(hasProjectTrustInputs(cwd)).toBe(true);

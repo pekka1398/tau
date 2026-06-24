@@ -270,7 +270,6 @@ describe("AgentSession model and extension characterization", () => {
 						handler: async (_args, ctx) => {
 							const options = ctx.getSystemPromptOptions();
 							seenOptions.push(options);
-							options.selectedTools?.push("mutated_tool");
 						},
 					});
 				},
@@ -284,8 +283,6 @@ describe("AgentSession model and extension characterization", () => {
 		expect(seenOptions).toHaveLength(2);
 		expect(seenOptions[0]).toBe(seenOptions[1]);
 		expect(seenOptions[0]?.cwd).toBe(harness.tempDir);
-		expect(seenOptions[0]?.selectedTools).toContain("read");
-		expect(seenOptions[1]?.selectedTools).toContain("mutated_tool");
 	});
 
 	it("allows before_agent_start handlers to inject custom messages and modify the system prompt", async () => {

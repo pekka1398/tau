@@ -1,11 +1,12 @@
 import { spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { ENV_AGENT_DIR, getProjectDir } from "../src/config.ts";
 
 const cliPath = resolve(__dirname, "../src/cli.ts");
+const runtimePath = join(homedir(), ".bun", "bin", "bun");
 
 const tempDirs: string[] = [];
 
@@ -27,6 +28,7 @@ async function runCli(args: string[]): Promise<{ stdout: string; stderr: string;
 	const projectDir = join(tempRoot, "project");
 	const projectConfigDir = getProjectDir(projectDir, agentDir);
 	mkdirSync(agentDir, { recursive: true });
+	mkdirSync(projectDir, { recursive: true });
 	mkdirSync(projectConfigDir, { recursive: true });
 
 	const fakeNpmPath = join(tempRoot, "fake-npm.mjs");
@@ -45,7 +47,7 @@ async function runCli(args: string[]): Promise<{ stdout: string; stderr: string;
 		JSON.stringify(
 			{
 				packages: ["npm:fake-package"],
-				npmCommand: [process.execPath, fakeNpmPath],
+				npmCommand: [runtimePath, fakeNpmPath],
 			},
 			null,
 			2,
@@ -54,7 +56,7 @@ async function runCli(args: string[]): Promise<{ stdout: string; stderr: string;
 	);
 
 	return await new Promise((resolvePromise, reject) => {
-		const child = spawn(process.execPath, [cliPath, ...args], {
+		const child = spawn(runtimePath, [cliPath, ...args], {
 			cwd: projectDir,
 			env: {
 				...process.env,
@@ -80,33 +82,33 @@ async function runCli(args: string[]): Promise<{ stdout: string; stderr: string;
 }
 
 describe("stdout cleanliness in non-interactive modes", () => {
-	it("keeps stdout empty for --mode json --help while routing trusted startup chatter to stderr", async () => {
+	it("prints --mode json --help to stdout while routing trusted startup chatter to stderr", async () => {
 		const result = await runCli(["--mode", "json", "--help", "--approve"]);
 
 		expect(result.code).toBe(0);
-		expect(result.stdout).toBe("");
+		expect(result.stdout).toContain("Usage:");
 		expect(result.stderr).toContain("changed 1 package in 471ms");
 		expect(result.stderr).toContain("found 0 vulnerabilities");
-		expect(result.stderr).toContain("Usage:");
+		expect(result.stderr).not.toContain("Usage:");
 	});
 
-	it("keeps stdout empty for -p --help while routing trusted startup chatter to stderr", async () => {
+	it("prints -p --help to stdout while routing trusted startup chatter to stderr", async () => {
 		const result = await runCli(["-p", "--help", "--approve"]);
 
 		expect(result.code).toBe(0);
-		expect(result.stdout).toBe("");
+		expect(result.stdout).toContain("Usage:");
 		expect(result.stderr).toContain("changed 1 package in 471ms");
 		expect(result.stderr).toContain("found 0 vulnerabilities");
-		expect(result.stderr).toContain("Usage:");
+		expect(result.stderr).not.toContain("Usage:");
 	});
 
 	it("ignores untrusted project package installs for help", async () => {
 		const result = await runCli(["-p", "--help"]);
 
 		expect(result.code).toBe(0);
-		expect(result.stdout).toBe("");
+		expect(result.stdout).toContain("Usage:");
 		expect(result.stderr).not.toContain("changed 1 package in 471ms");
 		expect(result.stderr).not.toContain("found 0 vulnerabilities");
-		expect(result.stderr).toContain("Usage:");
+		expect(result.stderr).not.toContain("Usage:");
 	});
 });

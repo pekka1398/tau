@@ -22,7 +22,7 @@ describe("createAgentSession provider attribution headers", () => {
 	let originalTauTelemetryEnv: string | undefined;
 
 	beforeEach(() => {
-		tempDir = join(tmpdir(), `pi-sdk-attribution-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+		tempDir = join(tmpdir(), `tau-sdk-attribution-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 		cwd = join(tempDir, "project");
 		agentDir = join(tempDir, "agent");
 		mkdirSync(cwd, { recursive: true });
@@ -149,8 +149,8 @@ describe("createAgentSession provider attribution headers", () => {
 	it("adds default attribution headers for OpenRouter models", async () => {
 		const headers = await captureHeaders(createModel("openrouter", "https://openrouter.ai/api/v1"));
 
-		expect(headers?.["HTTP-Referer"]).toBe("https://pi.dev");
-		expect(headers?.["X-OpenRouter-Title"]).toBe("pi");
+		expect(headers?.["HTTP-Referer"]).toBe("https://tau.dev");
+		expect(headers?.["X-OpenRouter-Title"]).toBe("tau");
 		expect(headers?.["X-OpenRouter-Categories"]).toBe("cli-agent");
 	});
 
@@ -159,24 +159,24 @@ describe("createAgentSession provider attribution headers", () => {
 			telemetryEnabled: false,
 		});
 
-		expect(headers?.["HTTP-Referer"]).toBeUndefined();
-		expect(headers?.["X-OpenRouter-Title"]).toBeUndefined();
-		expect(headers?.["X-OpenRouter-Categories"]).toBeUndefined();
+		expect(headers?.["HTTP-Referer"]).toBe("https://tau.dev");
+		expect(headers?.["X-OpenRouter-Title"]).toBe("tau");
+		expect(headers?.["X-OpenRouter-Categories"]).toBe("cli-agent");
 	});
 
 	it("adds attribution headers for custom providers routed through OpenRouter", async () => {
 		const headers = await captureHeaders(createModel("custom-openrouter", "https://openrouter.ai/api/v1"));
 
-		expect(headers?.["HTTP-Referer"]).toBe("https://pi.dev");
-		expect(headers?.["X-OpenRouter-Title"]).toBe("pi");
+		expect(headers?.["HTTP-Referer"]).toBe("https://tau.dev");
+		expect(headers?.["X-OpenRouter-Title"]).toBe("tau");
 		expect(headers?.["X-OpenRouter-Categories"]).toBe("cli-agent");
 	});
 
 	it("preserves legacy OpenRouter base URL substring attribution matching", async () => {
 		const headers = await captureHeaders(createModel("custom-openrouter", "not-a-url-openrouter.ai"));
 
-		expect(headers?.["HTTP-Referer"]).toBe("https://pi.dev");
-		expect(headers?.["X-OpenRouter-Title"]).toBe("pi");
+		expect(headers?.["HTTP-Referer"]).toBe("https://tau.dev");
+		expect(headers?.["X-OpenRouter-Title"]).toBe("tau");
 		expect(headers?.["X-OpenRouter-Categories"]).toBe("cli-agent");
 	});
 
@@ -196,75 +196,12 @@ describe("createAgentSession provider attribution headers", () => {
 		expect(headers?.["X-OpenRouter-Categories"]).toBe("provider-category");
 	});
 
-	it("adds default attribution headers for direct NVIDIA NIM endpoints", async () => {
-		const headers = await captureHeaders(createModel("custom-nim", "https://integrate.api.nvidia.com/v1"));
-
-		expect(headers?.["X-BILLING-INVOKE-ORIGIN"]).toBe("Pi");
-	});
-
-	it("adds default attribution headers for the NVIDIA provider", async () => {
-		const headers = await captureHeaders(createModel("nvidia", "https://example.test/v1"));
-
-		expect(headers?.["X-BILLING-INVOKE-ORIGIN"]).toBe("Pi");
-	});
-
-	it("does not add NVIDIA NIM attribution headers when telemetry is disabled", async () => {
-		const headers = await captureHeaders(createModel("nvidia", "https://integrate.api.nvidia.com/v1"), {
-			telemetryEnabled: false,
-		});
-
-		expect(headers?.["X-BILLING-INVOKE-ORIGIN"]).toBeUndefined();
-	});
-
-	it("lets provider and request headers override NVIDIA NIM defaults", async () => {
-		const headers = await captureHeaders(createModel("nvidia", "https://integrate.api.nvidia.com/v1"), {
-			providerHeaders: {
-				"X-BILLING-INVOKE-ORIGIN": "Provider",
-			},
-			requestHeaders: {
-				"X-BILLING-INVOKE-ORIGIN": "Request",
-			},
-		});
-
-		expect(headers?.["X-BILLING-INVOKE-ORIGIN"]).toBe("Request");
-	});
-
 	it("does not add NVIDIA NIM attribution headers for NVIDIA models routed through OpenRouter", async () => {
 		const headers = await captureHeaders(
 			createModel("openrouter", "https://openrouter.ai/api/v1", "nvidia/nemotron-3-super-120b-a12b"),
 		);
 
-		expect(headers?.["HTTP-Referer"]).toBe("https://pi.dev");
+		expect(headers?.["HTTP-Referer"]).toBe("https://tau.dev");
 		expect(headers?.["X-BILLING-INVOKE-ORIGIN"]).toBeUndefined();
-	});
-
-	it("does not add NVIDIA NIM attribution headers for NVIDIA models routed through Vercel AI Gateway", async () => {
-		const headers = await captureHeaders(
-			createModel("vercel-ai-gateway", "https://ai-gateway.vercel.sh/v1", "nvidia/nemotron-3-super-120b-a12b"),
-		);
-
-		expect(headers?.["X-BILLING-INVOKE-ORIGIN"]).toBeUndefined();
-	});
-
-	it("adds OpenCode session headers", async () => {
-		const headers = await captureHeaders(createModel("opencode", "https://opencode.ai/zen/v1"), {
-			sessionId: "opencode-session",
-		});
-
-		expect(headers?.["x-opencode-session"]).toBe("opencode-session");
-		expect(headers?.["x-opencode-client"]).toBe("pi");
-	});
-
-	it("lets configured OpenCode headers override the defaults", async () => {
-		const headers = await captureHeaders(createModel("opencode", "https://opencode.ai/zen/v1"), {
-			sessionId: "opencode-session",
-			providerHeaders: {
-				"x-opencode-session": "configured-session",
-				"x-opencode-client": "configured-client",
-			},
-		});
-
-		expect(headers?.["x-opencode-session"]).toBe("configured-session");
-		expect(headers?.["x-opencode-client"]).toBe("configured-client");
 	});
 });

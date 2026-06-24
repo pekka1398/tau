@@ -217,6 +217,7 @@ export {
 	type BashToolInput,
 	type BashToolOptions,
 	createBashToolDefinition,
+	createCodingTools,
 	createLocalBashOperations,
 	createTranscribeToolDefinition,
 	DEFAULT_MAX_BYTES,
