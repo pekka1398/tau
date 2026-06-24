@@ -406,17 +406,17 @@ describe("parseArgs", () => {
 		test("parses multiple flags together", () => {
 			const result = parseArgs([
 				"--provider",
-				"anthropic",
+				"openrouter",
 				"--model",
-				"claude-sonnet",
+				"anthropic/claude-sonnet-4.5",
 				"--print",
 				"--thinking",
 				"high",
 				"@prompt.md",
 				"Do the task",
 			]);
-			expect(result.provider).toBe("anthropic");
-			expect(result.model).toBe("claude-sonnet");
+			expect(result.provider).toBe("openrouter");
+			expect(result.model).toBe("anthropic/claude-sonnet-4.5");
 			expect(result.print).toBe(true);
 			expect(result.thinking).toBe("high");
 			expect(result.fileArgs).toEqual(["prompt.md"]);

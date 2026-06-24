@@ -1,7 +1,7 @@
 import { once } from "node:events";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { convertMessages, streamOpenAICompletions } from "../src/providers/openai-completions.ts";
 import type {
 	AssistantMessage,
@@ -98,10 +98,6 @@ interface ChatCompletionsRequestBody {
 }
 
 describe("openai-completions thinking-as-text replay", () => {
-	afterEach(() => {
-		delete process.env.OPENAI_API_KEY;
-	});
-
 	it("serializes same-model thinking-plus-text replay as assistant text parts", () => {
 		const messages = convertMessages(
 			buildModel(),
