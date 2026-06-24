@@ -41,16 +41,16 @@ describe("version checks", () => {
 		await expect(checkForNewTauVersion("1.2.2")).resolves.toEqual({ version: "1.2.3" });
 	});
 
-	it("uses the pi.dev version check api with a pi user agent", async () => {
+	it("uses the tau.dev version check api with a tau user agent", async () => {
 		const fetchMock = vi.fn(async () => Response.json({ version: "1.2.4" }));
 		vi.stubGlobal("fetch", fetchMock);
 
 		await expect(getLatestTauVersion("1.2.3")).resolves.toBe("1.2.4");
 		expect(fetchMock).toHaveBeenCalledWith(
-			"https://pi.dev/api/latest-version",
+			"https://tau.dev/api/latest-version",
 			expect.objectContaining({
 				headers: expect.objectContaining({
-					"User-Agent": expect.stringMatching(/^pi\/1\.2\.3 /),
+					"User-Agent": expect.stringMatching(/^tau\/1\.2\.3 /),
 					accept: "application/json",
 				}),
 			}),
