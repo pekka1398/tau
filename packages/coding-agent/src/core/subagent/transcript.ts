@@ -7,7 +7,7 @@
 
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import type { AgentMessage } from "@earendil-works/tau-agent-core";
 import { getAgentDir } from "../../config.ts";
 
 const TRANSCRIPT_DIR_NAME = "transcripts";

@@ -19,10 +19,10 @@
       },
     },
     "packages/agent": {
-      "name": "@earendil-works/pi-agent-core",
+      "name": "@earendil-works/tau-agent-core",
       "version": "0.78.1",
       "dependencies": {
-        "@earendil-works/pi-ai": "^0.78.1",
+        "@earendil-works/tau-ai": "^0.78.1",
         "ignore": "7.0.5",
         "typebox": "1.1.38",
         "yaml": "2.9.0",
@@ -35,7 +35,7 @@
       },
     },
     "packages/ai": {
-      "name": "@earendil-works/pi-ai",
+      "name": "@earendil-works/tau-ai",
       "version": "0.78.1",
       "dependencies": {
         "http-proxy-agent": "7.0.2",
@@ -55,15 +55,15 @@
       "version": "0.1.0",
     },
     "packages/coding-agent": {
-      "name": "@earendil-works/pi-coding-agent",
+      "name": "@earendil-works/tau-coding-agent",
       "version": "0.78.1",
       "bin": {
         "pi": "dist/cli.js",
       },
       "dependencies": {
-        "@earendil-works/pi-agent-core": "^0.78.1",
-        "@earendil-works/pi-ai": "^0.78.1",
-        "@earendil-works/pi-tui": "^0.78.1",
+        "@earendil-works/tau-agent-core": "^0.78.1",
+        "@earendil-works/tau-ai": "^0.78.1",
+        "@earendil-works/tau-tui": "^0.78.1",
         "@silvia-odwyer/photon-node": "0.3.4",
         "ai-dash": "*",
         "chalk": "5.6.2",
@@ -98,7 +98,7 @@
       },
     },
     "packages/tui": {
-      "name": "@earendil-works/pi-tui",
+      "name": "@earendil-works/tau-tui",
       "version": "0.78.1",
       "dependencies": {
         "get-east-asian-width": "1.6.0",
@@ -158,13 +158,13 @@
 
     "@discordjs/ws": ["@discordjs/ws@1.2.3", "", { "dependencies": { "@discordjs/collection": "^2.1.0", "@discordjs/rest": "^2.5.1", "@discordjs/util": "^1.1.0", "@sapphire/async-queue": "^1.5.2", "@types/ws": "^8.5.10", "@vladfrangu/async_event_emitter": "^2.2.4", "discord-api-types": "^0.38.1", "tslib": "^2.6.2", "ws": "^8.17.0" } }, "sha512-wPlQDxEmlDg5IxhJPuxXr3Vy9AjYq5xCvFWGJyD7w7Np8ZGu+Mc+97LCoEc/+AYCo2IDpKioiH0/c/mj5ZR9Uw=="],
 
-    "@earendil-works/pi-agent-core": ["@earendil-works/pi-agent-core@workspace:packages/agent"],
+    "@earendil-works/tau-agent-core": ["@earendil-works/tau-agent-core@workspace:packages/agent"],
 
-    "@earendil-works/pi-ai": ["@earendil-works/pi-ai@workspace:packages/ai"],
+    "@earendil-works/tau-ai": ["@earendil-works/tau-ai@workspace:packages/ai"],
 
-    "@earendil-works/pi-coding-agent": ["@earendil-works/pi-coding-agent@workspace:packages/coding-agent"],
+    "@earendil-works/tau-coding-agent": ["@earendil-works/tau-coding-agent@workspace:packages/coding-agent"],
 
-    "@earendil-works/pi-tui": ["@earendil-works/pi-tui@workspace:packages/tui"],
+    "@earendil-works/tau-tui": ["@earendil-works/tau-tui@workspace:packages/tui"],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.28.0", "", { "os": "aix", "cpu": "ppc64" }, "sha512-lhRUCeuOyJQURhTxl4WkpFTjIsbDayJHih5kZC1giwE+MhIzAb7mEsQMqMf18rHLsrb5qI1tafG20mLxEWcWlA=="],
 
@@ -802,11 +802,11 @@
 
     "@discordjs/ws/@discordjs/collection": ["@discordjs/collection@2.1.1", "", {}, "sha512-LiSusze9Tc7qF03sLCujF5iZp7K+vRNEDBZ86FT9aQAv3vxMLihUvKvpsCWiQ2DJq1tVckopKm1rxomgNUc9hg=="],
 
-    "@earendil-works/pi-agent-core/@types/node": ["@types/node@24.12.4", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-GUUEShf+PBCGW2KaXwcIt3Yk+e3pkKwWKb9GSyM9WQVE+ep2jzmHdGsHzu4wgcZy5fN9FBdVzjpBQsYlpfpgLA=="],
+    "@earendil-works/tau-agent-core/@types/node": ["@types/node@24.12.4", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-GUUEShf+PBCGW2KaXwcIt3Yk+e3pkKwWKb9GSyM9WQVE+ep2jzmHdGsHzu4wgcZy5fN9FBdVzjpBQsYlpfpgLA=="],
 
-    "@earendil-works/pi-ai/@types/node": ["@types/node@24.12.4", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-GUUEShf+PBCGW2KaXwcIt3Yk+e3pkKwWKb9GSyM9WQVE+ep2jzmHdGsHzu4wgcZy5fN9FBdVzjpBQsYlpfpgLA=="],
+    "@earendil-works/tau-ai/@types/node": ["@types/node@24.12.4", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-GUUEShf+PBCGW2KaXwcIt3Yk+e3pkKwWKb9GSyM9WQVE+ep2jzmHdGsHzu4wgcZy5fN9FBdVzjpBQsYlpfpgLA=="],
 
-    "@earendil-works/pi-coding-agent/@types/node": ["@types/node@24.12.4", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-GUUEShf+PBCGW2KaXwcIt3Yk+e3pkKwWKb9GSyM9WQVE+ep2jzmHdGsHzu4wgcZy5fN9FBdVzjpBQsYlpfpgLA=="],
+    "@earendil-works/tau-coding-agent/@types/node": ["@types/node@24.12.4", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-GUUEShf+PBCGW2KaXwcIt3Yk+e3pkKwWKb9GSyM9WQVE+ep2jzmHdGsHzu4wgcZy5fN9FBdVzjpBQsYlpfpgLA=="],
 
     "@types/cross-spawn/@types/node": ["@types/node@24.12.4", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-GUUEShf+PBCGW2KaXwcIt3Yk+e3pkKwWKb9GSyM9WQVE+ep2jzmHdGsHzu4wgcZy5fN9FBdVzjpBQsYlpfpgLA=="],
 
@@ -848,11 +848,11 @@
 
     "wrap-ansi-cjs/strip-ansi": ["strip-ansi@6.0.1", "", { "dependencies": { "ansi-regex": "^5.0.1" } }, "sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A=="],
 
-    "@earendil-works/pi-agent-core/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
+    "@earendil-works/tau-agent-core/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 
-    "@earendil-works/pi-ai/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
+    "@earendil-works/tau-ai/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 
-    "@earendil-works/pi-coding-agent/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
+    "@earendil-works/tau-coding-agent/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 
     "@types/cross-spawn/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 

@@ -1,5 +1,5 @@
 {
-	"name": "@earendil-works/pi-ai",
+	"name": "@earendil-works/tau-ai",
 	"version": "0.78.1",
 	"description": "OpenRouter-focused LLM API for Tau",
 	"type": "module",
@@ -44,7 +44,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/earendil-works/pi.git",
+		"url": "git+https://github.com/pekka1398/tau.git",
 		"directory": "packages/ai"
 	},
 	"engines": {

@@ -1,4 +1,4 @@
-import type { AgentTool } from "@earendil-works/pi-agent-core";
+import type { AgentTool } from "@earendil-works/tau-agent-core";
 import type { ToolContext, ToolDefinition } from "../tool-types.ts";
 
 /** Wrap a ToolDefinition into an AgentTool for the core runtime. */

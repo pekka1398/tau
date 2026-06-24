@@ -1,14 +1,14 @@
 /**
  * Multimodal API wrapper.
  *
- * Uses pi-ai's completeSimple for all calls (images + text).
- * Audio uses raw fetch since pi-ai has no AudioContent type.
+ * Uses tau-ai's completeSimple for all calls (images + text).
+ * Audio uses raw fetch since tau-ai has no AudioContent type.
  *
  * Key detail: we inject detail:"high" via onPayload hook
  * to ensure high-resolution image processing and avoid hallucinations.
  */
 
-import { completeSimple, getModel } from "@earendil-works/pi-ai";
+import { completeSimple, getModel } from "@earendil-works/tau-ai";
 import type { ChunkResult } from "./types.ts";
 
 /** Model for transcription. */
@@ -42,7 +42,7 @@ function injectHighResolution(payload: unknown): unknown {
 }
 
 /**
- * Transcribe a text chunk via pi-ai.
+ * Transcribe a text chunk via tau-ai.
  */
 export async function transcribeTextChunk(
 	text: string,
@@ -72,7 +72,7 @@ export async function transcribeTextChunk(
 }
 
 /**
- * Transcribe an image via pi-ai.
+ * Transcribe an image via tau-ai.
  * detail:"high" is injected by onPayload hook.
  */
 export async function transcribeImageChunk(
@@ -146,7 +146,7 @@ export async function transcribeImageBatch(
 
 /**
  * Transcribe audio via raw fetch.
- * pi-ai has no AudioContent type, so we build the request manually.
+ * tau-ai has no AudioContent type, so we build the request manually.
  */
 export async function transcribeAudioChunk(
 	audioData: Buffer,

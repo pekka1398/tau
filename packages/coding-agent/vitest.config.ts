@@ -17,10 +17,10 @@ export default defineConfig({
 	},
 	resolve: {
 			alias: [
-				{ find: /^@earendil-works\/pi-ai$/, replacement: aiSrcIndex },
-				{ find: /^@earendil-works\/pi-agent-core$/, replacement: agentSrcIndex },
-				{ find: /^@mariozechner\/pi-ai$/, replacement: aiSrcIndex },
-				{ find: /^@mariozechner\/pi-agent-core$/, replacement: agentSrcIndex },
+				{ find: /^@earendil-works\/tau-ai$/, replacement: aiSrcIndex },
+				{ find: /^@earendil-works\/tau-agent-core$/, replacement: agentSrcIndex },
+				{ find: /^@mariozechner\/tau-ai$/, replacement: aiSrcIndex },
+				{ find: /^@mariozechner\/tau-agent-core$/, replacement: agentSrcIndex },
 			],
 	},
 });

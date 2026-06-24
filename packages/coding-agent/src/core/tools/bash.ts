@@ -1,8 +1,8 @@
 import { appendFileSync, constants, createWriteStream, existsSync } from "node:fs";
 import { access as fsAccess } from "node:fs/promises";
 import { resolve as pathResolve } from "node:path";
-import type { AgentTool } from "@earendil-works/pi-agent-core";
-import { Container, Text } from "@earendil-works/pi-tui";
+import type { AgentTool } from "@earendil-works/tau-agent-core";
+import { Container, Text } from "@earendil-works/tau-tui";
 import { AI_DASH } from "ai-dash";
 import { spawn } from "child_process";
 import { type Static, Type } from "typebox";

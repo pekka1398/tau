@@ -7,7 +7,7 @@ This page gets you from install to a useful first Tau session.
 Tau is distributed as an npm package:
 
 ```bash
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+npm install -g --ignore-scripts @earendil-works/tau-coding-agent
 ```
 
 `--ignore-scripts` disables dependency lifecycle scripts during install. Tau does not require install scripts for normal npm installs.
@@ -17,10 +17,10 @@ npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 Use the package manager that installed Tau:
 
 ```bash
-npm uninstall -g @earendil-works/pi-coding-agent
-pnpm remove -g @earendil-works/pi-coding-agent
-yarn global remove @earendil-works/pi-coding-agent
-bun uninstall -g @earendil-works/pi-coding-agent
+npm uninstall -g @earendil-works/tau-coding-agent
+pnpm remove -g @earendil-works/tau-coding-agent
+yarn global remove @earendil-works/tau-coding-agent
+bun uninstall -g @earendil-works/tau-coding-agent
 ```
 
 Uninstalling Tau leaves settings, credentials, sessions, and installed packages in `~/.tau/agent/`.

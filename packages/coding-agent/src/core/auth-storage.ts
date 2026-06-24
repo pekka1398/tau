@@ -3,7 +3,7 @@
  * Handles loading and saving credentials from auth.json.
  */
 
-import { findEnvKeys, getEnvApiKey } from "@earendil-works/pi-ai";
+import { findEnvKeys, getEnvApiKey } from "@earendil-works/tau-ai";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import lockfile from "proper-lockfile";

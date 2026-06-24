@@ -1,11 +1,11 @@
 # Development
 
-See [AGENTS.md](https://github.com/earendil-works/pi-mono/blob/main/AGENTS.md) for additional guidelines.
+See [AGENTS.md](https://github.com/pekka1398/tau/blob/main/AGENTS.md) for additional guidelines.
 
 ## Setup
 
 ```bash
-git clone https://github.com/earendil-works/pi-mono
+git clone https://github.com/pekka1398/tau
 cd pi-mono
 npm install
 npm run build

@@ -1,4 +1,4 @@
-import { Box, type Component, Container, getCapabilities, Image, Spacer, Text, type TUI } from "@earendil-works/pi-tui";
+import { Box, type Component, Container, getCapabilities, Image, Spacer, Text, type TUI } from "@earendil-works/tau-tui";
 import type { ToolDefinition, ToolRenderContext } from "../../../core/tool-types.ts";
 import { createAllToolDefinitions, type ToolName } from "../../../core/tools/index.ts";
 import { getTextOutput as getRenderedTextOutput } from "../../../core/tools/render-utils.ts";

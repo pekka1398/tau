@@ -2,7 +2,7 @@
  * TUI config selector for `tau config` command
  */
 
-import { ProcessTerminal, TUI } from "@earendil-works/pi-tui";
+import { ProcessTerminal, TUI } from "@earendil-works/tau-tui";
 export interface ResolvedPaths {
 	extensions: any[];
 	skills: any[];

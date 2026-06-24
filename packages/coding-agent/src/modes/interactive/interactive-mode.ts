@@ -7,14 +7,14 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import type { AgentMessage } from "@earendil-works/tau-agent-core";
 import {
 	type AssistantMessage,
 	getProviders,
 	type ImageContent,
 	type Message,
 	type Model,
-} from "@earendil-works/pi-ai";
+} from "@earendil-works/tau-ai";
 import type {
 	AutocompleteItem,
 	AutocompleteProvider,
@@ -25,7 +25,7 @@ import type {
 	OverlayHandle,
 	OverlayOptions,
 	SlashCommand,
-} from "@earendil-works/pi-tui";
+} from "@earendil-works/tau-tui";
 import {
 	CombinedAutocompleteProvider,
 	type Component,
@@ -42,7 +42,7 @@ import {
 	TruncatedText,
 	TUI,
 	visibleWidth,
-} from "@earendil-works/pi-tui";
+} from "@earendil-works/tau-tui";
 import chalk from "chalk";
 import { spawn, spawnSync } from "child_process";
 import { APP_NAME, APP_TITLE, getDebugLogPath, getShareViewerUrl, VERSION } from "../../config.ts";

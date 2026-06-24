@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve, sep } from "node:path";
-import { type Component, truncateToWidth } from "@earendil-works/pi-tui";
+import { type Component, truncateToWidth } from "@earendil-works/tau-tui";
 import type { AgentSession } from "../../../core/agent-session.ts";
 import type { ReadonlyFooterDataProvider } from "../../../core/footer-data-provider.ts";
 import type { TaskManager } from "../../../core/task-manager.ts";

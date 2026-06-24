@@ -5,7 +5,7 @@
  * Uses local extraction where possible, falls back to multimodal API (Gemini via OpenRouter).
  */
 
-import { getModel } from "@earendil-works/pi-ai";
+import { getModel } from "@earendil-works/tau-ai";
 import { Type } from "typebox";
 import type { ToolContext, ToolDefinition } from "../tool-types.ts";
 import { transcribe } from "./transcribe/transcribe.ts";

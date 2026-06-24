@@ -1,4 +1,4 @@
-# @earendil-works/pi-ai
+# @earendil-works/tau-ai
 
 OpenRouter-focused LLM and image APIs for Tau.
 
@@ -7,7 +7,7 @@ This package intentionally supports OpenRouter only. Direct provider integration
 ## Install
 
 ```bash
-bun add @earendil-works/pi-ai
+bun add @earendil-works/tau-ai
 ```
 
 ## Credentials
@@ -23,7 +23,7 @@ You can also pass `apiKey` per request.
 ## Chat
 
 ```ts
-import { completeSimple, getModel } from "@earendil-works/pi-ai";
+import { completeSimple, getModel } from "@earendil-works/tau-ai";
 
 const model = getModel("openrouter", "openai/gpt-4o-mini");
 
@@ -41,7 +41,7 @@ console.log(response.content);
 ## Streaming
 
 ```ts
-import { getModel, streamSimple } from "@earendil-works/pi-ai";
+import { getModel, streamSimple } from "@earendil-works/tau-ai";
 
 const model = getModel("openrouter", "anthropic/claude-sonnet-4.5");
 const stream = streamSimple(
@@ -62,7 +62,7 @@ for await (const event of stream) {
 ## Tools
 
 ```ts
-import { Type, completeSimple, getModel } from "@earendil-works/pi-ai";
+import { Type, completeSimple, getModel } from "@earendil-works/tau-ai";
 
 const model = getModel("openrouter", "openai/gpt-4o-mini");
 
@@ -87,7 +87,7 @@ console.log(response.stopReason, response.content);
 ## Images
 
 ```ts
-import { generateImages, getImageModel } from "@earendil-works/pi-ai";
+import { generateImages, getImageModel } from "@earendil-works/tau-ai";
 
 const model = getImageModel("openrouter", "google/gemini-2.5-flash-image");
 

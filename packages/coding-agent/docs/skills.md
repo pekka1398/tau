@@ -227,5 +227,4 @@ cd /path/to/brave-search && npm install
 
 ## Skill Repositories
 
-- [Anthropic Skills](https://github.com/anthropics/skills) - Document processing (docx, pdf, pptx, xlsx), web development
-- [Pi Skills](https://github.com/badlogic/pi-skills) - Web search, browser automation, Google APIs, transcription
+Tau can load local skill folders that follow the `SKILL.md` structure described above.

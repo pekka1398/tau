@@ -7,7 +7,7 @@
 
 import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
-import type { ImageContent } from "@earendil-works/pi-ai";
+import type { ImageContent } from "@earendil-works/tau-ai";
 import { Type } from "typebox";
 import type { ToolDefinition } from "../tool-types.ts";
 

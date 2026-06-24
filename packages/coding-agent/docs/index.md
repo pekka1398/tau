@@ -7,7 +7,7 @@ Tau is a terminal coding harness built around a single OpenRouter provider surfa
 Install Tau with npm:
 
 ```bash
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+npm install -g --ignore-scripts @earendil-works/tau-coding-agent
 ```
 
 `--ignore-scripts` disables dependency lifecycle scripts during install. Tau does not require install scripts for normal npm installs.

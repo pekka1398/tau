@@ -24,7 +24,7 @@ export {
 export { createVisionToolDefinition } from "./vision.ts";
 export { createEditRedirectToolDefinition } from "./edit-redirect.ts";
 
-import type { AgentTool } from "@earendil-works/pi-agent-core";
+import type { AgentTool } from "@earendil-works/tau-agent-core";
 import { createSubagentToolDefinition, type SubagentToolOptions } from "../subagent/tool.ts";
 import type { ToolDefinition } from "../tool-types.ts";
 import { type BashToolOptions, createBashTool, createBashToolDefinition } from "./bash.ts";

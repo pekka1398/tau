@@ -7,12 +7,12 @@ Extensions are TypeScript modules that extend Tau's behavior. They can subscribe
 > **Placement for /reload:** Put extensions in `~/.tau/agent/extensions/` (global) or `.tau/extensions/` (project-local) for auto-discovery. Use `tau -e ./path.ts` only for quick tests. Extensions in auto-discovered locations can be hot-reloaded with `/reload`.
 
 **Key capabilities:**
-- **Custom tools** - Register tools the LLM can call via `pi.registerTool()`
+- **Custom tools** - Register tools the LLM can call via `Tau.registerTool()`
 - **Event interception** - Block or modify tool calls, inject context, customize compaction
 - **User interaction** - Prompt users via `ctx.ui` (select, confirm, input, notify)
 - **Custom UI components** - Full TUI components with keyboard input via `ctx.ui.custom()` for complex interactions
-- **Custom commands** - Register commands like `/mycommand` via `pi.registerCommand()`
-- **Session persistence** - Store state that survives restarts via `pi.appendEntry()`
+- **Custom commands** - Register commands like `/mycommand` via `Tau.registerCommand()`
+- **Session persistence** - Store state that survives restarts via `Tau.appendEntry()`
 - **Custom rendering** - Control how tool calls/results and messages appear in TUI
 
 **Example use cases:**
@@ -57,16 +57,16 @@ See [examples/extensions/](../examples/extensions/) for working implementations.
 Create `~/.tau/agent/extensions/my-extension.ts`:
 
 ```typescript
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/tau-coding-agent";
 import { Type } from "typebox";
 
-export default function (pi: ExtensionAPI) {
+export default function (Tau: ExtensionAPI) {
   // React to events
-  pi.on("session_start", async (_event, ctx) => {
+  Tau.on("session_start", async (_event, ctx) => {
     ctx.ui.notify("Extension loaded!", "info");
   });
 
-  pi.on("tool_call", async (event, ctx) => {
+  Tau.on("tool_call", async (event, ctx) => {
     if (event.toolName === "bash" && event.input.command?.includes("rm -rf")) {
       const ok = await ctx.ui.confirm("Dangerous!", "Allow rm -rf?");
       if (!ok) return { block: true, reason: "Blocked by user" };
@@ -74,7 +74,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   // Register a custom tool
-  pi.registerTool({
+  Tau.registerTool({
     name: "greet",
     label: "Greet",
     description: "Greet someone by name",
@@ -90,7 +90,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   // Register a command
-  pi.registerCommand("hello", {
+  Tau.registerCommand("hello", {
     description: "Say hello",
     handler: async (args, ctx) => {
       ctx.ui.notify(`Hello ${args || "world"}!`, "info");
@@ -133,20 +133,20 @@ Additional paths via `settings.json`:
 }
 ```
 
-To share extensions via npm or git as pi packages, see [packages.md](packages.md).
+To share extensions via npm or git as tau packages, see [packages.md](packages.md).
 
 ## Available Imports
 
 | Package | Purpose |
 |---------|---------|
-| `@earendil-works/pi-coding-agent` | Extension types (`ExtensionAPI`, `ExtensionContext`, events) |
+| `@earendil-works/tau-coding-agent` | Extension types (`ExtensionAPI`, `ExtensionContext`, events) |
 | `typebox` | Schema definitions for tool parameters |
-| `@earendil-works/pi-ai` | AI utilities (`StringEnum` for Google-compatible enums) |
-| `@earendil-works/pi-tui` | TUI components for custom rendering |
+| `@earendil-works/tau-ai` | AI utilities (`StringEnum` for Google-compatible enums) |
+| `@earendil-works/tau-tui` | TUI components for custom rendering |
 
 npm dependencies work too. Add a `package.json` next to your extension (or in a parent directory), run `npm install`, and imports from `node_modules/` are resolved automatically.
 
-For distributed pi packages installed with `pi install` (npm or git), runtime deps must be in `dependencies`. Package installation uses production installs (`npm install --omit=dev`) by default, so `devDependencies` are not available at runtime; when `npmCommand` is configured, git packages use plain `install` for compatibility with wrappers.
+For distributed tau packages installed with `tau install` (npm or git), runtime deps must be in `dependencies`. Package installation uses production installs (`npm install --omit=dev`) by default, so `devDependencies` are not available at runtime; when `npmCommand` is configured, git packages use plain `install` for compatibility with wrappers.
 
 Node.js built-ins (`node:fs`, `node:path`, etc.) are also available.
 
@@ -155,11 +155,11 @@ Node.js built-ins (`node:fs`, `node:path`, etc.) are also available.
 An extension exports a default factory function that receives `ExtensionAPI`. The factory can be synchronous or asynchronous:
 
 ```typescript
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/tau-coding-agent";
 
-export default function (pi: ExtensionAPI) {
+export default function (Tau: ExtensionAPI) {
   // Subscribe to events
-  pi.on("event_name", async (event, ctx) => {
+  Tau.on("event_name", async (event, ctx) => {
     // ctx.ui for user interaction
     const ok = await ctx.ui.confirm("Title", "Are you sure?");
     ctx.ui.notify("Done!", "info");
@@ -168,10 +168,10 @@ export default function (pi: ExtensionAPI) {
   });
 
   // Register tools, commands, shortcuts, flags
-  pi.registerTool({ ... });
-  pi.registerCommand("name", { ... });
-  pi.registerShortcut("ctrl+x", { ... });
-  pi.registerFlag("my-flag", { ... });
+  Tau.registerTool({ ... });
+  Tau.registerCommand("name", { ... });
+  Tau.registerShortcut("ctrl+x", { ... });
+  Tau.registerFlag("my-flag", { ... });
 }
 ```
 
@@ -184,12 +184,12 @@ If the factory returns a `Promise`, Tau awaits it before continuing startup. Tha
 Use an async factory for one-time startup work such as fetching remote configuration.
 
 ```typescript
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/tau-coding-agent";
 
-export default async function (pi: ExtensionAPI) {
+export default async function (Tau: ExtensionAPI) {
   const response = await fetch("https://example.com/config.json");
   const config = await response.json();
-  pi.registerCommand("show-config", {
+  Tau.registerCommand("show-config", {
     description: "Show remote config",
     handler: () => JSON.stringify(config, null, 2),
   });
@@ -237,7 +237,7 @@ This pattern makes fetched configuration available during normal startup.
     "zod": "^3.0.0",
     "chalk": "^5.0.0"
   },
-  "pi": {
+  "tau": {
     "extensions": ["./src/index.ts"]
   }
 }
@@ -250,7 +250,7 @@ Run `npm install` in the extension directory, then imports from `node_modules/` 
 ### Lifecycle Overview
 
 ```
-pi starts
+Tau starts
   │
   ├─► session_start { reason: "startup" }
   └─► resources_discover { reason: "startup" }
@@ -309,7 +309,7 @@ user sends another prompt ◄─────────────────
   ├─► thinking_level_select (if model change changes/clamps thinking level)
   └─► model_select
 
-thinking level changes (settings, keybinding, pi.setThinkingLevel())
+thinking level changes (settings, keybinding, Tau.setThinkingLevel())
   └─► thinking_level_select
 
 exit (Ctrl+C, Ctrl+D, SIGHUP, SIGTERM)
@@ -324,7 +324,7 @@ Fired after `session_start` so extensions can contribute additional skill, promp
 The startup path uses `reason: "startup"`. Reload uses `reason: "reload"`.
 
 ```typescript
-pi.on("resources_discover", async (event, _ctx) => {
+Tau.on("resources_discover", async (event, _ctx) => {
   // event.cwd - current working directory
   // event.reason - "startup" | "reload"
   return {
@@ -344,7 +344,7 @@ See [Session Format](session-format.md) for session storage internals and the Se
 Fired when a session is started, loaded, or reloaded.
 
 ```typescript
-pi.on("session_start", async (event, ctx) => {
+Tau.on("session_start", async (event, ctx) => {
   // event.reason - "startup" | "reload" | "new" | "resume" | "fork"
   // event.previousSessionFile - present for "new", "resume", and "fork"
   ctx.ui.notify(`Session: ${ctx.sessionManager.getSessionFile() ?? "ephemeral"}`, "info");
@@ -356,7 +356,7 @@ pi.on("session_start", async (event, ctx) => {
 Fired before starting a new session (`/new`) or switching sessions (`/resume`).
 
 ```typescript
-pi.on("session_before_switch", async (event, ctx) => {
+Tau.on("session_before_switch", async (event, ctx) => {
   // event.reason - "new" or "resume"
   // event.targetSessionFile - session we're switching to (only for "resume")
 
@@ -367,7 +367,7 @@ pi.on("session_before_switch", async (event, ctx) => {
 });
 ```
 
-After a successful switch or new-session action, pi emits `session_shutdown` for the old extension instance, reloads and rebinds extensions for the new session, then emits `session_start` with `reason: "new" | "resume"` and `previousSessionFile`.
+After a successful switch or new-session action, Tau emits `session_shutdown` for the old extension instance, reloads and rebinds extensions for the new session, then emits `session_start` with `reason: "new" | "resume"` and `previousSessionFile`.
 Do cleanup work in `session_shutdown`, then reestablish any in-memory state in `session_start`.
 
 #### session_before_fork
@@ -375,7 +375,7 @@ Do cleanup work in `session_shutdown`, then reestablish any in-memory state in `
 Fired when forking via `/fork` or cloning via `/clone`.
 
 ```typescript
-pi.on("session_before_fork", async (event, ctx) => {
+Tau.on("session_before_fork", async (event, ctx) => {
   // event.entryId - ID of the selected entry
   // event.position - "before" for /fork, "at" for /clone
   return { cancel: true }; // Cancel fork/clone
@@ -384,7 +384,7 @@ pi.on("session_before_fork", async (event, ctx) => {
 });
 ```
 
-After a successful fork or clone, pi emits `session_shutdown` for the old extension instance, reloads and rebinds extensions for the new session, then emits `session_start` with `reason: "fork"` and `previousSessionFile`.
+After a successful fork or clone, Tau emits `session_shutdown` for the old extension instance, reloads and rebinds extensions for the new session, then emits `session_start` with `reason: "fork"` and `previousSessionFile`.
 Do cleanup work in `session_shutdown`, then reestablish any in-memory state in `session_start`.
 
 #### session_before_compact / session_compact
@@ -392,7 +392,7 @@ Do cleanup work in `session_shutdown`, then reestablish any in-memory state in `
 Fired on compaction. See [compaction.md](compaction.md) for details.
 
 ```typescript
-pi.on("session_before_compact", async (event, ctx) => {
+Tau.on("session_before_compact", async (event, ctx) => {
   const { preparation, branchEntries, customInstructions, signal } = event;
 
   // Cancel:
@@ -408,7 +408,7 @@ pi.on("session_before_compact", async (event, ctx) => {
   };
 });
 
-pi.on("session_compact", async (event, ctx) => {
+Tau.on("session_compact", async (event, ctx) => {
   // event.compactionEntry - the saved compaction
   // event.fromExtension - whether extension provided it
 });
@@ -419,14 +419,14 @@ pi.on("session_compact", async (event, ctx) => {
 Fired on `/tree` navigation. See [Sessions](sessions.md) for tree navigation concepts.
 
 ```typescript
-pi.on("session_before_tree", async (event, ctx) => {
+Tau.on("session_before_tree", async (event, ctx) => {
   const { preparation, signal } = event;
   return { cancel: true };
   // OR provide custom summary:
   return { summary: { summary: "...", details: {} } };
 });
 
-pi.on("session_tree", async (event, ctx) => {
+Tau.on("session_tree", async (event, ctx) => {
   // event.newLeafId, oldLeafId, summaryEntry, fromExtension
 });
 ```
@@ -436,7 +436,7 @@ pi.on("session_tree", async (event, ctx) => {
 Fired before an extension runtime is torn down.
 
 ```typescript
-pi.on("session_shutdown", async (event, ctx) => {
+Tau.on("session_shutdown", async (event, ctx) => {
   // event.reason - "quit" | "reload" | "new" | "resume" | "fork"
   // event.targetSessionFile - destination session for session replacement flows
   // Cleanup, save state, etc.
@@ -450,7 +450,7 @@ pi.on("session_shutdown", async (event, ctx) => {
 Fired after user submits prompt, before agent loop. Can inject a message and/or modify the system prompt.
 
 ```typescript
-pi.on("before_agent_start", async (event, ctx) => {
+Tau.on("before_agent_start", async (event, ctx) => {
   // event.prompt - user's prompt text
   // event.images - attached images (if any)
   // event.systemPrompt - current chained system prompt for this handler
@@ -487,9 +487,9 @@ Inside `before_agent_start`, `event.systemPrompt` and `ctx.getSystemPrompt()` bo
 Fired once per user prompt.
 
 ```typescript
-pi.on("agent_start", async (_event, ctx) => {});
+Tau.on("agent_start", async (_event, ctx) => {});
 
-pi.on("agent_end", async (event, ctx) => {
+Tau.on("agent_end", async (event, ctx) => {
   // event.messages - messages from this prompt
 });
 ```
@@ -499,11 +499,11 @@ pi.on("agent_end", async (event, ctx) => {
 Fired for each turn (one LLM response + tool calls).
 
 ```typescript
-pi.on("turn_start", async (event, ctx) => {
+Tau.on("turn_start", async (event, ctx) => {
   // event.turnIndex, event.timestamp
 });
 
-pi.on("turn_end", async (event, ctx) => {
+Tau.on("turn_end", async (event, ctx) => {
   // event.turnIndex, event.message, event.toolResults
 });
 ```
@@ -517,16 +517,16 @@ Fired for message lifecycle updates.
 - `message_end` handlers can return `{ message }` to replace the finalized message. The replacement must keep the same `role`.
 
 ```typescript
-pi.on("message_start", async (event, ctx) => {
+Tau.on("message_start", async (event, ctx) => {
   // event.message
 });
 
-pi.on("message_update", async (event, ctx) => {
+Tau.on("message_update", async (event, ctx) => {
   // event.message
   // event.assistantMessageEvent (token-by-token stream event)
 });
 
-pi.on("message_end", async (event, ctx) => {
+Tau.on("message_end", async (event, ctx) => {
   if (event.message.role !== "assistant") return;
 
   return {
@@ -555,15 +555,15 @@ In parallel tool mode:
 - final `toolResult` message events are still emitted later in assistant source order
 
 ```typescript
-pi.on("tool_execution_start", async (event, ctx) => {
+Tau.on("tool_execution_start", async (event, ctx) => {
   // event.toolCallId, event.toolName, event.args
 });
 
-pi.on("tool_execution_update", async (event, ctx) => {
+Tau.on("tool_execution_update", async (event, ctx) => {
   // event.toolCallId, event.toolName, event.args, event.partialResult
 });
 
-pi.on("tool_execution_end", async (event, ctx) => {
+Tau.on("tool_execution_end", async (event, ctx) => {
   // event.toolCallId, event.toolName, event.result, event.isError
 });
 ```
@@ -573,7 +573,7 @@ pi.on("tool_execution_end", async (event, ctx) => {
 Fired before each LLM call. Modify messages non-destructively. See [Session Format](session-format.md) for message types.
 
 ```typescript
-pi.on("context", async (event, ctx) => {
+Tau.on("context", async (event, ctx) => {
   // event.messages - deep copy, safe to modify
   const filtered = event.messages.filter(m => !shouldPrune(m));
   return { messages: filtered };
@@ -587,7 +587,7 @@ Fired after the provider-specific payload is built, right before the request is 
 This hook can rewrite provider-level system instructions or remove them entirely. Those payload-level changes are not reflected by `ctx.getSystemPrompt()`, which reports Pi's system prompt string rather than the final serialized provider payload.
 
 ```typescript
-pi.on("before_provider_request", (event, ctx) => {
+Tau.on("before_provider_request", (event, ctx) => {
   console.log(JSON.stringify(event.payload, null, 2));
 
   // Optional: replace payload
@@ -602,7 +602,7 @@ This is mainly useful for debugging provider serialization and cache behavior.
 Fired after an HTTP response is received and before its stream body is consumed. Handlers run in extension load order.
 
 ```typescript
-pi.on("after_provider_response", (event, ctx) => {
+Tau.on("after_provider_response", (event, ctx) => {
   // event.status - HTTP status code
   // event.headers - normalized response headers
   if (event.status === 429) {
@@ -620,7 +620,7 @@ Header availability depends on provider and transport. Providers that abstract H
 Fired when the model changes via `/model` command, model cycling (`Ctrl+P`), or session restore.
 
 ```typescript
-pi.on("model_select", async (event, ctx) => {
+Tau.on("model_select", async (event, ctx) => {
   // event.model - newly selected model
   // event.previousModel - previous model (undefined if first selection)
   // event.source - "set" | "cycle" | "restore"
@@ -641,7 +641,7 @@ Use this to update UI elements (status bars, footers) or perform model-specific 
 Fired when the thinking level changes. This is notification-only; handler return values are ignored.
 
 ```typescript
-pi.on("thinking_level_select", async (event, ctx) => {
+Tau.on("thinking_level_select", async (event, ctx) => {
   // event.level - newly selected thinking level
   // event.previousLevel - previous thinking level
 
@@ -649,7 +649,7 @@ pi.on("thinking_level_select", async (event, ctx) => {
 });
 ```
 
-Use this to update extension UI when `pi.setThinkingLevel()`, model changes, or built-in thinking-level controls change the active thinking level.
+Use this to update extension UI when `Tau.setThinkingLevel()`, model changes, or built-in thinking-level controls change the active thinking level.
 
 ### Tool Events
 
@@ -657,7 +657,7 @@ Use this to update extension UI when `pi.setThinkingLevel()`, model changes, or 
 
 Fired after `tool_execution_start`, before the tool executes. **Can block.** Use `isToolCallEventType` to narrow and get typed inputs.
 
-Before `tool_call` runs, pi waits for previously emitted Agent events to finish draining through `AgentSession`. This means `ctx.sessionManager` is up to date through the current assistant tool-calling message.
+Before `tool_call` runs, Tau waits for previously emitted Agent events to finish draining through `AgentSession`. This means `ctx.sessionManager` is up to date through the current assistant tool-calling message.
 
 In the default parallel tool execution mode, sibling tool calls from the same assistant message are preflighted sequentially, then executed concurrently. `tool_call` is not guaranteed to see sibling tool results from that same assistant message in `ctx.sessionManager`.
 
@@ -670,9 +670,9 @@ Behavior guarantees:
 - Return values from `tool_call` only control blocking via `{ block: true, reason?: string }`
 
 ```typescript
-import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
+import { isToolCallEventType } from "@earendil-works/tau-coding-agent";
 
-pi.on("tool_call", async (event, ctx) => {
+Tau.on("tool_call", async (event, ctx) => {
   // event.toolName - "bash", "read", "write", "edit", etc.
   // event.toolCallId
   // event.input - tool parameters (mutable)
@@ -706,10 +706,10 @@ export type MyToolInput = Static<typeof myToolSchema>;
 Use `isToolCallEventType` with explicit type parameters:
 
 ```typescript
-import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
+import { isToolCallEventType } from "@earendil-works/tau-coding-agent";
 import type { MyToolInput } from "my-extension";
 
-pi.on("tool_call", (event) => {
+Tau.on("tool_call", (event) => {
   if (isToolCallEventType<"my_tool", MyToolInput>("my_tool", event)) {
     event.input.action;  // typed
   }
@@ -730,9 +730,9 @@ In parallel tool mode, `tool_result` and `tool_execution_end` may interleave in 
 Use `ctx.signal` for nested async work inside the handler. This lets Esc cancel model calls, `fetch()`, and other abort-aware operations started by the extension.
 
 ```typescript
-import { isBashToolResult } from "@earendil-works/pi-coding-agent";
+import { isBashToolResult } from "@earendil-works/tau-coding-agent";
 
-pi.on("tool_result", async (event, ctx) => {
+Tau.on("tool_result", async (event, ctx) => {
   // event.toolName, event.toolCallId, event.input
   // event.content, event.details, event.isError
 
@@ -758,9 +758,9 @@ pi.on("tool_result", async (event, ctx) => {
 Fired when user executes `!` or `!!` commands. **Can intercept.**
 
 ```typescript
-import { createLocalBashOperations } from "@earendil-works/pi-coding-agent";
+import { createLocalBashOperations } from "@earendil-works/tau-coding-agent";
 
-pi.on("user_bash", (event, ctx) => {
+Tau.on("user_bash", (event, ctx) => {
   // event.command - the bash command
   // event.excludeFromContext - true if !! prefix
   // event.cwd - working directory
@@ -768,7 +768,7 @@ pi.on("user_bash", (event, ctx) => {
   // Option 1: Provide custom operations (e.g., SSH)
   return { operations: remoteBashOps };
 
-  // Option 2: Wrap pi's built-in local bash backend
+  // Option 2: Wrap Tau's built-in local bash backend
   const local = createLocalBashOperations();
   return {
     operations: {
@@ -797,7 +797,7 @@ Fired when user input is received, after extension commands are checked but befo
 5. Agent processing begins (`before_agent_start`, etc.)
 
 ```typescript
-pi.on("input", async (event, ctx) => {
+Tau.on("input", async (event, ctx) => {
   // event.text - raw input (before skill/template expansion)
   // event.images - attached images, if any
   // event.source - "interactive" (typed), "rpc" (API), or "extension" (via sendUserMessage)
@@ -880,10 +880,10 @@ Use this for abort-aware nested work started by extension handlers, for example:
 - file or process helpers that accept `AbortSignal`
 
 `ctx.signal` is typically defined during active turn events such as `tool_call`, `tool_result`, `message_update`, and `turn_end`.
-It is usually `undefined` in idle or non-turn contexts such as session events, extension commands, and shortcuts fired while pi is idle.
+It is usually `undefined` in idle or non-turn contexts such as session events, extension commands, and shortcuts fired while Tau is idle.
 
 ```typescript
-pi.on("tool_result", async (event, ctx) => {
+Tau.on("tool_result", async (event, ctx) => {
   const response = await fetch("https://example.com/api", {
     method: "POST",
     body: JSON.stringify(event),
@@ -901,7 +901,7 @@ Control flow helpers.
 
 ### ctx.shutdown()
 
-Request a graceful shutdown of pi.
+Request a graceful shutdown of Tau.
 
 - **Interactive mode:** Deferred until the agent becomes idle (after processing all queued steering and follow-up messages).
 - **RPC mode:** Deferred until the next idle state (after completing the current command response, when waiting for the next command).
@@ -910,7 +910,7 @@ Request a graceful shutdown of pi.
 Emits `session_shutdown` event to all extensions before exiting. Available in all contexts (event handlers, tools, commands, shortcuts).
 
 ```typescript
-pi.on("tool_call", (event, ctx) => {
+Tau.on("tool_call", (event, ctx) => {
   if (isFatal(event.input)) {
     ctx.shutdown();
   }
@@ -954,7 +954,7 @@ Returns Pi's current system prompt string.
 - If later-loaded extensions run after yours, they can still change what is ultimately sent.
 
 ```typescript
-pi.on("before_agent_start", (event, ctx) => {
+Tau.on("before_agent_start", (event, ctx) => {
   const prompt = ctx.getSystemPrompt();
   console.log(`System prompt length: ${prompt.length}`);
 });
@@ -982,7 +982,7 @@ This reports the current base prompt inputs. It does not include per-turn `befor
 Wait for the agent to finish streaming:
 
 ```typescript
-pi.registerCommand("my-cmd", {
+Tau.registerCommand("my-cmd", {
   handler: async (args, ctx) => {
     await ctx.waitForIdle();
     // Agent is now idle, safe to modify session
@@ -1021,7 +1021,7 @@ if (result.cancelled) {
 Options:
 - `parentSession`: parent session file to record in the new session header
 - `setup`: mutate the new session's `SessionManager` before `withSession` runs
-- `withSession`: run post-switch work against a fresh replacement-session context. Do not use captured old `pi` / command `ctx`; see [Session replacement lifecycle and footguns](#session-replacement-lifecycle-and-footguns).
+- `withSession`: run post-switch work against a fresh replacement-session context. Do not use captured old `Tau` / command `ctx`; see [Session replacement lifecycle and footguns](#session-replacement-lifecycle-and-footguns).
 
 ### ctx.fork(entryId, options?)
 
@@ -1047,7 +1047,7 @@ if (cloneResult.cancelled) {
 Options:
 - `position`: `"before"` (default) forks before the selected user message, restoring that prompt into the editor
 - `position`: `"at"` duplicates the active path through the selected entry without restoring editor text
-- `withSession`: run post-switch work against a fresh replacement-session context. Do not use captured old `pi` / command `ctx`; see [Session replacement lifecycle and footguns](#session-replacement-lifecycle-and-footguns).
+- `withSession`: run post-switch work against a fresh replacement-session context. Do not use captured old `Tau` / command `ctx`; see [Session replacement lifecycle and footguns](#session-replacement-lifecycle-and-footguns).
 
 ### ctx.navigateTree(targetId, options?)
 
@@ -1084,14 +1084,14 @@ if (result.cancelled) {
 ```
 
 Options:
-- `withSession`: run post-switch work against a fresh replacement-session context. Do not use captured old `pi` / command `ctx`; see [Session replacement lifecycle and footguns](#session-replacement-lifecycle-and-footguns).
+- `withSession`: run post-switch work against a fresh replacement-session context. Do not use captured old `Tau` / command `ctx`; see [Session replacement lifecycle and footguns](#session-replacement-lifecycle-and-footguns).
 
 To discover available sessions, use the static `SessionManager.list()` or `SessionManager.listAll()` methods:
 
 ```typescript
-import { SessionManager } from "@earendil-works/pi-coding-agent";
+import { SessionManager } from "@earendil-works/tau-coding-agent";
 
-pi.registerCommand("switch", {
+Tau.registerCommand("switch", {
   description: "Switch to another session",
   handler: async (args, ctx) => {
     const sessions = await SessionManager.list(ctx.cwd);
@@ -1118,14 +1118,14 @@ pi.registerCommand("switch", {
 Lifecycle and footguns:
 - `withSession` runs only after the old session has emitted `session_shutdown`, the old runtime has been torn down, the replacement session has been rebound, and the new extension instance has already received `session_start`.
 - The callback still executes in the original closure, not inside the new extension instance. That means your old extension instance may already have run its shutdown cleanup before `withSession` starts.
-- Captured old `pi` / old command `ctx` session-bound objects are stale after replacement and will throw if used. Use only the `ctx` passed to `withSession` for session-bound work.
+- Captured old `Tau` / old command `ctx` session-bound objects are stale after replacement and will throw if used. Use only the `ctx` passed to `withSession` for session-bound work.
 - Previously extracted raw objects are still your responsibility. For example, if you capture `const sm = ctx.sessionManager` before replacement, `sm` is still the old `SessionManager` object. Do not reuse it after replacement.
 - Code in `withSession` should assume any state invalidated by your `session_shutdown` handler is already gone. Only capture plain data that survives shutdown cleanly, such as strings, ids, and serialized config.
 
 Safe pattern:
 
 ```typescript
-pi.registerCommand("handoff", {
+Tau.registerCommand("handoff", {
   handler: async (_args, ctx) => {
     const kickoff = "Continue from the replacement session";
     await ctx.newSession({
@@ -1140,14 +1140,14 @@ pi.registerCommand("handoff", {
 Unsafe pattern:
 
 ```typescript
-pi.registerCommand("handoff", {
+Tau.registerCommand("handoff", {
   handler: async (_args, ctx) => {
     const oldSessionManager = ctx.sessionManager;
     await ctx.newSession({
       withSession: async (_ctx) => {
         // stale old objects: do not do this
         oldSessionManager.getSessionFile();
-        pi.sendUserMessage("wrong");
+        Tau.sendUserMessage("wrong");
       },
     });
   },
@@ -1159,7 +1159,7 @@ pi.registerCommand("handoff", {
 Run the same reload flow as `/reload`.
 
 ```typescript
-pi.registerCommand("reload-runtime", {
+Tau.registerCommand("reload-runtime", {
   description: "Reload extensions, skills, prompts, and themes",
   handler: async (_args, ctx) => {
     await ctx.reload();
@@ -1183,11 +1183,11 @@ Tools run with `ExtensionContext`, so they cannot call `ctx.reload()` directly. 
 Example tool the LLM can call to trigger reload:
 
 ```typescript
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/tau-coding-agent";
 import { Type } from "typebox";
 
-export default function (pi: ExtensionAPI) {
-  pi.registerCommand("reload-runtime", {
+export default function (Tau: ExtensionAPI) {
+  Tau.registerCommand("reload-runtime", {
     description: "Reload extensions, skills, prompts, and themes",
     handler: async (_args, ctx) => {
       await ctx.reload();
@@ -1195,13 +1195,13 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
-  pi.registerTool({
+  Tau.registerTool({
     name: "reload_runtime",
     label: "Reload Runtime",
     description: "Reload extensions, skills, prompts, and themes",
     parameters: Type.Object({}),
     async execute() {
-      pi.sendUserMessage("/reload-runtime", { deliverAs: "followUp" });
+      Tau.sendUserMessage("/reload-runtime", { deliverAs: "followUp" });
       return {
         content: [{ type: "text", text: "Queued /reload-runtime as a follow-up command." }],
       };
@@ -1212,17 +1212,17 @@ export default function (pi: ExtensionAPI) {
 
 ## ExtensionAPI Methods
 
-### pi.on(event, handler)
+### Tau.on(event, handler)
 
 Subscribe to events. See [Events](#events) for event types and return values.
 
-### pi.registerTool(definition)
+### Tau.registerTool(definition)
 
 Register a custom tool callable by the LLM. See [Custom Tools](#custom-tools) for full details.
 
-`pi.registerTool()` works both during extension load and after startup. You can call it inside `session_start`, command handlers, or other event handlers. New tools are refreshed immediately in the same session, so they appear in `pi.getAllTools()` and are callable by the LLM without `/reload`.
+`Tau.registerTool()` works both during extension load and after startup. You can call it inside `session_start`, command handlers, or other event handlers. New tools are refreshed immediately in the same session, so they appear in `Tau.getAllTools()` and are callable by the LLM without `/reload`.
 
-Use `pi.setActiveTools()` to enable or disable tools (including dynamically added tools) at runtime.
+Use `Tau.setActiveTools()` to enable or disable tools (including dynamically added tools) at runtime.
 
 Use `promptSnippet` to opt a custom tool into a one-line entry in `Available tools`, and `promptGuidelines` to append tool-specific bullets to the default `Guidelines` section when the tool is active.
 
@@ -1232,9 +1232,9 @@ See [dynamic-tools.ts](../examples/extensions/dynamic-tools.ts) for a full examp
 
 ```typescript
 import { Type } from "typebox";
-import { StringEnum } from "@earendil-works/pi-ai";
+import { StringEnum } from "@earendil-works/tau-ai";
 
-pi.registerTool({
+Tau.registerTool({
   name: "my_tool",
   label: "My Tool",
   description: "What this tool does",
@@ -1267,12 +1267,12 @@ pi.registerTool({
 });
 ```
 
-### pi.sendMessage(message, options?)
+### Tau.sendMessage(message, options?)
 
 Inject a custom message into the session.
 
 ```typescript
-pi.sendMessage({
+Tau.sendMessage({
   customType: "my-extension",
   content: "Message text",
   display: true,
@@ -1290,23 +1290,23 @@ pi.sendMessage({
   - `"nextTurn"` - Queued for next user prompt. Does not interrupt or trigger anything.
 - `triggerTurn: true` - If agent is idle, trigger an LLM response immediately. Only applies to `"steer"` and `"followUp"` modes (ignored for `"nextTurn"`).
 
-### pi.sendUserMessage(content, options?)
+### Tau.sendUserMessage(content, options?)
 
 Send a user message to the agent. Unlike `sendMessage()` which sends custom messages, this sends an actual user message that appears as if typed by the user. Always triggers a turn.
 
 ```typescript
 // Simple text message
-pi.sendUserMessage("What is 2+2?");
+Tau.sendUserMessage("What is 2+2?");
 
 // With content array (text + images)
-pi.sendUserMessage([
+Tau.sendUserMessage([
   { type: "text", text: "Describe this image:" },
   { type: "image", source: { type: "base64", mediaType: "image/png", data: "..." } },
 ]);
 
 // During streaming - must specify delivery mode
-pi.sendUserMessage("Focus on error handling", { deliverAs: "steer" });
-pi.sendUserMessage("And then summarize", { deliverAs: "followUp" });
+Tau.sendUserMessage("Focus on error handling", { deliverAs: "steer" });
+Tau.sendUserMessage("And then summarize", { deliverAs: "followUp" });
 ```
 
 **Options:**
@@ -1318,15 +1318,15 @@ When not streaming, the message is sent immediately and triggers a new turn. Whe
 
 See [send-user-message.ts](../examples/extensions/send-user-message.ts) for a complete example.
 
-### pi.appendEntry(customType, data?)
+### Tau.appendEntry(customType, data?)
 
 Persist extension state (does NOT participate in LLM context).
 
 ```typescript
-pi.appendEntry("my-state", { count: 42 });
+Tau.appendEntry("my-state", { count: 42 });
 
 // Restore on reload
-pi.on("session_start", async (_event, ctx) => {
+Tau.on("session_start", async (_event, ctx) => {
   for (const entry of ctx.sessionManager.getEntries()) {
     if (entry.type === "custom" && entry.customType === "my-state") {
       // Reconstruct from entry.data
@@ -1335,35 +1335,35 @@ pi.on("session_start", async (_event, ctx) => {
 });
 ```
 
-### pi.setSessionName(name)
+### Tau.setSessionName(name)
 
 Set the session display name (shown in session selector instead of first message).
 
 ```typescript
-pi.setSessionName("Refactor auth module");
+Tau.setSessionName("Refactor auth module");
 ```
 
-### pi.getSessionName()
+### Tau.getSessionName()
 
 Get the current session name, if set.
 
 ```typescript
-const name = pi.getSessionName();
+const name = Tau.getSessionName();
 if (name) {
   console.log(`Session: ${name}`);
 }
 ```
 
-### pi.setLabel(entryId, label)
+### Tau.setLabel(entryId, label)
 
 Set or clear a label on an entry. Labels are user-defined markers for bookmarking and navigation (shown in `/tree` selector).
 
 ```typescript
 // Set a label
-pi.setLabel(entryId, "checkpoint-before-refactor");
+Tau.setLabel(entryId, "checkpoint-before-refactor");
 
 // Clear a label
-pi.setLabel(entryId, undefined);
+Tau.setLabel(entryId, undefined);
 
 // Read labels via sessionManager
 const label = ctx.sessionManager.getLabel(entryId);
@@ -1371,14 +1371,14 @@ const label = ctx.sessionManager.getLabel(entryId);
 
 Labels persist in the session and survive restarts. Use them to mark important points (turns, checkpoints) in the conversation tree.
 
-### pi.registerCommand(name, options)
+### Tau.registerCommand(name, options)
 
 Register a command.
 
-If multiple extensions register the same command name, pi keeps them all and assigns numeric invocation suffixes in load order, for example `/review:1` and `/review:2`.
+If multiple extensions register the same command name, Tau keeps them all and assigns numeric invocation suffixes in load order, for example `/review:1` and `/review:2`.
 
 ```typescript
-pi.registerCommand("stats", {
+Tau.registerCommand("stats", {
   description: "Show session statistics",
   handler: async (args, ctx) => {
     const count = ctx.sessionManager.getEntries().length;
@@ -1390,9 +1390,9 @@ pi.registerCommand("stats", {
 Optional: add argument auto-completion for `/command ...`:
 
 ```typescript
-import type { AutocompleteItem } from "@earendil-works/pi-tui";
+import type { AutocompleteItem } from "@earendil-works/tau-tui";
 
-pi.registerCommand("deploy", {
+Tau.registerCommand("deploy", {
   description: "Deploy to an environment",
   getArgumentCompletions: (prefix: string): AutocompleteItem[] | null => {
     const envs = ["dev", "staging", "prod"];
@@ -1406,13 +1406,13 @@ pi.registerCommand("deploy", {
 });
 ```
 
-### pi.getCommands()
+### Tau.getCommands()
 
 Get the slash commands available for invocation via `prompt` in the current session. Includes extension commands, prompt templates, and skill commands.
 The list matches the RPC `get_commands` ordering: extensions first, then templates, then skills.
 
 ```typescript
-const commands = pi.getCommands();
+const commands = Tau.getCommands();
 const bySource = commands.filter((command) => command.source === "extension");
 const userScoped = commands.filter((command) => command.sourceInfo.scope === "user");
 ```
@@ -1439,16 +1439,16 @@ Use `sourceInfo` as the canonical provenance field. Do not infer ownership from 
 Built-in interactive commands (like `/model` and `/settings`) are not included here. They are handled only in interactive
 mode and would not execute if sent via `prompt`.
 
-### pi.registerMessageRenderer(customType, renderer)
+### Tau.registerMessageRenderer(customType, renderer)
 
 Register a custom TUI renderer for messages with your `customType`. See [Custom UI](#custom-ui).
 
-### pi.registerShortcut(shortcut, options)
+### Tau.registerShortcut(shortcut, options)
 
 Register a keyboard shortcut. See [keybindings.md](keybindings.md) for the shortcut format and built-in keybindings.
 
 ```typescript
-pi.registerShortcut("ctrl+shift+p", {
+Tau.registerShortcut("ctrl+shift+p", {
   description: "Toggle plan mode",
   handler: async (ctx) => {
     ctx.ui.notify("Toggled!");
@@ -1456,39 +1456,39 @@ pi.registerShortcut("ctrl+shift+p", {
 });
 ```
 
-### pi.registerFlag(name, options)
+### Tau.registerFlag(name, options)
 
 Register a CLI flag.
 
 ```typescript
-pi.registerFlag("plan", {
+Tau.registerFlag("plan", {
   description: "Start in plan mode",
   type: "boolean",
   default: false,
 });
 
 // Check value
-if (pi.getFlag("plan")) {
+if (Tau.getFlag("plan")) {
   // Plan mode enabled
 }
 ```
 
-### pi.exec(command, args, options?)
+### Tau.exec(command, args, options?)
 
 Execute a shell command.
 
 ```typescript
-const result = await pi.exec("git", ["status"], { signal, timeout: 5000 });
+const result = await Tau.exec("git", ["status"], { signal, timeout: 5000 });
 // result.stdout, result.stderr, result.code, result.killed
 ```
 
-### pi.getActiveTools() / pi.getAllTools() / pi.setActiveTools(names)
+### Tau.getActiveTools() / Tau.getAllTools() / Tau.setActiveTools(names)
 
 Manage active tools. This works for both built-in tools and dynamically registered tools.
 
 ```typescript
-const active = pi.getActiveTools();
-const all = pi.getAllTools();
+const active = Tau.getActiveTools();
+const all = Tau.getAllTools();
 // [{
 //   name: "read",
 //   description: "Read file contents...",
@@ -1499,46 +1499,46 @@ const all = pi.getAllTools();
 const names = all.map(t => t.name);
 const builtinTools = all.filter((t) => t.sourceInfo.source === "builtin");
 const extensionTools = all.filter((t) => t.sourceInfo.source !== "builtin" && t.sourceInfo.source !== "sdk");
-pi.setActiveTools(["read", "bash"]); // Switch to read-only
+Tau.setActiveTools(["read", "bash"]); // Switch to read-only
 ```
 
-`pi.getAllTools()` returns `name`, `description`, `parameters`, `promptGuidelines`, and `sourceInfo`.
+`Tau.getAllTools()` returns `name`, `description`, `parameters`, `promptGuidelines`, and `sourceInfo`.
 
 Typical `sourceInfo.source` values:
 - `builtin` for built-in tools
 - `sdk` for tools passed via `createAgentSession({ customTools })`
 - extension source metadata for tools registered by extensions
 
-### pi.setModel(model)
+### Tau.setModel(model)
 
 Set the current model. Returns `false` if no API key is available for the model. See [models.md](models.md) for configuring custom models.
 
 ```typescript
 const model = ctx.modelRegistry.find("anthropic", "claude-sonnet-4-5");
 if (model) {
-  const success = await pi.setModel(model);
+  const success = await Tau.setModel(model);
   if (!success) {
     ctx.ui.notify("No API key for this model", "error");
   }
 }
 ```
 
-### pi.getThinkingLevel() / pi.setThinkingLevel(level)
+### Tau.getThinkingLevel() / Tau.setThinkingLevel(level)
 
 Get or set the thinking level. Level is clamped to model capabilities (non-reasoning models always use "off"). Changes emit `thinking_level_select`.
 
 ```typescript
-const current = pi.getThinkingLevel();  // "off" | "minimal" | "low" | "medium" | "high" | "xhigh"
-pi.setThinkingLevel("high");
+const current = Tau.getThinkingLevel();  // "off" | "minimal" | "low" | "medium" | "high" | "xhigh"
+Tau.setThinkingLevel("high");
 ```
 
-### pi.events
+### Tau.events
 
 Shared event bus for communication between extensions:
 
 ```typescript
-pi.events.on("my:event", (data) => { ... });
-pi.events.emit("my:event", { ... });
+Tau.events.on("my:event", (data) => { ... });
+Tau.events.emit("my:event", { ... });
 ```
 
 ## State Management
@@ -1546,11 +1546,11 @@ pi.events.emit("my:event", { ... });
 Extensions with state should store it in tool result `details` for proper branching support:
 
 ```typescript
-export default function (pi: ExtensionAPI) {
+export default function (Tau: ExtensionAPI) {
   let items: string[] = [];
 
   // Reconstruct state from session
-  pi.on("session_start", async (_event, ctx) => {
+  Tau.on("session_start", async (_event, ctx) => {
     items = [];
     for (const entry of ctx.sessionManager.getBranch()) {
       if (entry.type === "message" && entry.message.role === "toolResult") {
@@ -1561,7 +1561,7 @@ export default function (pi: ExtensionAPI) {
     }
   });
 
-  pi.registerTool({
+  Tau.registerTool({
     name: "my_tool",
     // ...
     async execute(toolCallId, params, signal, onUpdate, ctx) {
@@ -1577,11 +1577,11 @@ export default function (pi: ExtensionAPI) {
 
 ## Custom Tools
 
-Register tools the LLM can call via `pi.registerTool()`. Tools appear in the system prompt and can have custom rendering.
+Register tools the LLM can call via `Tau.registerTool()`. Tools appear in the system prompt and can have custom rendering.
 
 Use `promptSnippet` for a short one-line entry in the `Available tools` section in the default system prompt. If omitted, custom tools are left out of that section.
 
-Use `promptGuidelines` to add tool-specific bullets to the default system prompt `Guidelines` section. These bullets are included only while the tool is active (for example, after `pi.setActiveTools([...])`).
+Use `promptGuidelines` to add tool-specific bullets to the default system prompt `Guidelines` section. These bullets are included only while the tool is active (for example, after `Tau.setActiveTools([...])`).
 
 **Important:** `promptGuidelines` bullets are appended flat to the `Guidelines` section with no tool name prefix or grouping. Each guideline must name the tool it refers to — avoid "Use this tool when..." because the LLM cannot tell which tool "this" means. Write "Use my_tool when..." instead.
 
@@ -1596,7 +1596,7 @@ Pass the real target file path to `withFileMutationQueue()`, not the raw user ar
 Queue the entire mutation window on that target path. That includes read-modify-write logic, not just the final write.
 
 ```typescript
-import { withFileMutationQueue } from "@earendil-works/pi-coding-agent";
+import { withFileMutationQueue } from "@earendil-works/tau-coding-agent";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
@@ -1621,10 +1621,10 @@ async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 
 ```typescript
 import { Type } from "typebox";
-import { StringEnum } from "@earendil-works/pi-ai";
-import { Text } from "@earendil-works/pi-tui";
+import { StringEnum } from "@earendil-works/tau-ai";
+import { Text } from "@earendil-works/tau-tui";
 
-pi.registerTool({
+Tau.registerTool({
   name: "my_tool",
   label: "My Tool",
   description: "What this tool does (shown to LLM)",
@@ -1657,8 +1657,8 @@ pi.registerTool({
       details: { progress: 50 },
     });
 
-    // Run commands via pi.exec (captured from extension closure)
-    const result = await pi.exec("some-command", [], { signal });
+    // Run commands via Tau.exec (captured from extension closure)
+    const result = await Tau.exec("some-command", [], { signal });
 
     // Return result
     return {
@@ -1690,14 +1690,14 @@ async execute(toolCallId, params) {
 }
 ```
 
-**Important:** Use `StringEnum` from `@earendil-works/pi-ai` for string enums. `Type.Union`/`Type.Literal` doesn't work with Google's API.
+**Important:** Use `StringEnum` from `@earendil-works/tau-ai` for string enums. `Type.Union`/`Type.Literal` doesn't work with Google's API.
 
-**Argument preparation:** `prepareArguments(args)` is optional. If defined, it runs before schema validation and before `execute()`. Use it to mimic an older accepted input shape when pi resumes an older session whose stored tool call arguments no longer match the current schema. Return the object you want validated against `parameters`. Keep the public schema strict. Do not add deprecated compatibility fields to `parameters` just to keep old resumed sessions working.
+**Argument preparation:** `prepareArguments(args)` is optional. If defined, it runs before schema validation and before `execute()`. Use it to mimic an older accepted input shape when Tau resumes an older session whose stored tool call arguments no longer match the current schema. Return the object you want validated against `parameters`. Keep the public schema strict. Do not add deprecated compatibility fields to `parameters` just to keep old resumed sessions working.
 
 Example: an older session may contain an `edit` tool call with top-level `oldText` and `newText`, while the current schema only accepts `edits: [{ oldText, newText }]`.
 
 ```typescript
-pi.registerTool({
+Tau.registerTool({
   name: "edit",
   label: "Edit",
   description: "Edit a single file using exact text replacement",
@@ -1745,13 +1745,13 @@ Extensions can override built-in tools (`read`, `bash`, `edit`, `write`, `grep`,
 
 ```bash
 # Extension's read tool replaces built-in read
-pi -e ./tool-override.ts
+Tau -e ./tool-override.ts
 ```
 
 Alternatively, use `--no-builtin-tools` to start without any built-in tools while keeping extension tools enabled:
 ```bash
 # No built-in tools, only extension tools
-pi --no-builtin-tools -e ./my-extension.ts
+Tau --no-builtin-tools -e ./my-extension.ts
 ```
 
 See [examples/extensions/tool-override.ts](../examples/extensions/tool-override.ts) for a complete example that overrides `read` with logging and access control.
@@ -1763,20 +1763,20 @@ See [examples/extensions/tool-override.ts](../examples/extensions/tool-override.
 **Your implementation must match the exact result shape**, including the `details` type. The UI and session logic depend on these shapes for rendering and state tracking.
 
 Built-in tool implementations:
-- [read.ts](https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/src/core/tools/read.ts) - `ReadToolDetails`
-- [bash.ts](https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/src/core/tools/bash.ts) - `BashToolDetails`
-- [edit.ts](https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/src/core/tools/edit.ts)
-- [write.ts](https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/src/core/tools/write.ts)
-- [grep.ts](https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/src/core/tools/grep.ts) - `GrepToolDetails`
-- [find.ts](https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/src/core/tools/find.ts) - `FindToolDetails`
-- [ls.ts](https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/src/core/tools/ls.ts) - `LsToolDetails`
+- [read.ts](https://github.com/pekka1398/tau/blob/main/packages/coding-agent/src/core/tools/read.ts) - `ReadToolDetails`
+- [bash.ts](https://github.com/pekka1398/tau/blob/main/packages/coding-agent/src/core/tools/bash.ts) - `BashToolDetails`
+- [edit.ts](https://github.com/pekka1398/tau/blob/main/packages/coding-agent/src/core/tools/edit.ts)
+- [write.ts](https://github.com/pekka1398/tau/blob/main/packages/coding-agent/src/core/tools/write.ts)
+- [grep.ts](https://github.com/pekka1398/tau/blob/main/packages/coding-agent/src/core/tools/grep.ts) - `GrepToolDetails`
+- [find.ts](https://github.com/pekka1398/tau/blob/main/packages/coding-agent/src/core/tools/find.ts) - `FindToolDetails`
+- [ls.ts](https://github.com/pekka1398/tau/blob/main/packages/coding-agent/src/core/tools/ls.ts) - `LsToolDetails`
 
 ### Remote Execution
 
 Built-in tools support pluggable operations for delegating to remote systems (SSH, containers, etc.):
 
 ```typescript
-import { createReadTool, createBashTool, type ReadOperations } from "@earendil-works/pi-coding-agent";
+import { createReadTool, createBashTool, type ReadOperations } from "@earendil-works/tau-coding-agent";
 
 // Create tool with custom operations
 const remoteRead = createReadTool(cwd, {
@@ -1787,7 +1787,7 @@ const remoteRead = createReadTool(cwd, {
 });
 
 // Register, checking flag at execution time
-pi.registerTool({
+Tau.registerTool({
   ...remoteRead,
   async execute(id, params, signal, onUpdate, _ctx) {
     const ssh = getSshConfig();
@@ -1802,12 +1802,12 @@ pi.registerTool({
 
 **Operations interfaces:** `ReadOperations`, `WriteOperations`, `EditOperations`, `BashOperations`, `LsOperations`, `GrepOperations`, `FindOperations`
 
-For `user_bash`, extensions can reuse pi's local shell backend via `createLocalBashOperations()` instead of reimplementing local process spawning, shell resolution, and process-tree termination.
+For `user_bash`, extensions can reuse Tau's local shell backend via `createLocalBashOperations()` instead of reimplementing local process spawning, shell resolution, and process-tree termination.
 
 The bash tool also supports a spawn hook to adjust the command, cwd, or env before execution:
 
 ```typescript
-import { createBashTool } from "@earendil-works/pi-coding-agent";
+import { createBashTool } from "@earendil-works/tau-coding-agent";
 
 const bashTool = createBashTool(cwd, {
   spawnHook: ({ command, cwd, env }) => ({
@@ -1837,7 +1837,7 @@ import {
   formatSize,        // Human-readable size (e.g., "50KB", "1.5MB")
   DEFAULT_MAX_BYTES, // 50KB
   DEFAULT_MAX_LINES, // 2000
-} from "@earendil-works/pi-coding-agent";
+} from "@earendil-works/tau-coding-agent";
 
 async execute(toolCallId, params, signal, onUpdate, ctx) {
   const output = await runCommand();
@@ -1877,14 +1877,14 @@ See [examples/extensions/truncated-tool.ts](../examples/extensions/truncated-too
 One extension can register multiple tools with shared state:
 
 ```typescript
-export default function (pi: ExtensionAPI) {
+export default function (Tau: ExtensionAPI) {
   let connection = null;
 
-  pi.registerTool({ name: "db_connect", ... });
-  pi.registerTool({ name: "db_query", ... });
-  pi.registerTool({ name: "db_close", ... });
+  Tau.registerTool({ name: "db_connect", ... });
+  Tau.registerTool({ name: "db_query", ... });
+  Tau.registerTool({ name: "db_close", ... });
 
-  pi.on("session_shutdown", async () => {
+  Tau.on("session_shutdown", async () => {
     connection?.close();
   });
 }
@@ -1892,14 +1892,14 @@ export default function (pi: ExtensionAPI) {
 
 ### Custom Rendering
 
-Tools can provide `renderCall` and `renderResult` for custom TUI display. See [tui.md](tui.md) for the full component API and [tool-execution.ts](https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/src/modes/interactive/components/tool-execution.ts) for how tool rows are composed.
+Tools can provide `renderCall` and `renderResult` for custom TUI display. See [tui.md](tui.md) for the full component API and [tool-execution.ts](https://github.com/pekka1398/tau/blob/main/packages/coding-agent/src/modes/interactive/components/tool-execution.ts) for how tool rows are composed.
 
 By default, tool output is wrapped in a `Box` that handles padding and background. A defined `renderCall` or `renderResult` must return a `Component`. If a slot renderer is not defined, `tool-execution.ts` uses fallback rendering for that slot.
 
 Set `renderShell: "self"` when the tool should render its own shell instead of using the default `Box`. This is useful for tools that need complete control over framing or background behavior, for example large previews that must stay visually stable after the tool settles.
 
 ```typescript
-pi.registerTool({
+Tau.registerTool({
   name: "my_tool",
   label: "My Tool",
   description: "Custom shell example",
@@ -1928,7 +1928,7 @@ Use `context.state` for cross-slot shared state. Keep slot-local caches on the r
 Renders the tool call or header:
 
 ```typescript
-import { Text } from "@earendil-works/pi-tui";
+import { Text } from "@earendil-works/tau-tui";
 
 renderCall(args, theme, context) {
   const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
@@ -1973,7 +1973,7 @@ If a slot intentionally has no visible content, return an empty `Component` such
 Use `keyHint()` to display keybinding hints that respect the active keybinding configuration:
 
 ```typescript
-import { keyHint } from "@earendil-works/pi-coding-agent";
+import { keyHint } from "@earendil-works/tau-coding-agent";
 
 renderResult(result, { expanded }, theme, context) {
   let text = theme.fg("success", "✓ Done");
@@ -2141,7 +2141,7 @@ ctx.ui.setFooter((tui, theme) => ({
 ctx.ui.setFooter(undefined);  // Restore built-in footer
 
 // Terminal title
-ctx.ui.setTitle("pi - my-project");
+ctx.ui.setTitle("Tau - my-project");
 
 // Editor text
 ctx.ui.setEditorText("Prefill text");
@@ -2210,7 +2210,7 @@ Typical pattern:
 - delegate `applyCompletion(...)` unless you need custom insertion behavior
 
 ```typescript
-pi.on("session_start", (_event, ctx) => {
+Tau.on("session_start", (_event, ctx) => {
   ctx.ui.addAutocompleteProvider((current) => ({
     async getSuggestions(lines, cursorLine, cursorCol, options) {
       const line = lines[cursorLine] ?? "";
@@ -2247,7 +2247,7 @@ See [github-issue-autocomplete.ts](../examples/extensions/github-issue-autocompl
 For complex UI, use `ctx.ui.custom()`. This temporarily replaces the editor with your component until `done()` is called:
 
 ```typescript
-import { Text, Component } from "@earendil-works/pi-tui";
+import { Text, Component } from "@earendil-works/tau-tui";
 
 const result = await ctx.ui.custom<boolean>((tui, theme, keybindings, done) => {
   const text = new Text("Press Enter to confirm, Escape to cancel", 1, 1);
@@ -2312,8 +2312,8 @@ See [tui.md](tui.md) for the full `OverlayOptions` and `OverlayHandle` API and [
 Replace the main input editor with a custom implementation (vim mode, emacs mode, etc.):
 
 ```typescript
-import { CustomEditor, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { matchesKey } from "@earendil-works/pi-tui";
+import { CustomEditor, type ExtensionAPI } from "@earendil-works/tau-coding-agent";
+import { matchesKey } from "@earendil-works/tau-tui";
 
 class VimEditor extends CustomEditor {
   private mode: "normal" | "insert" = "insert";
@@ -2331,8 +2331,8 @@ class VimEditor extends CustomEditor {
   }
 }
 
-export default function (pi: ExtensionAPI) {
-  pi.on("session_start", (_event, ctx) => {
+export default function (Tau: ExtensionAPI) {
+  Tau.on("session_start", (_event, ctx) => {
     ctx.ui.setEditorComponent((_tui, theme, keybindings) =>
       new VimEditor(theme, keybindings)
     );
@@ -2363,9 +2363,9 @@ See [tui.md](tui.md) Pattern 7 for a complete example with mode indicator.
 Register a custom renderer for messages with your `customType`:
 
 ```typescript
-import { Text } from "@earendil-works/pi-tui";
+import { Text } from "@earendil-works/tau-tui";
 
-pi.registerMessageRenderer("my-extension", (message, options, theme) => {
+Tau.registerMessageRenderer("my-extension", (message, options, theme) => {
   const { expanded } = options;
   let text = theme.fg("accent", `[${message.customType}] `);
   text += message.content;
@@ -2378,10 +2378,10 @@ pi.registerMessageRenderer("my-extension", (message, options, theme) => {
 });
 ```
 
-Messages are sent via `pi.sendMessage()`:
+Messages are sent via `Tau.sendMessage()`:
 
 ```typescript
-pi.sendMessage({
+Tau.sendMessage({
   customType: "my-extension",  // Matches registerMessageRenderer
   content: "Status update",
   display: true,               // Show in TUI
@@ -2412,7 +2412,7 @@ theme.strikethrough(text)
 For syntax highlighting in custom tool renderers:
 
 ```typescript
-import { highlightCode, getLanguageFromPath } from "@earendil-works/pi-coding-agent";
+import { highlightCode, getLanguageFromPath } from "@earendil-works/tau-coding-agent";
 
 // Highlight code with explicit language
 const highlighted = highlightCode("const x = 1;", "typescript", theme);
@@ -2511,7 +2511,7 @@ All examples in [examples/extensions/](../examples/extensions/).
 | `doom-overlay/` | Doom in overlay | `ui.custom` with overlay |
 | **Messages & Communication** |||
 | `message-renderer.ts` | Custom message rendering | `registerMessageRenderer`, `sendMessage` |
-| `event-bus.ts` | Inter-extension events | `pi.events` |
+| `event-bus.ts` | Inter-extension events | `Tau.events` |
 | **Session Metadata** |||
 | `session-name.ts` | Name sessions for selector | `setSessionName`, `getSessionName` |
 | `bookmark.ts` | Bookmark entries for /tree | `setLabel` |

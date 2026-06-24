@@ -1,5 +1,5 @@
-import { getModel, getProviders, Type } from "@earendil-works/pi-ai";
-import { Agent } from "@earendil-works/pi-agent-core";
+import { getModel, getProviders, Type } from "@earendil-works/tau-ai";
+import { Agent } from "@earendil-works/tau-agent-core";
 
 // Keep this entry browser-safe. It is bundled by scripts/check-browser-smoke.mjs
 // to catch accidental Node-only runtime imports in browser-facing package exports.

@@ -1,5 +1,5 @@
 {
-	"name": "@earendil-works/pi-agent-core",
+	"name": "@earendil-works/tau-agent-core",
 	"version": "0.78.1",
 	"description": "General-purpose agent with transport abstraction, state management, and attachment support",
 	"type": "module",
@@ -29,7 +29,7 @@
 		"prepublishOnly": "bun run clean && bun run build"
 	},
 	"dependencies": {
-		"@earendil-works/pi-ai": "^0.78.1",
+		"@earendil-works/tau-ai": "^0.78.1",
 		"ignore": "7.0.5",
 		"typebox": "1.1.38",
 		"yaml": "2.9.0"
@@ -45,7 +45,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/earendil-works/pi.git",
+		"url": "git+https://github.com/pekka1398/tau.git",
 		"directory": "packages/agent"
 	},
 	"engines": {

@@ -11,6 +11,7 @@ describe("package commands", () => {
 	let agentDir: string;
 	let projectDir: string;
 	let packageDir: string;
+	let selfPackageDir: string;
 	let originalCwd: string;
 	let originalAgentDir: string | undefined;
 	let originalTauPackageDir: string | undefined;
@@ -23,10 +24,11 @@ describe("package commands", () => {
 	}
 
 	beforeEach(() => {
-		tempDir = join(tmpdir(), `pi-package-commands-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+		tempDir = join(tmpdir(), `tau-package-commands-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 		agentDir = join(tempDir, "agent");
 		projectDir = join(tempDir, "project");
 		packageDir = join(tempDir, "local-package");
+		selfPackageDir = join(tempDir, "self-package");
 		mkdirSync(agentDir, { recursive: true });
 		mkdirSync(projectDir, { recursive: true });
 		mkdirSync(packageDir, { recursive: true });
@@ -38,6 +40,7 @@ describe("package commands", () => {
 		originalExecPath = process.execPath;
 		process.exitCode = undefined;
 		process.env[ENV_AGENT_DIR] = agentDir;
+		process.env.TAU_PACKAGE_DIR = selfPackageDir;
 		process.chdir(projectDir);
 	});
 
@@ -87,8 +90,8 @@ describe("package commands", () => {
 	});
 
 	it("skips untrusted project package settings", async () => {
-		mkdirSync(getProjectDir(projectDir, selfPackageDir), { recursive: true });
-		writeFileSync(join(getProjectDir(projectDir, selfPackageDir), "settings.json"), JSON.stringify({ packages: ["npm:@project/pkg"] }));
+		mkdirSync(getProjectDir(projectDir, agentDir), { recursive: true });
+		writeFileSync(join(getProjectDir(projectDir, agentDir), "settings.json"), JSON.stringify({ packages: ["npm:@project/pkg"] }));
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
 		try {
@@ -103,8 +106,8 @@ describe("package commands", () => {
 	});
 
 	it("uses remembered project trust for list", async () => {
-		mkdirSync(getProjectDir(projectDir, selfPackageDir), { recursive: true });
-		writeFileSync(join(getProjectDir(projectDir, selfPackageDir), "settings.json"), JSON.stringify({ packages: ["npm:@project/pkg"] }));
+		mkdirSync(getProjectDir(projectDir, agentDir), { recursive: true });
+		writeFileSync(join(getProjectDir(projectDir, agentDir), "settings.json"), JSON.stringify({ packages: ["npm:@project/pkg"] }));
 		new ProjectTrustStore(agentDir).set(projectDir, true);
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -122,8 +125,8 @@ describe("package commands", () => {
 	});
 
 	it("overrides remembered trust for list with --no-approve", async () => {
-		mkdirSync(getProjectDir(projectDir, selfPackageDir), { recursive: true });
-		writeFileSync(join(getProjectDir(projectDir, selfPackageDir), "settings.json"), JSON.stringify({ packages: ["npm:@project/pkg"] }));
+		mkdirSync(getProjectDir(projectDir, agentDir), { recursive: true });
+		writeFileSync(join(getProjectDir(projectDir, agentDir), "settings.json"), JSON.stringify({ packages: ["npm:@project/pkg"] }));
 		new ProjectTrustStore(agentDir).set(projectDir, true);
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -140,8 +143,8 @@ describe("package commands", () => {
 	});
 
 	it("approves project trust for list with --approve", async () => {
-		mkdirSync(getProjectDir(projectDir, selfPackageDir), { recursive: true });
-		writeFileSync(join(getProjectDir(projectDir, selfPackageDir), "settings.json"), JSON.stringify({ packages: ["npm:@project/pkg"] }));
+		mkdirSync(getProjectDir(projectDir, agentDir), { recursive: true });
+		writeFileSync(join(getProjectDir(projectDir, agentDir), "settings.json"), JSON.stringify({ packages: ["npm:@project/pkg"] }));
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
 		try {
@@ -158,7 +161,8 @@ describe("package commands", () => {
 	});
 
 	it("blocks local package changes when project is untrusted", async () => {
-		mkdirSync(getProjectDir(projectDir, selfPackageDir), { recursive: true });
+		mkdirSync(getProjectDir(projectDir, agentDir), { recursive: true });
+		mkdirSync(join(projectDir, "local-package"), { recursive: true });
 		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
 		try {
@@ -175,11 +179,11 @@ describe("package commands", () => {
 	it("allows local package install to initialize fresh project settings", async () => {
 		await main(["install", "-l", packageDir]);
 
-		const settingsPath = join(getProjectDir(projectDir, selfPackageDir), "settings.json");
+		const settingsPath = join(getProjectDir(projectDir, agentDir), "settings.json");
 		const settings = JSON.parse(readFileSync(settingsPath, "utf-8")) as { packages?: string[] };
 		expect(settings.packages?.length).toBe(1);
 		const stored = settings.packages?.[0] ?? "";
-		expect(realpathSync(join(getProjectDir(projectDir, selfPackageDir), stored))).toBe(realpathSync(packageDir));
+		expect(realpathSync(join(getProjectDir(projectDir, agentDir), stored))).toBe(realpathSync(packageDir));
 		expect(process.exitCode).toBeUndefined();
 	});
 
@@ -192,7 +196,7 @@ describe("package commands", () => {
 
 			const stdout = logSpy.mock.calls.map(([message]) => String(message)).join("\n");
 			expect(stdout).toContain("Usage:");
-			expect(stdout).toContain("pi install <source> [-l]");
+			expect(stdout).toContain("tau install <source> [-l]");
 			expect(errorSpy).not.toHaveBeenCalled();
 			expect(process.exitCode).toBeUndefined();
 		} finally {
@@ -209,7 +213,7 @@ describe("package commands", () => {
 
 			const stderr = errorSpy.mock.calls.map(([message]) => String(message)).join("\n");
 			expect(stderr).toContain('Unknown option --unknown for "install".');
-			expect(stderr).toContain('Use "pi --help" or "pi install <source> [-l] [--approve|--no-approve]".');
+			expect(stderr).toContain('Use "tau --help" or "tau install <source> [-l] [--approve|--no-approve]".');
 			expect(process.exitCode).toBe(1);
 		} finally {
 			errorSpy.mockRestore();
@@ -224,7 +228,7 @@ describe("package commands", () => {
 
 			const stderr = errorSpy.mock.calls.map(([message]) => String(message)).join("\n");
 			expect(stderr).toContain("Missing install source.");
-			expect(stderr).toContain("Usage: pi install <source> [-l]");
+			expect(stderr).toContain("Usage: tau install <source> [-l]");
 			expect(stderr).not.toContain("at ");
 			expect(process.exitCode).toBe(1);
 		} finally {
@@ -235,11 +239,11 @@ describe("package commands", () => {
 	it("uses global npmCommand and current package name for forced self updates without checking the api", async () => {
 		const globalPrefix = join(tempDir, "global-prefix");
 		const projectPrefix = join(tempDir, "project-prefix");
-		const selfPackageDir = join(globalPrefix, "lib", "node_modules", "@earendil-works", "pi-coding-agent");
+		const selfPackageDir = join(globalPrefix, "lib", "node_modules", "@earendil-works", "tau-coding-agent");
 		const fakeNpmPath = join(tempDir, "fake-npm.cjs");
 		const recordPath = join(tempDir, "self-update.json");
 		mkdirSync(selfPackageDir, { recursive: true });
-		mkdirSync(getProjectDir(projectDir, selfPackageDir), { recursive: true });
+		mkdirSync(getProjectDir(projectDir, agentDir), { recursive: true });
 		writeFileSync(
 			fakeNpmPath,
 			`const fs=require("node:fs"),path=require("node:path"),args=process.argv.slice(2),prefix=args[args.indexOf("--prefix")+1];
@@ -252,7 +256,7 @@ else fs.writeFileSync(${JSON.stringify(recordPath)},JSON.stringify(args));
 			JSON.stringify({ npmCommand: [originalExecPath, fakeNpmPath, "--prefix", globalPrefix] }, null, 2),
 		);
 		writeFileSync(
-			join(getProjectDir(projectDir, selfPackageDir), "settings.json"),
+			join(getProjectDir(projectDir, agentDir), "settings.json"),
 			JSON.stringify({ npmCommand: [originalExecPath, fakeNpmPath, "--prefix", projectPrefix] }, null, 2),
 		);
 		process.env.TAU_PACKAGE_DIR = selfPackageDir;
@@ -284,7 +288,7 @@ else fs.writeFileSync(${JSON.stringify(recordPath)},JSON.stringify(args));
 
 	it("uses the current package name when the update check omits packageName", async () => {
 		const globalPrefix = join(tempDir, "global-prefix");
-		const selfPackageDir = join(globalPrefix, "lib", "node_modules", "@mariozechner", "pi-coding-agent");
+		const selfPackageDir = join(globalPrefix, "lib", "node_modules", "@mariozechner", "tau-coding-agent");
 		const fakeNpmPath = join(tempDir, "fake-npm.cjs");
 		const recordPath = join(tempDir, "self-update.json");
 		mkdirSync(selfPackageDir, { recursive: true });
@@ -326,7 +330,7 @@ else fs.writeFileSync(${JSON.stringify(recordPath)},JSON.stringify(args));
 
 	it("installs the active package name from the update check during self-update", async () => {
 		const globalPrefix = join(tempDir, "global-prefix");
-		const selfPackageDir = join(globalPrefix, "lib", "node_modules", "@mariozechner", "pi-coding-agent");
+		const selfPackageDir = join(globalPrefix, "lib", "node_modules", "@mariozechner", "tau-coding-agent");
 		const fakeNpmPath = join(tempDir, "fake-npm.cjs");
 		const recordPath = join(tempDir, "self-update.json");
 		mkdirSync(selfPackageDir, { recursive: true });
@@ -350,7 +354,7 @@ else {
 			value: join(selfPackageDir, "dist", "cli.js"),
 			configurable: true,
 		});
-		const activePackageName = PACKAGE_NAME === "@new-scope/pi" ? "@newer-scope/pi" : "@new-scope/pi";
+		const activePackageName = PACKAGE_NAME === "@new-scope/tau" ? "@newer-scope/tau" : "@new-scope/tau";
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async () => Response.json({ packageName: activePackageName, version: "0.73.0" })),
@@ -377,7 +381,7 @@ else {
 
 	it("fails self-update when renamed npm package installation fails", async () => {
 		const globalPrefix = join(tempDir, "global-prefix");
-		const selfPackageDir = join(globalPrefix, "lib", "node_modules", "@mariozechner", "pi-coding-agent");
+		const selfPackageDir = join(globalPrefix, "lib", "node_modules", "@mariozechner", "tau-coding-agent");
 		const fakeNpmPath = join(tempDir, "fake-npm-fail.cjs");
 		const recordPath = join(tempDir, "self-update-fail.json");
 		mkdirSync(selfPackageDir, { recursive: true });
@@ -403,7 +407,7 @@ if(args.includes("install")) process.exit(23);
 			value: join(selfPackageDir, "dist", "cli.js"),
 			configurable: true,
 		});
-		const activePackageName = PACKAGE_NAME === "@new-scope/pi" ? "@newer-scope/pi" : "@new-scope/pi";
+		const activePackageName = PACKAGE_NAME === "@new-scope/tau" ? "@newer-scope/tau" : "@new-scope/tau";
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async () => Response.json({ packageName: activePackageName, version: "0.73.0" })),

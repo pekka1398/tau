@@ -4,7 +4,7 @@
  * Configure API key resolution via AuthStorage and ModelRegistry.
  */
 
-import { AuthStorage, createAgentSession, ModelRegistry, SessionManager } from "@earendil-works/pi-coding-agent";
+import { AuthStorage, createAgentSession, ModelRegistry, SessionManager } from "@earendil-works/tau-coding-agent";
 
 // Default: AuthStorage uses ~/.tau/agent/auth.json
 // ModelRegistry loads built-in + custom models from ~/.tau/agent/models.json
