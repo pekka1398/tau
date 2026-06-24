@@ -60,6 +60,8 @@ npm test                          # Run all tests
 npm test -- test/specific.test.ts # Run specific test
 ```
 
+Top-level `reference-repo/`, `test`, and `note` directories are ignored local scratch/reference material. They are not part of the tracked Tau source tree or release/test surface.
+
 ## Project Structure
 
 ```
