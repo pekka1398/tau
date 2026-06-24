@@ -525,16 +525,14 @@ export class DefaultResourceLoader implements ResourceLoader {
 	private applyExtensionSourceInfo(extensions: Extension[], metadataByPath: Map<string, PathMetadata>): void {
 		for (const extension of extensions) {
 			const extensionPath = extension.path ?? "<inline-extension>";
-			const commands = extension.commands instanceof Map ? extension.commands : new Map<string, unknown>();
-			const tools = extension.tools instanceof Map ? extension.tools : new Map<string, unknown>();
 
 			extension.sourceInfo =
 				this.findSourceInfoForPath(extensionPath, undefined, metadataByPath) ??
 				this.getDefaultSourceInfoForPath(extensionPath);
-			for (const command of commands.values()) {
+			for (const command of extension.commands.values()) {
 				command.sourceInfo = extension.sourceInfo;
 			}
-			for (const tool of tools.values()) {
+			for (const tool of extension.tools.values()) {
 				tool.sourceInfo = extension.sourceInfo;
 			}
 		}

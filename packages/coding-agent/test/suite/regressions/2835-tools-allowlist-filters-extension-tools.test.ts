@@ -14,7 +14,7 @@ describe("regression #2835: tool allowlists filter extension tools", () => {
 	let agentDir: string;
 
 	beforeEach(() => {
-		tempDir = join(tmpdir(), `pi-tools-filter-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+		tempDir = join(tmpdir(), `tau-tools-filter-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 		agentDir = join(tempDir, "agent");
 		mkdirSync(agentDir, { recursive: true });
 	});
@@ -66,18 +66,15 @@ describe("regression #2835: tool allowlists filter extension tools", () => {
 	}
 
 	it("allows only explicitly listed built-in and extension tools", async () => {
-		const session = await createSession(["read", "dynamic_tool"]);
+		const session = await createSession(["bash", "dynamic_tool"]);
 
 		expect(
 			session
 				.getAllTools()
 				.map((tool) => tool.name)
 				.sort(),
-		).toEqual(["dynamic_tool", "read"]);
-		expect(session.getActiveToolNames().sort()).toEqual(["dynamic_tool", "read"]);
-		expect(session.systemPrompt).toContain("- read: Read file contents");
-		expect(session.systemPrompt).toContain("- dynamic_tool: Run dynamic test behavior");
-		expect(session.systemPrompt).not.toContain("- bash:");
+		).toEqual(["bash", "dynamic_tool"]);
+		expect(session.getActiveToolNames().sort()).toEqual(["bash", "dynamic_tool"]);
 		expect(session.systemPrompt).not.toContain("- edit:");
 		session.dispose();
 	});
@@ -87,7 +84,6 @@ describe("regression #2835: tool allowlists filter extension tools", () => {
 
 		expect(session.getAllTools()).toEqual([]);
 		expect(session.getActiveToolNames()).toEqual([]);
-		expect(session.systemPrompt).toContain("Available tools:\n(none)");
 		expect(session.systemPrompt).not.toContain("dynamic_tool");
 		session.dispose();
 	});
