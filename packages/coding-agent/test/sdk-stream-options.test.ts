@@ -21,7 +21,7 @@ describe("createAgentSession stream options", () => {
 	let agentDir: string;
 
 	beforeEach(() => {
-		tempDir = mkdtempSync(join(tmpdir(), "pi-sdk-stream-options-"));
+		tempDir = mkdtempSync(join(tmpdir(), "tau-sdk-stream-options-"));
 		cwd = join(tempDir, "project");
 		agentDir = join(tempDir, "agent");
 		mkdirSync(cwd, { recursive: true });
@@ -113,8 +113,8 @@ describe("createAgentSession stream options", () => {
 		}
 	}
 
-	it("forwards httpIdleTimeoutMs as timeoutMs for OpenAI Codex", async () => {
-		const options = await captureStreamOptions("openai-codex-responses", { httpIdleTimeoutMs: 1234 });
+	it("forwards httpIdleTimeoutMs as timeoutMs", async () => {
+		const options = await captureStreamOptions("openai-completions", { httpIdleTimeoutMs: 1234 });
 
 		expect(options?.timeoutMs).toBe(1234);
 	});
@@ -125,25 +125,21 @@ describe("createAgentSession stream options", () => {
 		expect(options?.timeoutMs).toBe(1234);
 	});
 
-	it("lets request timeoutMs override httpIdleTimeoutMs for OpenAI Codex", async () => {
-		const options = await captureStreamOptions(
-			"openai-codex-responses",
-			{ httpIdleTimeoutMs: 1234 },
-			{ timeoutMs: 0 },
-		);
+	it("lets request timeoutMs override httpIdleTimeoutMs", async () => {
+		const options = await captureStreamOptions("openai-completions", { httpIdleTimeoutMs: 1234 }, { timeoutMs: 0 });
 
 		expect(options?.timeoutMs).toBe(0);
 	});
 
 	it("forwards websocketConnectTimeoutMs from settings", async () => {
-		const options = await captureStreamOptions("openai-codex-responses", { websocketConnectTimeoutMs: 1234 });
+		const options = await captureStreamOptions("openai-completions", { websocketConnectTimeoutMs: 1234 });
 
 		expect(options?.websocketConnectTimeoutMs).toBe(1234);
 	});
 
 	it("lets request websocketConnectTimeoutMs override settings", async () => {
 		const options = await captureStreamOptions(
-			"openai-codex-responses",
+			"openai-completions",
 			{ websocketConnectTimeoutMs: 1234 },
 			{ websocketConnectTimeoutMs: 0 },
 		);

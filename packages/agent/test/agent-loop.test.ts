@@ -36,7 +36,7 @@ function createUsage() {
 	};
 }
 
-function createModel(): Model<"openai-responses"> {
+function createModel(): Model<"openai-completions"> {
 	return {
 		id: "mock",
 		name: "mock",

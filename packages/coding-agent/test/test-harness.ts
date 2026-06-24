@@ -45,7 +45,7 @@ import {
 
 const FAUX_PROVIDER = "faux";
 const FAUX_MODEL_ID = "faux-1";
-const FAUX_API = "anthropic-messages" as const;
+const FAUX_API = "openai-completions" as const;
 
 export const fauxModel: Model<typeof FAUX_API> = {
 	id: FAUX_MODEL_ID,
@@ -356,7 +356,7 @@ export interface Harness {
 }
 
 function createTempDir(): string {
-	const tempDir = join(tmpdir(), `pi-harness-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+	const tempDir = join(tmpdir(), `tau-harness-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 	mkdirSync(tempDir, { recursive: true });
 	return tempDir;
 }
