@@ -7,7 +7,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ensureProjectDir, getProjectDir } from "../config.ts";
+import { APP_NAME, ensureProjectDir, getProjectDir } from "../config.ts";
 
 export type TodoStatus = "open" | "in_progress" | "done" | "cancelled";
 export type TodoPriority = "critical" | "high" | "medium" | "low";
@@ -228,7 +228,7 @@ export function getTodoSummary(cwd: string): string {
 // ============================================================================
 
 function printUsage(): void {
-	console.log(`Usage: pi todo <command> [args]
+	console.log(`Usage: ${APP_NAME} todo <command> [args]
 
 Commands:
   list [--status <status>] [--priority <priority>] [--tag <tag>]   List todos
@@ -245,7 +245,7 @@ Priorities: critical, high, medium, low
 }
 
 /**
- * CLI entry point for `pi todo`.
+ * CLI entry point for the todo command.
  */
 export async function runTodoCli(cwd: string, args: string[]): Promise<number> {
 	if (args.length === 0) {
@@ -290,7 +290,7 @@ export async function runTodoCli(cwd: string, args: string[]): Promise<number> {
 		case "new": {
 			const title = positional();
 			if (!title) {
-				console.error("Error: title is required. Usage: pi todo add <title>");
+				console.error(`Error: title is required. Usage: ${APP_NAME} todo add <title>`);
 				return 1;
 			}
 			const priority = flag("priority") as TodoPriority | undefined;
@@ -307,7 +307,7 @@ export async function runTodoCli(cwd: string, args: string[]): Promise<number> {
 		case "done": {
 			const id = positional();
 			if (!id) {
-				console.error("Error: id is required. Usage: pi todo done <id>");
+				console.error(`Error: id is required. Usage: ${APP_NAME} todo done <id>`);
 				return 1;
 			}
 			const todo = updateTodo(cwd, id, { status: "done" });
@@ -322,7 +322,7 @@ export async function runTodoCli(cwd: string, args: string[]): Promise<number> {
 		case "update": {
 			const id = positional();
 			if (!id) {
-				console.error("Error: id is required. Usage: pi todo update <id> [--status ...] [--priority ...]");
+				console.error(`Error: id is required. Usage: ${APP_NAME} todo update <id> [--status ...] [--priority ...]`);
 				return 1;
 			}
 			const updates: Parameters<typeof updateTodo>[2] = {};
@@ -345,7 +345,7 @@ export async function runTodoCli(cwd: string, args: string[]): Promise<number> {
 		case "rm": {
 			const id = positional();
 			if (!id) {
-				console.error("Error: id is required. Usage: pi todo delete <id>");
+				console.error(`Error: id is required. Usage: ${APP_NAME} todo delete <id>`);
 				return 1;
 			}
 			const ok = deleteTodo(cwd, id);
@@ -360,7 +360,7 @@ export async function runTodoCli(cwd: string, args: string[]): Promise<number> {
 		case "show": {
 			const id = positional();
 			if (!id) {
-				console.error("Error: id is required. Usage: pi todo show <id>");
+				console.error(`Error: id is required. Usage: ${APP_NAME} todo show <id>`);
 				return 1;
 			}
 			const store = loadTodos(cwd);

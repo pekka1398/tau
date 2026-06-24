@@ -8,7 +8,7 @@ export type ProjectTrustDecision = boolean | null;
 
 type TrustFile = Record<string, boolean | null | undefined>;
 
-const CONTEXT_FILE_NAMES = ["AGENTS.md", "AGENTS.MD", "CLAUDE.md", "CLAUDE.MD"];
+const CONTEXT_FILE_NAMES = ["AGENTS.md", "AGENTS.MD"];
 
 function normalizeCwd(cwd: string): string {
 	return canonicalizePath(resolvePath(cwd));

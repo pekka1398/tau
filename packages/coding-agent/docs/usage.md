@@ -4,18 +4,14 @@ This page collects day-to-day usage details that do not fit on the quickstart pa
 
 ## Interactive Mode
 
-<p align="center"><img src="images/interactive-mode.png" alt="Interactive Mode" width="600"></p>
-
 The interface has four main areas:
 
-- **Startup header** - shortcuts, loaded context files, prompt templates, skills, and extensions
-- **Messages** - user messages, assistant responses, tool calls, tool results, notifications, errors, and extension UI
-- **Editor** - where you type; border color indicates the current thinking level
-- **Footer** - working directory, session name, token/cache usage, cost, context usage, and current model
+- Startup header: shortcuts, loaded context files, prompt templates, skills, and extensions
+- Messages: user messages, assistant responses, tool calls, tool results, notifications, and errors
+- Editor: where you type; border color indicates the current thinking level
+- Footer: working directory, session name, token/cache usage, cost, context usage, and current model
 
-The editor can be replaced temporarily by built-in UI such as `/settings` or by custom extension UI.
-
-### Editor Features
+## Editor Features
 
 | Feature | How |
 |---------|-----|
@@ -31,11 +27,9 @@ See [Keybindings](keybindings.md) for all shortcuts and customization.
 
 ## Slash Commands
 
-Type `/` in the editor to open command completion. Extensions can register custom commands, skills are available as `/skill:name`, and prompt templates expand via `/templatename`.
-
 | Command | Description |
 |---------|-------------|
-| `/model` | Switch models |
+| `/model` | Switch OpenRouter models |
 | `/scoped-models` | Enable/disable models for Ctrl+P cycling |
 | `/settings` | Thinking level, theme, message delivery, transport |
 | `/resume` | Pick from previous sessions |
@@ -45,27 +39,20 @@ Type `/` in the editor to open command completion. Extensions can register custo
 | `/tree` | Jump to any point in the session and continue from there |
 | `/fork` | Create a new session from a previous user message |
 | `/clone` | Duplicate the current active branch into a new session |
-| `/compact [prompt]` | Manually compact context, optionally with custom instructions |
+| `/compact [prompt]` | Manually compact context |
 | `/copy` | Copy last assistant message to clipboard |
 | `/export [file]` | Export session to HTML |
 | `/share` | Upload as private GitHub gist with shareable HTML link |
 | `/reload` | Reload keybindings, extensions, skills, prompts, and context files |
-| `/hotkeys` | Show all keyboard shortcuts |
+| `/hotkeys` | Show keyboard shortcuts |
 | `/changelog` | Display version history |
 | `/quit` | Quit Tau |
 
-## Message Queue
+## Project Trust
 
-You can submit messages while the agent is still working:
+On interactive startup, Tau asks before trusting a project folder that contains project-local inputs and has no saved decision in `~/.tau/agent/trust.json`. Trusting a project allows Tau to read `AGENTS.md`, load `.tau/settings.json` and `.tau` resources, install missing project packages, and execute project extensions.
 
-- **Enter** queues a steering message, delivered after the current assistant turn finishes executing its tool calls.
-- **Alt+Enter** queues a follow-up message, delivered after the agent finishes all work.
-- **Escape** aborts and restores queued messages to the editor.
-- **Alt+Up** retrieves queued messages back to the editor.
-
-On Windows Terminal, Alt+Enter is fullscreen by default. Remap it as described in [Terminal setup](terminal-setup.md) if you want Tau to receive the shortcut.
-
-Configure delivery in [Settings](settings.md) with `steeringMode` and `followUpMode`.
+Use `/trust` in interactive mode to save a trust decision for future sessions. The current session is not reloaded, so restart Tau for changes to take effect.
 
 ## Sessions
 
@@ -76,19 +63,9 @@ tau -c                  # Continue most recent session
 tau -r                  # Browse and select a session
 tau --no-session        # Ephemeral mode; do not save
 tau --name "my task"    # Set session display name at startup
-tau --session <path|id> # Use a specific session file or session ID
-tau --fork <path|id>    # Fork a session into a new session file
+tau --session <path|id> # Use a specific session file or partial UUID
+tau --fork <path|id>    # Fork a session file or partial UUID into a new session
 ```
-
-Useful session commands:
-
-- `/session` shows the current session file and ID.
-- `/tree` navigates the in-file session tree and can summarize abandoned branches.
-- `/fork` creates a new session from an earlier user message.
-- `/clone` duplicates the current active branch into a new session file.
-- `/compact` summarizes older messages to free context.
-
-See [Sessions](sessions.md) and [Compaction](compaction.md) for details.
 
 ## Context Files
 
@@ -98,110 +75,67 @@ Tau loads `AGENTS.md` at startup from:
 - parent directories, walking up from the current working directory when the project is trusted
 - the current directory when the project is trusted
 
-Use context files for project conventions, commands, safety rules, and preferences. Disable loading with `--no-context-files` or `-nc`.
-
-### System Prompt Files
-
-Replace the default system prompt with:
-
-- `.tau/SYSTEM.md` for a project
-- `~/.tau/agent/SYSTEM.md` globally
-
-Append to the default prompt without replacing it with `APPEND_SYSTEM.md` in either location.
-
-### Project Trust
-
-On interactive startup, Tau asks before trusting a project folder that contains project-local inputs and has no saved decision in `~/.tau/agent/trust.json`. Trusting a project allows Tau to read project instructions (`AGENTS.md`), load `.tau/settings.json` and `.tau` resources, install missing project packages, and execute project extensions.
-
-Non-interactive modes (`-p`, `--mode json`, and `--mode rpc`) do not show a trust prompt. Without a saved trust decision, they ignore project-local inputs unless `--approve`/`-a` is passed. Use `--no-approve`/`-na` to ignore project-local inputs for one run even when the project is trusted.
-
-`pi config` assumes project trust for that command so you can view and change project resource settings before starting a session. It does not save a trust decision; starting a session in that folder still prompts. Pass `--no-approve` to hide project-local inputs in `pi config`.
-
-Use `/trust` in interactive mode to save a project trust decision for future sessions. It writes `~/.pi/agent/trust.json` only; the current session is not reloaded, so restart pi for changes to take effect.
-
-## Exporting and Sharing Sessions
-
-Use `/export [file]` to write a session to HTML.
-
-Use `/share` to upload a private GitHub gist with a shareable HTML link.
-
-If you use pi for open source work and want to publish sessions for model, prompt, tool, and evaluation research, see [`badlogic/pi-share-hf`](https://github.com/badlogic/pi-share-hf). It publishes sessions to Hugging Face datasets.
+Disable loading with `--no-context-files` or `-nc`.
 
 ## CLI Reference
 
 ```bash
-pi [options] [@files...] [messages...]
+tau [options] [@files...] [messages...]
 ```
 
-### Package Commands
+## Package Commands
 
 ```bash
-pi install <source> [-l]     # Install package, -l for project-local
-pi remove <source> [-l]      # Remove package
-pi uninstall <source> [-l]   # Alias for remove
-pi update [source|self|pi]   # Update pi and packages; reconcile pinned git refs
-pi update --extensions       # Update packages only; reconcile pinned git refs
-pi update --self             # Update pi only
-pi update --extension <src>  # Update one package
-pi list                      # List installed packages
-pi config                    # Enable/disable package resources
+tau install <source> [-l]       # Install package, -l for project-local
+tau remove <source> [-l]        # Remove package
+tau uninstall <source> [-l]     # Alias for remove
+tau update [source|self|tau]    # Update Tau and packages
+tau update --extensions         # Update packages only
+tau update --self               # Update Tau only
+tau update --extension <src>    # Update one package
+tau list                        # List installed packages
+tau config                      # Enable/disable package resources
 ```
 
-These commands manage pi packages, not the pi CLI installation. To uninstall pi itself, see [Quickstart](quickstart.md#uninstall). Project package commands accept `--approve`/`--no-approve` to trust or ignore project-local package settings for one command.
-
-See [Pi Packages](packages.md) for package sources and security notes.
-
-### Modes
+## Modes
 
 | Flag | Description |
 |------|-------------|
 | default | Interactive mode |
 | `-p`, `--print` | Print response and exit |
-| `--mode json` | Output all events as JSON lines; see [JSON mode](json.md) |
-| `--mode rpc` | RPC mode over stdin/stdout; see [RPC mode](rpc.md) |
+| `--mode json` | Output all events as JSON lines |
+| `--mode rpc` | RPC mode over stdin/stdout |
 | `--export <in> [out]` | Export a session to HTML |
 
-In print mode, pi also reads piped stdin and merges it into the initial prompt:
+In print mode, Tau also reads piped stdin and merges it into the initial prompt:
 
 ```bash
-cat README.md | pi -p "Summarize this text"
+cat README.md | tau -p "Summarize this text"
 ```
 
-### Model Options
+## Model Options
 
 | Option | Description |
 |--------|-------------|
-| `--provider <name>` | Provider, such as `anthropic`, `openai`, or `google` |
-| `--model <pattern>` | Model pattern or ID; supports `provider/id` and optional `:<thinking>` |
-| `--api-key <key>` | API key, overriding environment variables |
+| `--provider openrouter` | Provider selection; OpenRouter is the only built-in provider |
+| `--model <pattern>` | OpenRouter model pattern or ID, with optional `:<thinking>` |
+| `--api-key <key>` | OpenRouter API key override |
 | `--thinking <level>` | `off`, `minimal`, `low`, `medium`, `high`, `xhigh` |
-| `--models <patterns>` | Comma-separated patterns for Ctrl+P cycling |
-| `--list-models [search]` | List available models |
+| `--models <patterns>` | Comma-separated OpenRouter model patterns for Ctrl+P cycling |
+| `--list-models [search]` | List available OpenRouter models |
 
-### Session Options
-
-| Option | Description |
-|--------|-------------|
-| `-c`, `--continue` | Continue the most recent session |
-| `-r`, `--resume` | Browse and select a session |
-| `--session <path\|id>` | Use a specific session file or partial UUID |
-| `--fork <path\|id>` | Fork a session file or partial UUID into a new session |
-| `--session-dir <dir>` | Custom session storage directory |
-| `--no-session` | Ephemeral mode; do not save |
-| `--name <name>`, `-n <name>` | Set session display name at startup |
-
-### Tool Options
+## Tool Options
 
 | Option | Description |
 |--------|-------------|
-| `--tools <list>`, `-t <list>` | Allowlist specific built-in, extension, and custom tools |
-| `--exclude-tools <list>`, `-xt <list>` | Disable specific built-in, extension, and custom tools |
+| `--tools <list>`, `-t <list>` | Allowlist specific tools |
+| `--exclude-tools <list>`, `-xt <list>` | Disable specific tools |
 | `--no-builtin-tools`, `-nbt` | Disable built-in tools but keep extension/custom tools enabled |
 | `--no-tools`, `-nt` | Disable all tools |
 
-Built-in tools: `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`.
+Core tools: `bash`, `subagent`, `transcribe`, and `vision`.
 
-### Resource Options
+## Resource Options
 
 | Option | Description |
 |--------|-------------|
@@ -213,87 +147,27 @@ Built-in tools: `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`.
 | `--no-prompt-templates` | Disable prompt template discovery |
 | `--theme <path>` | Load a theme; repeatable |
 | `--no-themes` | Disable theme discovery |
-| `--no-context-files`, `-nc` | Disable `AGENTS.md` and `CLAUDE.md` discovery |
+| `--no-context-files`, `-nc` | Disable `AGENTS.md` discovery |
 
-Combine `--no-*` with explicit flags to load exactly what you need, ignoring settings. Example:
-
-```bash
-pi --no-extensions -e ./my-extension.ts
-```
-
-### Other Options
-
-| Option | Description |
-|--------|-------------|
-| `--system-prompt <text>` | Replace default prompt; context files and skills are still appended |
-| `--append-system-prompt <text>` | Append to system prompt |
-| `--verbose` | Force verbose startup |
-| `-a`, `--approve` | Trust project-local files for this run |
-| `-na`, `--no-approve` | Ignore project-local files for this run |
-| `-h`, `--help` | Show help |
-| `-v`, `--version` | Show version |
-
-### File Arguments
+## File Arguments
 
 Prefix files with `@` to include them in the message:
 
 ```bash
-pi @prompt.md "Answer this"
-pi -p @screenshot.png "What's in this image?"
-pi @code.ts @test.ts "Review these files"
+tau @prompt.md "Answer this"
+tau -p @screenshot.png "What's in this image?"
+tau @code.ts @test.ts "Review these files"
 ```
 
-### Examples
-
-```bash
-# Interactive with initial prompt
-pi "List all .ts files in src/"
-
-# Non-interactive
-pi -p "Summarize this codebase"
-
-# Non-interactive with piped stdin
-cat README.md | pi -p "Summarize this text"
-
-# Named one-shot session
-pi --name "release audit" -p "Audit this repository"
-
-# Different model
-pi --provider openai --model gpt-4o "Help me refactor"
-
-# Model with provider prefix
-pi --model openai/gpt-4o "Help me refactor"
-
-# Model with thinking level shorthand
-pi --model sonnet:high "Solve this complex problem"
-
-# Limit model cycling
-pi --models "claude-*,gpt-4o"
-
-# Read-only mode
-pi --tools read,grep,find,ls -p "Review the code"
-
-# Disable one extension or built-in tool while keeping the rest available
-pi --exclude-tools ask_question
-```
-
-### Environment Variables
+## Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `PI_CODING_AGENT_DIR` | Override config directory; default is `~/.pi/agent` |
-| `PI_CODING_AGENT_SESSION_DIR` | Override session storage directory; overridden by `--session-dir` |
-| `PI_PACKAGE_DIR` | Override package directory, useful for Nix/Guix store paths |
-| `PI_OFFLINE` | Disable startup network operations, including update checks, package update checks, and install/update telemetry |
-| `PI_SKIP_VERSION_CHECK` | Skip the Pi version update check at startup. This prevents the `pi.dev` latest-version request |
-| `PI_TELEMETRY` | Override install/update telemetry and provider attribution headers: `1`/`true`/`yes` or `0`/`false`/`no`. This does not disable update checks |
-| `PI_CACHE_RETENTION` | Set to `long` for extended prompt cache where supported |
+| `OPENROUTER_API_KEY` | OpenRouter API key |
+| `TAU_CODING_AGENT_DIR` | Override config directory; default is `~/.tau/agent` |
+| `TAU_CODING_AGENT_SESSION_DIR` | Override session storage directory; overridden by `--session-dir` |
+| `TAU_PACKAGE_DIR` | Override package directory, useful for Nix/Guix store paths |
+| `TAU_OFFLINE` | Disable startup network operations |
+| `TAU_SKIP_VERSION_CHECK` | Skip the Tau version update check at startup |
+| `TAU_TELEMETRY` | Override install/update telemetry |
 | `VISUAL`, `EDITOR` | External editor for Ctrl+G |
-
-## Design Principles
-
-Pi keeps the core small and pushes workflow-specific behavior into extensions, skills, prompt templates, and packages.
-
-It intentionally does not include built-in MCP, sub-agents, permission popups, plan mode, to-dos, or background bash. You can build or install those workflows as extensions or packages, or use external tools such as containers and tmux.
-
-For the full rationale, read the [blog post](https://mariozechner.at/posts/2025-11-30-pi-coding-agent/).
