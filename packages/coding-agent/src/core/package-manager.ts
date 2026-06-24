@@ -886,7 +886,7 @@ export class DefaultPackageManager implements PackageManager {
 		await this.resolvePackageSources(packageSources, accumulator, onMissing);
 
 		const globalBaseDir = this.agentDir;
-		const projectBaseDir = getProjectDir(this.cwd);
+		const projectBaseDir = getProjectDir(this.cwd, this.agentDir);
 
 		for (const resourceType of RESOURCE_TYPES) {
 			const target = this.getTargetMap(accumulator, resourceType);
@@ -1902,7 +1902,7 @@ export class DefaultPackageManager implements PackageManager {
 		}
 		if (scope === "project") {
 			this.assertProjectTrustedForScope(scope);
-			return join(getProjectDir(this.cwd), "npm");
+			return join(getProjectDir(this.cwd, this.agentDir), "npm");
 		}
 		return join(this.agentDir, "npm");
 	}
@@ -1943,7 +1943,7 @@ export class DefaultPackageManager implements PackageManager {
 		}
 		if (scope === "project") {
 			this.assertProjectTrustedForScope(scope);
-			return join(getProjectDir(this.cwd), "npm", "node_modules", source.name);
+			return join(getProjectDir(this.cwd, this.agentDir), "npm", "node_modules", source.name);
 		}
 		return join(this.agentDir, "npm", "node_modules", source.name);
 	}
@@ -1982,7 +1982,7 @@ export class DefaultPackageManager implements PackageManager {
 		}
 		if (scope === "project") {
 			this.assertProjectTrustedForScope(scope);
-			return join(getProjectDir(this.cwd), "git");
+			return join(getProjectDir(this.cwd, this.agentDir), "git");
 		}
 		return join(this.agentDir, "git");
 	}
@@ -2008,7 +2008,7 @@ export class DefaultPackageManager implements PackageManager {
 	private getBaseDirForScope(scope: SourceScope): string {
 		if (scope === "project") {
 			this.assertProjectTrustedForScope(scope);
-			return getProjectDir(this.cwd);
+			return getProjectDir(this.cwd, this.agentDir);
 		}
 		if (scope === "user") {
 			return this.agentDir;
