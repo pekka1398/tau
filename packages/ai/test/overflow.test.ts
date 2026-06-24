@@ -61,14 +61,12 @@ describe("isContextOverflow", () => {
 		expect(isContextOverflow(message, 32768)).toBe(false);
 	});
 
-	it("does not treat Bedrock throttling 'Too many tokens' as overflow", () => {
-		// Bedrock returns this for HTTP 429 rate limiting, NOT context overflow.
-		// formatBedrockError uses a human-readable prefix for ThrottlingException.
+	it("does not treat throttling errors containing 'Too many tokens' as overflow", () => {
 		const message = createErrorMessage("Throttling error: Too many tokens, please wait before trying again.");
 		expect(isContextOverflow(message, 200000)).toBe(false);
 	});
 
-	it("does not treat Bedrock service unavailable as overflow", () => {
+	it("does not treat service unavailable errors as overflow", () => {
 		const message = createErrorMessage("Service unavailable: The service is temporarily unavailable.");
 		expect(isContextOverflow(message, 200000)).toBe(false);
 	});

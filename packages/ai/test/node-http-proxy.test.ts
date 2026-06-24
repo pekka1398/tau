@@ -40,25 +40,23 @@ describe("node HTTP proxy resolution", () => {
 	it("respects NO_PROXY exclusions", () => {
 		resetProxyEnv();
 		process.env.HTTPS_PROXY = "http://proxy.example:8080";
-		process.env.NO_PROXY = "bedrock-runtime.us-east-1.amazonaws.com";
+		process.env.NO_PROXY = "api.openrouter.ai";
 
-		expect(resolveHttpProxyUrlForTarget("https://bedrock-runtime.us-east-1.amazonaws.com")).toBeUndefined();
+		expect(resolveHttpProxyUrlForTarget("https://api.openrouter.ai")).toBeUndefined();
 	});
 
 	it("resolves HTTP and HTTPS proxy URLs", () => {
 		resetProxyEnv();
 		process.env.HTTPS_PROXY = "http://proxy.example:8080";
 
-		expect(resolveHttpProxyUrlForTarget("https://bedrock-runtime.us-east-1.amazonaws.com")?.toString()).toBe(
-			"http://proxy.example:8080/",
-		);
+		expect(resolveHttpProxyUrlForTarget("https://api.openrouter.ai")?.toString()).toBe("http://proxy.example:8080/");
 	});
 
 	it("rejects SOCKS and PAC proxy URLs explicitly", () => {
 		resetProxyEnv();
 		process.env.HTTPS_PROXY = "socks5://proxy.example:1080";
 
-		expect(() => resolveHttpProxyUrlForTarget("https://bedrock-runtime.us-east-1.amazonaws.com")).toThrow(
+		expect(() => resolveHttpProxyUrlForTarget("https://api.openrouter.ai")).toThrow(
 			UNSUPPORTED_PROXY_PROTOCOL_MESSAGE,
 		);
 	});
