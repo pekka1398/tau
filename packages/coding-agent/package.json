@@ -1,7 +1,7 @@
 {
 	"name": "@earendil-works/tau-coding-agent",
 	"version": "0.78.1",
-	"description": "Coding agent CLI with read, bash, edit, write tools and session management",
+	"description": "Tau coding agent CLI with OpenRouter model access and session management",
 	"type": "module",
 	"tauConfig": {
 		"name": "tau",
