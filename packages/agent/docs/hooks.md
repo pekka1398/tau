@@ -387,7 +387,6 @@ These are not covered by `emit()` and should stay as registries on `CodingAgentH
 - flags
 - message renderers
 - provider registrations
-- OAuth providers
 - custom model providers
 
 That is fine. They do not belong in `AgentHarness`.

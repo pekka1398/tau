@@ -380,7 +380,7 @@ class AnsiCodeTracker {
 	process(ansiCode: string): void {
 		// OSC 8 hyperlink: \x1b]8;;<url>\x1b\\ (open) or \x1b]8;;\x1b\\ (close).
 		// Preserve the original terminator because some terminals only make BEL-terminated
-		// links clickable. OAuth login URLs use BEL, so reopening wrapped lines with ST
+		// links clickable. Some URLs use BEL, so reopening wrapped lines with ST
 		// made only the first physical line clickable in those terminals.
 		const hyperlink = parseOsc8Hyperlink(ansiCode);
 		if (hyperlink !== undefined) {
