@@ -7,8 +7,8 @@ See [AGENTS.md](https://github.com/pekka1398/tau/blob/main/AGENTS.md) for additi
 ```bash
 git clone https://github.com/pekka1398/tau
 cd tau
-npm install
-npm run build
+bun install
+bun run build
 ```
 
 Run from source:
@@ -56,8 +56,8 @@ Never use `__dirname` directly for package assets.
 
 ```bash
 ./test.sh                         # Run non-LLM tests (no API keys needed)
-npm test                          # Run all tests
-npm test -- test/specific.test.ts # Run specific test
+bun run test                      # Run all tests
+bunx vitest --run test/specific.test.ts  # Run specific coding-agent test
 ```
 
 Top-level `reference-repo/`, `test`, and `note` directories are ignored local scratch/reference material. They are not part of the tracked Tau source tree or release/test surface.

@@ -13,6 +13,7 @@
 		"check:browser-smoke": "node scripts/check-browser-smoke.mjs",
 		"check:pinned-deps": "node scripts/check-pinned-deps.mjs",
 		"check:ts-imports": "node scripts/check-ts-relative-imports.mjs",
+		"format": "biome check --write .",
 		"start": "bun run build && TAU_DEBUG_LOADER=1 TAU_DEBUG_TOOL_RESULT=1 bun packages/coding-agent/dist/cli.js --provider openrouter --model xiaomi/mimo-v2.5-pro",
 		"test": "bun run --workspaces test"
 	},
