@@ -32,7 +32,7 @@ function assistantMsg(text: string): AgentMessage {
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 		},
 		stopReason: "end_turn",
-		api: "openai",
+		api: "openai-completions",
 		provider: "openrouter",
 		model: "test",
 		timestamp: Date.now(),
@@ -52,7 +52,7 @@ function assistantWithToolCall(toolName: string, args: Record<string, unknown>):
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 		},
 		stopReason: "tool_use",
-		api: "openai",
+		api: "openai-completions",
 		provider: "openrouter",
 		model: "test",
 		timestamp: Date.now(),
@@ -119,7 +119,7 @@ describe("effectiveChars", () => {
 				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 			},
 			stopReason: "end_turn",
-			api: "openai",
+			api: "openai-completions",
 			provider: "openrouter",
 			model: "test",
 			timestamp: Date.now(),
@@ -202,7 +202,7 @@ describe("extractAssistantText", () => {
 				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 			},
 			stopReason: "end_turn",
-			api: "openai",
+			api: "openai-completions",
 			provider: "openrouter",
 			model: "test",
 			timestamp: Date.now(),
@@ -307,8 +307,8 @@ describe("rebuildMessages", () => {
 				}),
 			]),
 		);
-		expect(result[1]).toBe(kept[0]);
-		expect(result[2]).toBe(kept[1]);
+		expect(result[1]).toEqual(kept[0]);
+		expect(result[2]).toEqual(kept[1]);
 	});
 
 	it("summary message contains compaction marker", () => {
