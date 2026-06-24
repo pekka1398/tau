@@ -141,7 +141,7 @@ To share extensions via npm or git as tau packages, see [packages.md](packages.m
 |---------|---------|
 | `@earendil-works/tau-coding-agent` | Extension types (`ExtensionAPI`, `ExtensionContext`, events) |
 | `typebox` | Schema definitions for tool parameters |
-| `@earendil-works/tau-ai` | AI utilities (`StringEnum` for Google-compatible enums) |
+| `@earendil-works/tau-ai` | AI utilities (`StringEnum` for compatible string enums) |
 | `@earendil-works/tau-tui` | TUI components for custom rendering |
 
 npm dependencies work too. Add a `package.json` next to your extension (or in a parent directory), run `npm install`, and imports from `node_modules/` are resolved automatically.
@@ -1633,7 +1633,7 @@ Tau.registerTool({
     "Use my_tool for todo planning instead of direct file edits when the user asks for a task list."
   ],
   parameters: Type.Object({
-    action: StringEnum(["list", "add"] as const),  // Use StringEnum for Google compatibility
+    action: StringEnum(["list", "add"] as const),  // Use StringEnum for broad schema compatibility
     text: Type.Optional(Type.String()),
   }),
   prepareArguments(args) {
@@ -1690,7 +1690,7 @@ async execute(toolCallId, params) {
 }
 ```
 
-**Important:** Use `StringEnum` from `@earendil-works/tau-ai` for string enums. `Type.Union`/`Type.Literal` doesn't work with Google's API.
+**Important:** Use `StringEnum` from `@earendil-works/tau-ai` for string enums. Some OpenAI-compatible APIs reject `Type.Union`/`Type.Literal` anyOf/const schemas.
 
 **Argument preparation:** `prepareArguments(args)` is optional. If defined, it runs before schema validation and before `execute()`. Use it to mimic an older accepted input shape when Tau resumes an older session whose stored tool call arguments no longer match the current schema. Return the object you want validated against `parameters`. Keep the public schema strict. Do not add deprecated compatibility fields to `parameters` just to keep old resumed sessions working.
 

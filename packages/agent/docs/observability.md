@@ -332,8 +332,8 @@ Every emitted event inside that async chain includes the context:
     region: "eu",
   },
   payload: {
-    provider: "anthropic",
-    model: "claude-sonnet-4",
+    provider: "openrouter",
+    model: "anthropic/claude-sonnet-4.5",
   },
 }
 ```

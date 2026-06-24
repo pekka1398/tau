@@ -87,7 +87,7 @@ When multiple sources specify a session directory, precedence is `--session-dir`
 
 ```json
 {
-  "enabledModels": ["xiaomi/*", "anthropic/*"]
+  "enabledModels": ["xiaomi/*", "openai/*"]
 }
 ```
 

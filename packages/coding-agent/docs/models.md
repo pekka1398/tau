@@ -122,7 +122,7 @@ Use `enabledModels` in settings to limit Ctrl+P model cycling:
 
 ```json
 {
-  "enabledModels": ["xiaomi/*", "anthropic/*"]
+  "enabledModels": ["xiaomi/*", "openai/*"]
 }
 ```
 

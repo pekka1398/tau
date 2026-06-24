@@ -1,8 +1,8 @@
 import { type TUnsafe, Type } from "typebox";
 
 /**
- * Creates a string enum schema compatible with Google's API and other providers
- * that don't support anyOf/const patterns.
+ * Creates a string enum schema compatible with OpenAI-compatible APIs that
+ * don't support anyOf/const patterns.
  *
  * @example
  * const OperationSchema = StringEnum(["add", "subtract", "multiply", "divide"], {

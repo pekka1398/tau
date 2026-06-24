@@ -39,8 +39,8 @@ import { transformMessages } from "./transform-messages.ts";
 
 /**
  * Check if conversation messages contain tool calls or tool results.
- * This is needed because Anthropic (via proxy) requires the tools param
- * to be present when messages include tool_calls or tool role messages.
+ * Some OpenRouter-routed models require the tools param to be present when
+ * messages include tool_calls or tool role messages.
  */
 function hasToolHistory(messages: Message[]): boolean {
 	for (const msg of messages) {
@@ -584,12 +584,12 @@ function buildParams(
 			(params as any).tool_stream = true;
 		}
 	} else if (hasToolHistory(context.messages)) {
-		// Anthropic (via LiteLLM/proxy) requires tools param when conversation has tool_calls/tool_results
+		// Some OpenRouter-routed models require tools when the conversation has tool_calls/tool_results.
 		params.tools = [];
 	}
 
 	if (cacheControl) {
-		applyAnthropicCacheControl(messages, params.tools, cacheControl);
+		applyCacheControlMarkers(messages, params.tools, cacheControl);
 	}
 
 	params.parallel_tool_calls = true;
@@ -685,7 +685,7 @@ function getCompatCacheControl(
 	return { type: "ephemeral", ...(ttl ? { ttl } : {}) };
 }
 
-function applyAnthropicCacheControl(
+function applyCacheControlMarkers(
 	messages: ChatCompletionMessageParam[],
 	tools: OpenAI.Chat.Completions.ChatCompletionTool[] | undefined,
 	cacheControl: OpenAICompatCacheControl,
@@ -796,9 +796,8 @@ export function convertMessages(
 	const params: ChatCompletionMessageParam[] = [];
 
 	const normalizeToolCallId = (id: string): string => {
-		// Handle pipe-separated IDs from OpenAI Responses API
+		// Handle pipe-separated IDs from imported sessions or OpenAI-compatible proxies.
 		// Format: {call_id}|{id} where {id} can be 400+ chars with special chars (+, /, =)
-		// These come from providers like github-copilot, openai-codex, opencode
 		// Extract just the call_id part and normalize it
 		if (id.includes("|")) {
 			const [callId] = id.split("|");

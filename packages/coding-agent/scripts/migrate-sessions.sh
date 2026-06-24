@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
 #
-# Migrate sessions from ~/.pi/agent/*.jsonl to proper session directories.
-# This fixes sessions created by the bug in v0.30.0 where sessions were
-# saved to ~/.pi/agent/ instead of ~/.pi/agent/sessions/<encoded-cwd>/.
+# Migrate loose Tau session files into proper session directories.
+# This fixes sessions created by the historical bug where sessions were
+# saved to ~/.tau/agent/ instead of ~/.tau/agent/sessions/<encoded-cwd>/.
 #
-# Usage: ./migrate-sessions.sh [--dry-run]
+# Usage: ./migrate-sessions.sh [--dry-run] [agent-dir]
 #
 
 set -e
 
-AGENT_DIR="${PI_AGENT_DIR:-$HOME/.pi/agent}"
 DRY_RUN=false
 
 if [[ "$1" == "--dry-run" ]]; then
     DRY_RUN=true
+    AGENT_DIR="${2:-${TAU_CODING_AGENT_DIR:-$HOME/.tau/agent}}"
     echo "Dry run mode - no files will be moved"
     echo
+else
+    AGENT_DIR="${1:-${TAU_CODING_AGENT_DIR:-$HOME/.tau/agent}}"
 fi
 
 # Find all .jsonl files directly in agent dir (not in subdirectories)

@@ -308,7 +308,7 @@ ${chalk.bold("Examples:")}
   ${APP_NAME} --model sonnet:high "Solve this complex problem"
 
   # Limit model cycling to specific models
-  ${APP_NAME} --models anthropic/claude-sonnet-4.5,openai/gpt-4o-mini
+  ${APP_NAME} --models xiaomi/mimo-v2.5-pro,openai/gpt-4o-mini
 
   # Limit to a specific provider with glob pattern
   ${APP_NAME} --models "openrouter/*sonnet*"
