@@ -53,13 +53,13 @@ Configure Pi to use the corresponding OpenAI-compatible or Anthropic-compatible 
 ## Gondolin
 
 [Gondolin](https://github.com/earendil-works/gondolin) is a local Linux micro-VM.
-Use the [example extension](../examples/extensions/gondolin) when you want `pi` on the host but all built-in tools routed into the VM.
+Use the [example extension](../examples/extensions/gondolin) when you want Tau on the host but all built-in tools routed into the VM.
 
 Setup:
 
 ```bash
-cp -R packages/coding-agent/examples/extensions/gondolin ~/.pi/agent/extensions/gondolin
-cd ~/.pi/agent/extensions/gondolin
+cp -R packages/coding-agent/examples/extensions/gondolin ~/.tau/agent/extensions/gondolin
+cd ~/.tau/agent/extensions/gondolin
 npm install --ignore-scripts
 ```
 
@@ -67,7 +67,7 @@ Run from the project you want mounted:
 
 ```bash
 cd /path/to/project
-pi -e ~/.pi/agent/extensions/gondolin
+tau -e ~/.tau/agent/extensions/gondolin
 ```
 
 The extension mounts the host cwd at `/workspace` in the VM and overrides `read`, `write`, `edit`, `bash`, `grep`, `find`, and `ls`.

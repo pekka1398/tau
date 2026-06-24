@@ -22,7 +22,7 @@
 	"scripts": {
 		"clean": "shx rm -rf dist",
 		"generate-models": "tsx scripts/generate-models.ts",
-		"build": "bun run generate-models && tsgo -p tsconfig.build.json",
+		"build": "bun run clean && bun run generate-models && tsgo -p tsconfig.build.json",
 		"test": "vitest --run",
 		"prepublishOnly": "bun run clean && bun run build"
 	},
