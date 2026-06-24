@@ -7,8 +7,8 @@
 
 import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
-import type { ImageContent } from "@earendil-works/tau-ai";
 import { Type } from "typebox";
+import type { ImageContent } from "../ai/index.ts";
 import type { ToolDefinition } from "../tool-types.ts";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB

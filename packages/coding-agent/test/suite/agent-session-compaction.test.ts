@@ -1,10 +1,10 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	type AssistantMessage,
 	createAssistantMessageEventStream,
 	fauxAssistantMessage,
 	type Model,
-} from "@earendil-works/tau-ai";
-import { afterEach, describe, expect, it, vi } from "vitest";
+} from "../../src/core/ai/index.ts";
 import { createHarness, type Harness } from "./harness.ts";
 
 function createUsage(totalTokens: number) {

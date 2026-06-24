@@ -1,4 +1,3 @@
-import { type Model, modelsAreEqual } from "@earendil-works/tau-ai";
 import {
 	Container,
 	type Focusable,
@@ -9,6 +8,7 @@ import {
 	Text,
 	type TUI,
 } from "@earendil-works/tau-tui";
+import { type Model, modelsAreEqual } from "../../../core/ai/index.ts";
 import type { ModelRegistry } from "../../../core/model-registry.ts";
 import type { SettingsManager } from "../../../core/settings-manager.ts";
 import { theme } from "../theme/theme.ts";

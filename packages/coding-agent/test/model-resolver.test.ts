@@ -1,5 +1,5 @@
-import type { Model } from "@earendil-works/tau-ai";
 import { describe, expect, test } from "vitest";
+import type { Model } from "../src/core/ai/index.ts";
 import { findInitialModel, parseModelPattern, resolveCliModel } from "../src/core/model-resolver.ts";
 
 // Mock models for testing

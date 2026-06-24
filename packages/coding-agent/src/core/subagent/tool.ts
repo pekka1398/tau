@@ -16,9 +16,9 @@
  */
 
 import { randomUUID } from "node:crypto";
-import type { AgentMessage, AgentToolResult } from "@earendil-works/tau-agent-core";
-import { getSubagentOutput, getSubagentUsage, runSubagent } from "@earendil-works/tau-agent-core";
 import { Type } from "typebox";
+import type { AgentMessage, AgentToolResult } from "../agent/index.ts";
+import { getSubagentOutput, getSubagentUsage, runSubagent } from "../agent/index.ts";
 import type { ToolDefinition } from "../tool-types.ts";
 import type { AgentConfig, AgentScope } from "./agents.ts";
 import { discoverAgents } from "./agents.ts";
@@ -77,8 +77,8 @@ export interface SubagentDetails {
  */
 export function resolveAgentTools(
 	agent: AgentConfig,
-	availableTools: import("@earendil-works/tau-agent-core").AgentTool<any>[],
-): import("@earendil-works/tau-agent-core").AgentTool<any>[] {
+	availableTools: import("../agent/index.ts").AgentTool<any>[],
+): import("../agent/index.ts").AgentTool<any>[] {
 	// No tool restriction or wildcard → all tools
 	if (!agent.tools || agent.tools.length === 0 || agent.tools.includes("*")) {
 		return availableTools;
@@ -93,9 +93,9 @@ export function resolveAgentTools(
  */
 export function resolveAgentModel(
 	agent: AgentConfig,
-	parentModel: import("@earendil-works/tau-ai").Model<any> | undefined,
-	fallbackModel: import("@earendil-works/tau-ai").Model<any> | undefined,
-): import("@earendil-works/tau-ai").Model<any> | undefined {
+	parentModel: import("../ai/index.ts").Model<any> | undefined,
+	fallbackModel: import("../ai/index.ts").Model<any> | undefined,
+): import("../ai/index.ts").Model<any> | undefined {
 	if (agent.model === "inherit") {
 		return parentModel;
 	}
@@ -145,13 +145,13 @@ async function runSingleAgent(
 	agents: AgentConfig[],
 	agentName: string,
 	task: string,
-	model: import("@earendil-works/tau-ai").Model<any> | undefined,
+	model: import("../ai/index.ts").Model<any> | undefined,
 	getApiKey: ((provider: string) => Promise<string | undefined> | string | undefined) | undefined,
-	streamFn: import("@earendil-works/tau-agent-core").StreamFn | undefined,
+	streamFn: import("../agent/index.ts").StreamFn | undefined,
 	signal: AbortSignal | undefined,
 	onUpdate: OnUpdateCallback | undefined,
 	makeDetails: (results: SingleResult[]) => SubagentDetails,
-	parentTools?: import("@earendil-works/tau-agent-core").AgentTool<any>[],
+	parentTools?: import("../agent/index.ts").AgentTool<any>[],
 ): Promise<SingleResult> {
 	const agent = agents.find((a) => a.name === agentName);
 
@@ -166,7 +166,7 @@ async function runSingleAgent(
 		};
 	}
 
-	const taskMessages: import("@earendil-works/tau-agent-core").AgentMessage[] = [
+	const taskMessages: import("../agent/index.ts").AgentMessage[] = [
 		{
 			role: "user",
 			content: [{ type: "text", text: `Task: ${task}` }],
@@ -178,7 +178,7 @@ async function runSingleAgent(
 	const availableTools = parentTools ?? [];
 	const tools = resolveAgentTools(agent, availableTools);
 	const resolvedModel = resolveAgentModel(agent, model, model);
-	const allMessages: import("@earendil-works/tau-agent-core").AgentMessage[] = [];
+	const allMessages: import("../agent/index.ts").AgentMessage[] = [];
 	const agentRunId = randomUUID();
 
 	// Record agent metadata
@@ -264,10 +264,10 @@ async function runSingleAgent(
 async function runForkAgent(
 	messages: AgentMessage[],
 	systemPrompt: string,
-	tools: import("@earendil-works/tau-agent-core").AgentTool<any>[],
-	model: import("@earendil-works/tau-ai").Model<any> | undefined,
+	tools: import("../agent/index.ts").AgentTool<any>[],
+	model: import("../ai/index.ts").Model<any> | undefined,
 	getApiKey: ((provider: string) => Promise<string | undefined> | string | undefined) | undefined,
-	streamFn: import("@earendil-works/tau-agent-core").StreamFn | undefined,
+	streamFn: import("../agent/index.ts").StreamFn | undefined,
 	signal: AbortSignal | undefined,
 	onUpdate: OnUpdateCallback | undefined,
 	makeDetails: (results: SingleResult[]) => SubagentDetails,
@@ -359,10 +359,10 @@ function runSingleAgentAsync(
 	agents: AgentConfig[],
 	agentName: string,
 	task: string,
-	model: import("@earendil-works/tau-ai").Model<any> | undefined,
+	model: import("../ai/index.ts").Model<any> | undefined,
 	getApiKey: ((provider: string) => Promise<string | undefined> | string | undefined) | undefined,
-	streamFn: import("@earendil-works/tau-agent-core").StreamFn | undefined,
-	parentTools?: import("@earendil-works/tau-agent-core").AgentTool<any>[],
+	streamFn: import("../agent/index.ts").StreamFn | undefined,
+	parentTools?: import("../agent/index.ts").AgentTool<any>[],
 ): string {
 	const taskId = randomUUID();
 	const abortController = new AbortController();
@@ -459,7 +459,7 @@ export interface SubagentToolOptions {
 	/** Task registry for background execution. Enables run_in_background mode. */
 	taskRegistry?: TaskRegistry;
 	/** Get the current set of tools available to the parent agent. Passed to subagents. */
-	getTools?: () => import("@earendil-works/tau-agent-core").AgentTool<any>[];
+	getTools?: () => import("../agent/index.ts").AgentTool<any>[];
 	/** Get the parent's conversation messages. Used for fork mode context inheritance. */
 	getParentMessages?: () => AgentMessage[];
 	/** Get the parent's system prompt. Used for fork mode (cache-identical prefix). */

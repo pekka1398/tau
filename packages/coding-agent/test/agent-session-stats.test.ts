@@ -1,7 +1,7 @@
-import { Agent } from "@earendil-works/tau-agent-core";
-import { type AssistantMessage, getModel, type Usage } from "@earendil-works/tau-ai";
 import { describe, expect, it } from "vitest";
+import { Agent } from "../src/core/agent/index.ts";
 import { AgentSession } from "../src/core/agent-session.ts";
+import { type AssistantMessage, getModel, type Usage } from "../src/core/ai/index.ts";
 import { AuthStorage } from "../src/core/auth-storage.ts";
 import { ModelRegistry } from "../src/core/model-registry.ts";
 import { SessionManager } from "../src/core/session-manager.ts";

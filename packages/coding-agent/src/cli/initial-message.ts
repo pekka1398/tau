@@ -1,4 +1,4 @@
-import type { ImageContent } from "@earendil-works/tau-ai";
+import type { ImageContent } from "../core/ai/index.ts";
 import type { Args } from "./args.ts";
 
 export interface InitialMessageInput {

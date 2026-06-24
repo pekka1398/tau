@@ -7,7 +7,7 @@
 	],
 	"scripts": {
 		"clean": "bun run --workspaces clean",
-		"build": "cd packages/tui && bun run build && cd ../ai && bun run build && cd ../agent && bun run build && cd ../coding-agent && bun run build",
+		"build": "cd packages/tui && bun run build && cd ../coding-agent && bun run build",
 		"build:binary": "cd packages/coding-agent && bun run build:binary",
 		"check": "biome check --error-on-warnings . && bun run check:pinned-deps && bun run check:ts-imports && tsgo --noEmit && bun run check:browser-smoke",
 		"check:browser-smoke": "node scripts/check-browser-smoke.mjs",

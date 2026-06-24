@@ -11,7 +11,7 @@
  * Compaction is manual only — no auto-trigger.
  */
 
-import type { AgentMessage } from "@earendil-works/tau-agent-core";
+import type { AgentMessage } from "../agent/index.ts";
 
 // ============================================================================
 // Constants

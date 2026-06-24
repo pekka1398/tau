@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fauxAssistantMessage, registerFauxProvider } from "@earendil-works/tau-ai";
 import { afterEach, describe, expect, it } from "vitest";
 import {
 	type CreateAgentSessionRuntimeFactory,
@@ -9,6 +8,7 @@ import {
 	createAgentSessionRuntime,
 	createAgentSessionServices,
 } from "../src/core/agent-session-runtime.ts";
+import { fauxAssistantMessage, registerFauxProvider } from "../src/core/ai/index.ts";
 import { AuthStorage } from "../src/core/auth-storage.ts";
 import { SessionManager } from "../src/core/session-manager.ts";
 import type {

@@ -16,15 +16,11 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname } from "node:path";
-import type {
-	Agent,
-	AgentEvent,
-	AgentMessage,
-	AgentState,
-	AgentTool,
-	ThinkingLevel,
-} from "@earendil-works/tau-agent-core";
-import type { AssistantMessage, ImageContent, Message, Model, TextContent } from "@earendil-works/tau-ai";
+import { stripFrontmatter } from "../utils/frontmatter.ts";
+import { resolvePath } from "../utils/paths.ts";
+import { sleep } from "../utils/sleep.ts";
+import type { Agent, AgentEvent, AgentMessage, AgentState, AgentTool, ThinkingLevel } from "./agent/index.ts";
+import type { AssistantMessage, ImageContent, Message, Model, TextContent } from "./ai/index.ts";
 import {
 	clampThinkingLevel,
 	cleanupSessionResources,
@@ -32,10 +28,7 @@ import {
 	isContextOverflow,
 	modelsAreEqual,
 	resetApiProviders,
-} from "@earendil-works/tau-ai";
-import { stripFrontmatter } from "../utils/frontmatter.ts";
-import { resolvePath } from "../utils/paths.ts";
-import { sleep } from "../utils/sleep.ts";
+} from "./ai/index.ts";
 import { type BashResult, executeBashWithOperations } from "./bash-executor.ts";
 import {
 	COMPACT_PROMPT,

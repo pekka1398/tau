@@ -24,7 +24,7 @@ export {
 } from "./truncate.ts";
 export { createVisionToolDefinition } from "./vision.ts";
 
-import type { AgentTool } from "@earendil-works/tau-agent-core";
+import type { AgentTool } from "../agent/index.ts";
 import { createSubagentToolDefinition, type SubagentToolOptions } from "../subagent/tool.ts";
 import type { ToolDefinition } from "../tool-types.ts";
 import { type BashToolOptions, createBashTool, createBashToolDefinition } from "./bash.ts";

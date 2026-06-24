@@ -1,7 +1,7 @@
-import type { AgentTool, ThinkingLevel } from "@earendil-works/tau-agent-core";
-import { fauxAssistantMessage, fauxToolCall, type Model } from "@earendil-works/tau-ai";
 import { Type } from "typebox";
 import { afterEach, describe, expect, it } from "vitest";
+import type { AgentTool, ThinkingLevel } from "../../src/core/agent/index.ts";
+import { fauxAssistantMessage, fauxToolCall, type Model } from "../../src/core/ai/index.ts";
 import type { BuildSystemPromptOptions, ExtensionAPI } from "../../src/index.ts";
 import { createHarness, getAssistantTexts, type Harness } from "./harness.ts";
 

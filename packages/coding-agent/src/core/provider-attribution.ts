@@ -1,4 +1,4 @@
-import type { Api, Model } from "@earendil-works/tau-ai";
+import type { Api, Model } from "./ai/index.ts";
 
 const OPENROUTER_ATTRIBUTION_HEADERS = {
 	"HTTP-Referer": "https://tau.dev",

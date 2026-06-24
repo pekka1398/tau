@@ -1,5 +1,5 @@
-import type { AgentMessage } from "@earendil-works/tau-agent-core";
 import { describe, expect, it } from "vitest";
+import type { AgentMessage } from "../src/core/agent/index.ts";
 import {
 	COMPACT_PROMPT,
 	effectiveChars,

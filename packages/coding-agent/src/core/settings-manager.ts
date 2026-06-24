@@ -1,9 +1,9 @@
-import type { Transport } from "@earendil-works/tau-ai";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import lockfile from "proper-lockfile";
 import { getAgentDir, getProjectDir } from "../config.ts";
 import { normalizePath, resolvePath } from "../utils/paths.ts";
+import type { Transport } from "./ai/index.ts";
 import { DEFAULT_HTTP_IDLE_TIMEOUT_MS, parseHttpIdleTimeoutMs } from "./http-dispatcher.ts";
 
 /** @deprecated Only `enabled` is used. Token-based fields are no longer consumed. */

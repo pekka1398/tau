@@ -115,7 +115,12 @@ function generateFileTree(cwd: string): string {
  * Scan the project for important files and generate a table.
  */
 function generateFileTable(cwd: string): string {
-	const importantDirs = ["packages/coding-agent/src", "packages/agent/src", "packages/ai/src", "packages/tui/src"];
+	const importantDirs = [
+		"packages/coding-agent/src",
+		"packages/coding-agent/src/core/agent",
+		"packages/coding-agent/src/core/ai",
+		"packages/tui/src",
+	];
 	const rows: string[] = [];
 
 	rows.push("| Absolute Path | Lines | Keywords | Description |");
@@ -227,18 +232,18 @@ export function createRoadmap(cwd: string): string {
 ## Architecture
 
 \`\`\`
-packages/ai              LLM provider abstraction (OpenRouter, model registry, streaming)
-packages/agent           Agent loop core (runAgentLoop, EventStream, tool execution)
+packages/coding-agent    Main Tau CLI/app
+├─ src/core/ai           OpenRouter model registry, streaming, image generation
+├─ src/core/agent        Agent loop core, EventStream, tool execution
 packages/tui             Terminal UI components (Ink-based, themes, keybindings)
 packages/ai-dash         Sandboxed shell (C, modified dash) — spawned as subprocess
 
-packages/coding-agent    Main product — depends on all above
-├─ src/cli/              CLI argument parsing, entry point
+├─ src/cli/              CLI argument parsing
 ├─ src/core/             Session management, tools, subagent, config
 │  ├─ tools/             Bash, Transcribe, Vision tool definitions
 │  ├─ subagent/          Fork, worktree, transcript, built-in agents
 │  ├─ compaction/        Context compaction for long sessions
-│  └─ extensions/        Extension type stubs (infrastructure removed)
+│  └─ extensions/        Extension loading and runtime
 ├─ src/modes/            Execution modes
 │  ├─ interactive/       TUI mode (default)
 │  ├─ print-mode.ts      Single-shot mode (-p flag)
@@ -249,13 +254,11 @@ packages/coding-agent    Main product — depends on all above
 ## Dependencies
 
 \`\`\`
-coding-agent ──→ agent ──→ ai (LLM provider, streaming)
-    │                        ↑
-    ├────────────────────────┘
-    │
-    ├────→ tui (terminal rendering)
-    │
-    └────→ ai-dash (C binary, spawned via child_process.spawn)
+coding-agent
+    ├── core/agent (agent loop, events, tool execution)
+    ├── core/ai (OpenRouter provider, models, streaming)
+    ├── tui package (terminal rendering)
+    └── ai-dash (C binary, spawned via child_process.spawn)
 \`\`\`
 
 ## Entry Points
@@ -269,8 +272,8 @@ coding-agent ──→ agent ──→ ai (LLM provider, streaming)
 | Change subagent logic | \`src/core/subagent/tool.ts\` |
 | Change agent definitions | \`src/core/subagent/agents.ts\` + \`built-in-agents.ts\` |
 | Change TUI display | \`src/modes/interactive/\` |
-| Change model/provider | \`packages/ai/src/providers/\` |
-| Change agent loop | \`packages/agent/src/agent-loop.ts\` |
+| Change model/provider | \`src/core/ai/providers/\` |
+| Change agent loop | \`src/core/agent/agent-loop.ts\` |
 | Change fork/worktree | \`src/core/subagent/fork.ts\` + \`worktree.ts\` |
 | Change todo system | \`src/core/todo.ts\` |
 | Change roadmap | \`src/core/roadmap.ts\` |

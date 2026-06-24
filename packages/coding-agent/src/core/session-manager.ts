@@ -1,5 +1,3 @@
-import type { AgentMessage } from "@earendil-works/tau-agent-core";
-import type { ImageContent, Message, TextContent } from "@earendil-works/tau-ai";
 import { randomUUID } from "crypto";
 import {
 	appendFileSync,
@@ -19,6 +17,8 @@ import { createInterface } from "readline";
 import { StringDecoder } from "string_decoder";
 import { encodeCwdForPath, getAgentDir as getDefaultAgentDir, getSessionsDir } from "../config.ts";
 import { normalizePath, resolvePath } from "../utils/paths.ts";
+import type { AgentMessage } from "./agent/index.ts";
+import type { ImageContent, Message, TextContent } from "./ai/index.ts";
 import {
 	type BashExecutionMessage,
 	type CustomMessage,

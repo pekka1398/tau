@@ -239,7 +239,7 @@ Both `steer()` and `followUp()` expand file-based prompt templates but error on 
 
 ### Agent and AgentState
 
-The `Agent` class (from `@earendil-works/tau-agent-core`) handles the core LLM interaction. Access it via `session.agent`.
+The `Agent` class handles the core LLM interaction. Access it via `session.agent`.
 
 ```typescript
 // Access current state
@@ -368,8 +368,7 @@ When you pass a custom `ResourceLoader`, `cwd` and `agentDir` no longer control 
 ### Model
 
 ```typescript
-import { getModel } from "@earendil-works/tau-ai";
-import { AuthStorage, ModelRegistry } from "@earendil-works/tau-coding-agent";
+import { AuthStorage, getModel, ModelRegistry } from "@earendil-works/tau-coding-agent";
 
 const authStorage = AuthStorage.create();
 const modelRegistry = ModelRegistry.create(authStorage);
@@ -875,13 +874,13 @@ interface LoadExtensionsResult {
 ## Complete Example
 
 ```typescript
-import { getModel } from "@earendil-works/tau-ai";
 import { Type } from "typebox";
 import {
   AuthStorage,
   createAgentSession,
   DefaultResourceLoader,
   defineTool,
+  getModel,
   ModelRegistry,
   SessionManager,
   SettingsManager,

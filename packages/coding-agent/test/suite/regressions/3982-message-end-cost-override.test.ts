@@ -1,5 +1,5 @@
-import { fauxAssistantMessage } from "@earendil-works/tau-ai";
 import { afterEach, describe, expect, it } from "vitest";
+import { fauxAssistantMessage } from "../../../src/core/ai/index.ts";
 import { createHarness, type Harness } from "../harness.ts";
 
 describe("regression #3982: message_end cost override", () => {

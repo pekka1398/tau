@@ -3,12 +3,12 @@
  * Handles loading and saving credentials from auth.json.
  */
 
-import { findEnvKeys, getEnvApiKey } from "@earendil-works/tau-ai";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import lockfile from "proper-lockfile";
 import { getAgentDir } from "../config.ts";
 import { normalizePath } from "../utils/paths.ts";
+import { findEnvKeys, getEnvApiKey } from "./ai/index.ts";
 import { resolveConfigValue } from "./resolve-config-value.ts";
 
 export type ApiKeyCredential = {

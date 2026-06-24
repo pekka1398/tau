@@ -1,8 +1,8 @@
-import type { AgentMessage } from "@earendil-works/tau-agent-core";
-import type { AssistantMessage, ToolResultMessage, Usage } from "@earendil-works/tau-ai";
 import { Container, Text, type TUI } from "@earendil-works/tau-tui";
 import { beforeAll, describe, expect, test, vi } from "vitest";
+import type { AgentMessage } from "../../../src/core/agent/index.ts";
 import type { AgentSessionEvent } from "../../../src/core/agent-session.ts";
+import type { AssistantMessage, ToolResultMessage, Usage } from "../../../src/core/ai/index.ts";
 import type { SessionContext } from "../../../src/core/session-manager.ts";
 import type { ToolExecutionComponent } from "../../../src/modes/interactive/components/tool-execution.ts";
 import { InteractiveMode } from "../../../src/modes/interactive/interactive-mode.ts";

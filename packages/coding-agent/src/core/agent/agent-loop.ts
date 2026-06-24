@@ -10,7 +10,7 @@ import {
 	streamSimple,
 	type ToolResultMessage,
 	validateToolArguments,
-} from "@earendil-works/tau-ai";
+} from "../ai/index.ts";
 import type {
 	AgentContext,
 	AgentEvent,

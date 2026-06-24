@@ -10,8 +10,9 @@
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { AgentTool } from "@earendil-works/tau-agent-core";
-import { Agent } from "@earendil-works/tau-agent-core";
+import type { AgentTool } from "../src/core/agent/index.ts";
+import { Agent } from "../src/core/agent/index.ts";
+import { AgentSession, type AgentSessionEvent } from "../src/core/agent-session.ts";
 import type {
 	AssistantMessage,
 	AssistantMessageEvent,
@@ -24,9 +25,8 @@ import type {
 	ThinkingContent,
 	ToolCall,
 	Usage,
-} from "@earendil-works/tau-ai";
-import { createAssistantMessageEventStream } from "@earendil-works/tau-ai";
-import { AgentSession, type AgentSessionEvent } from "../src/core/agent-session.ts";
+} from "../src/core/ai/index.ts";
+import { createAssistantMessageEventStream } from "../src/core/ai/index.ts";
 import { AuthStorage } from "../src/core/auth-storage.ts";
 import { ModelRegistry } from "../src/core/model-registry.ts";
 import { SessionManager } from "../src/core/session-manager.ts";

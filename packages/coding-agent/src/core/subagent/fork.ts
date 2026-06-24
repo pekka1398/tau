@@ -6,7 +6,7 @@
  * byte-identical API prefixes for prompt cache hits.
  */
 
-import type { AgentMessage } from "@earendil-works/tau-agent-core";
+import type { AgentMessage } from "../agent/index.ts";
 
 /** Tag used to identify fork children and prevent recursive forking. */
 export const FORK_BOILERPLATE_TAG = "fork_worker_directive";

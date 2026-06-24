@@ -3,9 +3,9 @@
  */
 
 import { access, readFile, stat } from "node:fs/promises";
-import type { ImageContent } from "@earendil-works/tau-ai";
 import chalk from "chalk";
 import { resolve } from "path";
+import type { ImageContent } from "../core/ai/index.ts";
 import { resolveReadPath } from "../core/tools/path-utils.ts";
 import { formatDimensionNote, resizeImage } from "../utils/image-resize.ts";
 import { detectSupportedImageMimeTypeFromFile } from "../utils/mime.ts";

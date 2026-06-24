@@ -3,10 +3,10 @@
  * Validates that the faux provider and session factory work correctly.
  */
 
-import type { AgentTool } from "@earendil-works/tau-agent-core";
-import type { AssistantMessage } from "@earendil-works/tau-ai";
 import { Type } from "typebox";
 import { afterEach, describe, expect, it } from "vitest";
+import type { AgentTool } from "../src/core/agent/index.ts";
+import type { AssistantMessage } from "../src/core/ai/index.ts";
 import { createHarness, createHarnessWithExtensions, type Harness } from "./test-harness.ts";
 
 describe("test harness", () => {

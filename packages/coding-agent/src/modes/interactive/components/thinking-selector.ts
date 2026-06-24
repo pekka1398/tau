@@ -1,5 +1,5 @@
-import type { ThinkingLevel } from "@earendil-works/tau-agent-core";
 import { Container, type SelectItem, SelectList, type SelectListLayoutOptions } from "@earendil-works/tau-tui";
+import type { ThinkingLevel } from "../../../core/agent/index.ts";
 import { getSelectListTheme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
 

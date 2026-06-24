@@ -4,6 +4,8 @@ export { type Args, parseArgs } from "./cli/args.ts";
 
 // Config paths
 export { getAgentDir, getDocsPath, getExamplesPath, getPackageDir, getReadmePath, VERSION } from "./config.ts";
+export type { ThinkingLevel } from "./core/agent/index.ts";
+export * from "./core/agent/index.ts";
 export {
 	AgentSession,
 	type AgentSessionConfig,
@@ -15,6 +17,7 @@ export {
 	parseSkillBlock,
 	type SessionStats,
 } from "./core/agent-session.ts";
+export * from "./core/ai/index.ts";
 // Auth and model registry
 export {
 	type ApiKeyCredential,

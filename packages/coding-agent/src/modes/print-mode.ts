@@ -7,8 +7,8 @@
  * - `tau --mode json "prompt"` - JSON event stream
  */
 
-import type { AssistantMessage, ImageContent } from "@earendil-works/tau-ai";
 import type { AgentSessionRuntime } from "../core/agent-session-runtime.ts";
+import type { AssistantMessage, ImageContent } from "../core/ai/index.ts";
 import { flushRawStdout, writeRawStdout } from "../core/output-guard.ts";
 import { killTrackedDetachedChildren } from "../utils/shell.ts";
 

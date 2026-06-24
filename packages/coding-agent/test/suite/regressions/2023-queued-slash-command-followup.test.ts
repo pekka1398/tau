@@ -1,8 +1,8 @@
-import type { AgentTool } from "@earendil-works/tau-agent-core";
-import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/tau-ai";
 import type { ExtensionAPI } from "@earendil-works/tau-coding-agent";
 import { Type } from "typebox";
 import { afterEach, describe, expect, it } from "vitest";
+import type { AgentTool } from "../../../src/core/agent/index.ts";
+import { fauxAssistantMessage, fauxToolCall } from "../../../src/core/ai/index.ts";
 import { createHarness, getAssistantTexts, getUserTexts, type Harness } from "../harness.ts";
 
 describe("issue #2023 queued slash-command follow-up", () => {

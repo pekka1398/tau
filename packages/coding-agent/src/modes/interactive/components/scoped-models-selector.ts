@@ -1,4 +1,3 @@
-import type { Model } from "@earendil-works/tau-ai";
 import {
 	Container,
 	type Focusable,
@@ -10,6 +9,7 @@ import {
 	Spacer,
 	Text,
 } from "@earendil-works/tau-tui";
+import type { Model } from "../../../core/ai/index.ts";
 import { theme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
 import { keyText } from "./keybinding-hints.ts";

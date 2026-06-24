@@ -1,8 +1,8 @@
 import { join } from "node:path";
-import type { ThinkingLevel } from "@earendil-works/tau-agent-core";
-import type { Model } from "@earendil-works/tau-ai";
 import { getAgentDir } from "../config.ts";
 import { resolvePath } from "../utils/paths.ts";
+import type { ThinkingLevel } from "./agent/index.ts";
+import type { Model } from "./ai/index.ts";
 import { AuthStorage } from "./auth-storage.ts";
 import type { SessionStartEvent, ToolDefinition } from "./extensions/index.ts";
 import { ModelRegistry } from "./model-registry.ts";

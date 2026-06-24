@@ -9,24 +9,6 @@
  */
 
 import type {
-	AgentMessage,
-	AgentToolResult,
-	AgentToolUpdateCallback,
-	ThinkingLevel,
-	ToolExecutionMode,
-} from "@earendil-works/tau-agent-core";
-import type {
-	Api,
-	AssistantMessageEvent,
-	AssistantMessageEventStream,
-	Context,
-	ImageContent,
-	Model,
-	SimpleStreamOptions,
-	TextContent,
-	ToolResultMessage,
-} from "@earendil-works/tau-ai";
-import type {
 	AutocompleteItem,
 	AutocompleteProvider,
 	Component,
@@ -39,6 +21,24 @@ import type {
 } from "@earendil-works/tau-tui";
 import type { Static, TSchema } from "typebox";
 import type { Theme } from "../../modes/interactive/theme/theme.ts";
+import type {
+	AgentMessage,
+	AgentToolResult,
+	AgentToolUpdateCallback,
+	ThinkingLevel,
+	ToolExecutionMode,
+} from "../agent/index.ts";
+import type {
+	Api,
+	AssistantMessageEvent,
+	AssistantMessageEventStream,
+	Context,
+	ImageContent,
+	Model,
+	SimpleStreamOptions,
+	TextContent,
+	ToolResultMessage,
+} from "../ai/index.ts";
 import type { BashResult } from "../bash-executor.ts";
 import type { CompactionResult } from "../compaction/index.ts";
 import type { EventBus } from "../event-bus.ts";

@@ -1,5 +1,5 @@
-import type { AssistantMessage } from "@earendil-works/tau-ai";
 import { Container, Markdown, type MarkdownTheme, Spacer, Text } from "@earendil-works/tau-tui";
+import type { AssistantMessage } from "../../../core/ai/index.ts";
 import { getMarkdownTheme, theme } from "../theme/theme.ts";
 
 const OSC133_ZONE_START = "\x1b]133;A\x07";

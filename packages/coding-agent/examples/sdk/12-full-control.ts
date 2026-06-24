@@ -4,7 +4,6 @@
  * Replace everything - no discovery, explicit configuration.
  */
 
-import { getModel } from "@earendil-works/tau-ai";
 import {
 	AuthStorage,
 	createAgentSession,
@@ -14,6 +13,7 @@ import {
 	SessionManager,
 	SettingsManager,
 } from "@earendil-works/tau-coding-agent";
+import { getModel } from "../../src/core/ai/index.ts";
 
 // Custom auth storage location
 const authStorage = AuthStorage.create("/tmp/my-agent/auth.json");

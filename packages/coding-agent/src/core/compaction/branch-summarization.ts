@@ -5,9 +5,9 @@
  * a summary of the branch being left so context isn't lost.
  */
 
-import type { AgentMessage, StreamFn } from "@earendil-works/tau-agent-core";
-import type { Model, SimpleStreamOptions } from "@earendil-works/tau-ai";
-import { completeSimple } from "@earendil-works/tau-ai";
+import type { AgentMessage, StreamFn } from "../agent/index.ts";
+import type { Model, SimpleStreamOptions } from "../ai/index.ts";
+import { completeSimple } from "../ai/index.ts";
 import {
 	convertToLlm,
 	createBranchSummaryMessage,

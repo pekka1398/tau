@@ -24,10 +24,10 @@ ctx.fill();
 
 // Save the image
 const buffer = canvas.toBuffer("image/png");
-const outputPath = join(__dirname, "..", "test", "data", "red-circle.png");
+const outputPath = join(__dirname, "..", "..", "test", "core", "ai", "data", "red-circle.png");
 
 // Ensure the directory exists
-mkdirSync(join(__dirname, "..", "test", "data"), { recursive: true });
+mkdirSync(join(__dirname, "..", "..", "test", "core", "ai", "data"), { recursive: true });
 
 writeFileSync(outputPath, buffer);
 console.log(`Generated test image at: ${outputPath}`);

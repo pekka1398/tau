@@ -32,7 +32,7 @@ npx tsx examples/sdk/01-minimal.ts
 ## Quick Reference
 
 ```typescript
-import { getModel } from "@earendil-works/tau-ai";
+import { getModel } from "@earendil-works/tau-coding-agent";
 import {
   AuthStorage,
   createAgentSession,

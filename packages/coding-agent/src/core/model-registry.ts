@@ -2,6 +2,15 @@
  * Model registry - manages built-in and custom models, provides API key resolution.
  */
 
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
+import { type Static, Type } from "typebox";
+import { Compile } from "typebox/compile";
+import type { TLocalizedValidationError } from "typebox/error";
+import { getAgentDir } from "../config.ts";
+import { warnDeprecation } from "../utils/deprecation.ts";
+import { stripJsonComments } from "../utils/json.ts";
+import { normalizePath } from "../utils/paths.ts";
 import {
 	type Api,
 	type AssistantMessageEventStream,
@@ -14,16 +23,7 @@ import {
 	registerApiProvider,
 	resetApiProviders,
 	type SimpleStreamOptions,
-} from "@earendil-works/tau-ai";
-import { existsSync, readFileSync } from "fs";
-import { join } from "path";
-import { type Static, Type } from "typebox";
-import { Compile } from "typebox/compile";
-import type { TLocalizedValidationError } from "typebox/error";
-import { getAgentDir } from "../config.ts";
-import { warnDeprecation } from "../utils/deprecation.ts";
-import { stripJsonComments } from "../utils/json.ts";
-import { normalizePath } from "../utils/paths.ts";
+} from "./ai/index.ts";
 import type { AuthStatus, AuthStorage } from "./auth-storage.ts";
 import { BUILT_IN_PROVIDER_DISPLAY_NAMES } from "./provider-display-names.ts";
 import {

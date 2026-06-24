@@ -25,7 +25,7 @@ Main Agent (AgentSession)
 
 ## Key Files
 
-### packages/agent/src/subagent.ts (139 lines)
+### packages/coding-agent/src/core/agent/subagent.ts
 
 Core execution engine. Creates an isolated `AgentContext` and runs `agentLoop()` independently from the parent.
 
@@ -103,7 +103,7 @@ Key lines:
 - Line 2470: `createAllToolDefinitions` with subagent options
 - Line 2501: `defaultActiveToolNames = ["bash", "subagent"]`
 
-### packages/agent/test/subagent.test.ts (304 lines)
+### packages/coding-agent/test/core/agent/subagent.test.ts
 
 5 tests covering:
 1. Basic subagent run + event collection
@@ -197,6 +197,6 @@ Main agent turn:
 
 ```bash
 # Run subagent unit tests
-cd packages/agent
+cd packages/coding-agent
 node ../../node_modules/vitest/dist/cli.js --run test/subagent.test.ts
 ```

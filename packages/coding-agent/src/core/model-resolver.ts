@@ -2,11 +2,11 @@
  * Model resolution, scoping, and initial selection
  */
 
-import type { ThinkingLevel } from "@earendil-works/tau-agent-core";
-import { type Api, type KnownProvider, type Model, modelsAreEqual } from "@earendil-works/tau-ai";
 import chalk from "chalk";
 import { minimatch } from "minimatch";
 import { isValidThinkingLevel } from "../cli/args.ts";
+import type { ThinkingLevel } from "./agent/index.ts";
+import { type Api, type KnownProvider, type Model, modelsAreEqual } from "./ai/index.ts";
 import { DEFAULT_THINKING_LEVEL } from "./defaults.ts";
 import type { ModelRegistry } from "./model-registry.ts";
 

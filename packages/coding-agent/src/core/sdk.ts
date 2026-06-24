@@ -1,10 +1,10 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { Agent, type AgentMessage, type ThinkingLevel } from "@earendil-works/tau-agent-core";
-import { clampThinkingLevel, type Message, type Model, streamSimple } from "@earendil-works/tau-ai";
 import { getAgentDir } from "../config.ts";
 import { resolvePath } from "../utils/paths.ts";
+import { Agent, type AgentMessage, type ThinkingLevel } from "./agent/index.ts";
 import { AgentSession } from "./agent-session.ts";
+import { clampThinkingLevel, type Message, type Model, streamSimple } from "./ai/index.ts";
 import { AuthStorage } from "./auth-storage.ts";
 import { DEFAULT_THINKING_LEVEL } from "./defaults.ts";
 import type { ExtensionRunner, LoadExtensionsResult, SessionStartEvent, ToolDefinition } from "./extensions/index.ts";
@@ -169,7 +169,7 @@ function initDumpLogger(agentDir: string, sessionId: string): void {
  * const { session } = await createAgentSession();
  *
  * // With explicit model
- * import { getModel } from '@earendil-works/tau-ai';
+ * import { getModel } from './ai/index.ts';
  * const { session } = await createAgentSession({
  *   model: getModel('openrouter', 'anthropic/claude-opus-4.5'),
  *   thinkingLevel: 'high',

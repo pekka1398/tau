@@ -1,5 +1,5 @@
-import { fauxAssistantMessage } from "@earendil-works/tau-ai";
 import { afterEach, describe, expect, it } from "vitest";
+import { fauxAssistantMessage } from "../../../src/core/ai/index.ts";
 import { createHarness, getAssistantTexts, type Harness } from "../harness.ts";
 
 describe("issue #3317 network connection lost retry", () => {

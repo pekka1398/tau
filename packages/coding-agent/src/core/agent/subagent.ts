@@ -5,7 +5,7 @@
  * Replaces the spawn-based approach from the subagent extension.
  */
 
-import type { EventStream, Model } from "@earendil-works/tau-ai";
+import type { EventStream, Model } from "../ai/index.ts";
 import { agentLoop } from "./agent-loop.ts";
 import type { AgentContext, AgentEvent, AgentMessage, AgentTool, StreamFn } from "./types.ts";
 
@@ -80,9 +80,9 @@ export function runSubagent(config: SubagentConfig): EventStream<AgentEvent, Age
  * Default conversion from AgentMessage[] to LLM-compatible messages.
  * Filters out custom message types that the LLM can't handle.
  */
-function defaultConvertToLlm(messages: AgentMessage[]): import("@earendil-works/tau-ai").Message[] {
+function defaultConvertToLlm(messages: AgentMessage[]): import("../ai/index.ts").Message[] {
 	return messages.filter(
-		(m): m is import("@earendil-works/tau-ai").Message =>
+		(m): m is import("../ai/index.ts").Message =>
 			m.role === "user" || m.role === "assistant" || m.role === "toolResult",
 	);
 }

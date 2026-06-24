@@ -37,11 +37,9 @@ tau todo add "Fix the bug" --priority high --tag bug
 ## Architecture
 
 ```
-packages/ai              LLM provider abstraction (OpenRouter)
-packages/agent           Agent loop core (runAgentLoop, EventStream)
+packages/coding-agent    Main Tau CLI/app, including AI access and agent runtime
 packages/tui             Terminal UI components (Ink-based)
 packages/ai-dash         Sandboxed shell (C, modified dash)
-packages/coding-agent    Main product — depends on all above
 ```
 
 ## Tools

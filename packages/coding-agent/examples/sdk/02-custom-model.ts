@@ -4,8 +4,8 @@
  * Shows how to select a specific model and thinking level.
  */
 
-import { getModel } from "@earendil-works/tau-ai";
 import { AuthStorage, createAgentSession, ModelRegistry } from "@earendil-works/tau-coding-agent";
+import { getModel } from "../../src/core/ai/index.ts";
 
 // Set up auth storage and model registry
 const authStorage = AuthStorage.create();

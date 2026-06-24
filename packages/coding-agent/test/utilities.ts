@@ -5,9 +5,9 @@
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { Agent } from "@earendil-works/tau-agent-core";
-import { getModel } from "@earendil-works/tau-ai";
+import { Agent } from "../src/core/agent/index.ts";
 import { AgentSession } from "../src/core/agent-session.ts";
+import { getModel } from "../src/core/ai/index.ts";
 import { AuthStorage } from "../src/core/auth-storage.ts";
 import { createEventBus } from "../src/core/event-bus.ts";
 import type { Extension, ExtensionFactory, LoadExtensionsResult } from "../src/core/extensions/index.ts";

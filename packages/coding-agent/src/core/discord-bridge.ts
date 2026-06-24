@@ -9,10 +9,10 @@
  * Uses session.subscribe() for real-time events (no polling).
  */
 
-import type { AgentMessage } from "@earendil-works/tau-agent-core";
-import type { AssistantMessage, ToolCall, ToolResultMessage } from "@earendil-works/tau-ai";
 import { Client, Events, GatewayIntentBits, type Message, type TextChannel } from "discord.js";
+import type { AgentMessage } from "./agent/index.ts";
 import type { AgentSession, AgentSessionEvent } from "./agent-session.ts";
+import type { AssistantMessage, ToolCall, ToolResultMessage } from "./ai/index.ts";
 import type {
 	BashExecutionMessage,
 	BranchSummaryMessage,

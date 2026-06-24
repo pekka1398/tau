@@ -9,7 +9,6 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
-import { type ImageContent, modelsAreEqual } from "@earendil-works/tau-ai";
 import { ProcessTerminal, setKeybindings, TUI } from "@earendil-works/tau-tui";
 import chalk from "chalk";
 import { type Args, type Mode, parseArgs, printHelp } from "./cli/args.ts";
@@ -24,6 +23,7 @@ import {
 	createAgentSessionFromServices,
 	createAgentSessionServices,
 } from "./core/agent-session-services.ts";
+import { type ImageContent, modelsAreEqual } from "./core/ai/index.ts";
 import { AuthStorage } from "./core/auth-storage.ts";
 import type { ExtensionFactory } from "./core/extensions/index.ts";
 import { configureHttpDispatcher } from "./core/http-dispatcher.ts";

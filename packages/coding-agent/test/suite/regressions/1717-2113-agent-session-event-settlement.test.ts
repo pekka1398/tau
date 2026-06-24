@@ -1,7 +1,7 @@
-import type { AgentTool } from "@earendil-works/tau-agent-core";
-import { fauxAssistantMessage, fauxToolCall } from "@earendil-works/tau-ai";
 import { Type } from "typebox";
 import { afterEach, describe, expect, it } from "vitest";
+import type { AgentTool } from "../../../src/core/agent/index.ts";
+import { fauxAssistantMessage, fauxToolCall } from "../../../src/core/ai/index.ts";
 import { createHarness, type Harness } from "../harness.ts";
 
 function createEchoTool(): AgentTool {

@@ -1,5 +1,5 @@
-import { getModel, getProviders, Type } from "@earendil-works/tau-ai";
-import { Agent } from "@earendil-works/tau-agent-core";
+import { getModel, getProviders, Type } from "../packages/coding-agent/src/core/ai/index.ts";
+import { Agent } from "../packages/coding-agent/src/core/agent/index.ts";
 
 // Keep this entry browser-safe. It is bundled by scripts/check-browser-smoke.mjs
 // to catch accidental Node-only runtime imports in browser-facing package exports.

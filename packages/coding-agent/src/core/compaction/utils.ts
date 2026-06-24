@@ -2,8 +2,8 @@
  * Shared utilities for compaction and branch summarization.
  */
 
-import type { AgentMessage } from "@earendil-works/tau-agent-core";
-import type { Message } from "@earendil-works/tau-ai";
+import type { AgentMessage } from "../agent/index.ts";
+import type { Message } from "../ai/index.ts";
 
 // ============================================================================
 // File Operation Tracking

@@ -1201,8 +1201,8 @@ Parse errors:
 ## Types
 
 Source files:
-- [`packages/ai/src/types.ts`](../../ai/src/types.ts) - `Model`, `UserMessage`, `AssistantMessage`, `ToolResultMessage`
-- [`packages/agent/src/types.ts`](../../agent/src/types.ts) - `AgentMessage`, `AgentEvent`
+- [`src/core/ai/types.ts`](../src/core/ai/types.ts) - `Model`, `UserMessage`, `AssistantMessage`, `ToolResultMessage`
+- [`src/core/agent/types.ts`](../src/core/agent/types.ts) - `AgentMessage`, `AgentEvent`
 - [`src/core/messages.ts`](../src/core/messages.ts) - `BashExecutionMessage`
 - [`src/modes/rpc/rpc-types.ts`](../src/modes/rpc/rpc-types.ts) - RPC command/response types, extension UI request/response types
 

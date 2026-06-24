@@ -139,7 +139,7 @@ To share extensions via npm or git as tau packages, see [packages.md](packages.m
 |---------|---------|
 | `@earendil-works/tau-coding-agent` | Extension types (`ExtensionAPI`, `ExtensionContext`, events) |
 | `typebox` | Schema definitions for tool parameters |
-| `@earendil-works/tau-ai` | AI utilities (`StringEnum` for compatible string enums) |
+| `@earendil-works/tau-coding-agent` | Tau SDK, agent runtime types, and AI utilities (`StringEnum` for compatible string enums) |
 | `@earendil-works/tau-tui` | TUI components for custom rendering |
 
 npm dependencies work too. Add a `package.json` next to your extension (or in a parent directory), run `npm install`, and imports from `node_modules/` are resolved automatically.
@@ -1230,7 +1230,7 @@ Register dynamic tools from a startup event or command handler when their availa
 
 ```typescript
 import { Type } from "typebox";
-import { StringEnum } from "@earendil-works/tau-ai";
+import { StringEnum } from "@earendil-works/tau-coding-agent";
 
 Tau.registerTool({
   name: "my_tool",
@@ -1619,7 +1619,7 @@ async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 
 ```typescript
 import { Type } from "typebox";
-import { StringEnum } from "@earendil-works/tau-ai";
+import { StringEnum } from "@earendil-works/tau-coding-agent";
 import { Text } from "@earendil-works/tau-tui";
 
 Tau.registerTool({
@@ -1688,7 +1688,7 @@ async execute(toolCallId, params) {
 }
 ```
 
-**Important:** Use `StringEnum` from `@earendil-works/tau-ai` for string enums. Some OpenAI-compatible APIs reject `Type.Union`/`Type.Literal` anyOf/const schemas.
+**Important:** Use `StringEnum` from `@earendil-works/tau-coding-agent` for string enums. Some OpenAI-compatible APIs reject `Type.Union`/`Type.Literal` anyOf/const schemas.
 
 **Argument preparation:** `prepareArguments(args)` is optional. If defined, it runs before schema validation and before `execute()`. Use it to mimic an older accepted input shape when Tau resumes an older session whose stored tool call arguments no longer match the current schema. Return the object you want validated against `parameters`. Keep the public schema strict. Do not add deprecated compatibility fields to `parameters` just to keep old resumed sessions working.
 

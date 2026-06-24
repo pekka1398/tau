@@ -7,8 +7,6 @@ import * as fs from "node:fs";
 import { createRequire } from "node:module";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import * as _bundledTauAgentCore from "@earendil-works/tau-agent-core";
-import * as _bundledTauAi from "@earendil-works/tau-ai";
 import type { KeyId } from "@earendil-works/tau-tui";
 import * as _bundledTauTui from "@earendil-works/tau-tui";
 import { createJiti } from "jiti/static";
@@ -47,9 +45,7 @@ const VIRTUAL_MODULES: Record<string, unknown> = {
 	"@sinclair/typebox": _bundledTypebox,
 	"@sinclair/typebox/compile": _bundledTypeboxCompile,
 	"@sinclair/typebox/value": _bundledTypeboxValue,
-	"@earendil-works/tau-agent-core": _bundledTauAgentCore,
 	"@earendil-works/tau-tui": _bundledTauTui,
-	"@earendil-works/tau-ai": _bundledTauAi,
 	"@earendil-works/tau-coding-agent": _bundledTauCodingAgent,
 };
 
@@ -81,15 +77,11 @@ function getAliases(): Record<string, string> {
 	};
 
 	const tauCodingAgentEntry = packageIndex;
-	const tauAgentCoreEntry = resolveWorkspaceOrImport("agent/dist/index.js", "@earendil-works/tau-agent-core");
 	const tauTuiEntry = resolveWorkspaceOrImport("tui/dist/index.js", "@earendil-works/tau-tui");
-	const tauAiEntry = resolveWorkspaceOrImport("ai/dist/index.js", "@earendil-works/tau-ai");
 
 	_aliases = {
 		"@earendil-works/tau-coding-agent": tauCodingAgentEntry,
-		"@earendil-works/tau-agent-core": tauAgentCoreEntry,
 		"@earendil-works/tau-tui": tauTuiEntry,
-		"@earendil-works/tau-ai": tauAiEntry,
 		typebox: typeboxEntry,
 		"typebox/compile": typeboxCompileEntry,
 		"typebox/value": typeboxValueEntry,

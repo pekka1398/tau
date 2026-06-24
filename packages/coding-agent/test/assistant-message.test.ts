@@ -1,5 +1,5 @@
-import type { AssistantMessage } from "@earendil-works/tau-ai";
 import { describe, expect, test } from "vitest";
+import type { AssistantMessage } from "../src/core/ai/index.ts";
 import { AssistantMessageComponent } from "../src/modes/interactive/components/assistant-message.ts";
 import { initTheme } from "../src/modes/interactive/theme/theme.ts";
 

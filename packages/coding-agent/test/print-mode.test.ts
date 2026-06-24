@@ -1,5 +1,5 @@
-import type { AssistantMessage, ImageContent } from "@earendil-works/tau-ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { AssistantMessage, ImageContent } from "../src/core/ai/index.ts";
 import type { SessionShutdownEvent } from "../src/index.ts";
 import { runPrintMode } from "../src/modes/print-mode.ts";
 

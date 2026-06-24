@@ -7,14 +7,6 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentMessage } from "@earendil-works/tau-agent-core";
-import {
-	type AssistantMessage,
-	getProviders,
-	type ImageContent,
-	type Message,
-	type Model,
-} from "@earendil-works/tau-ai";
 import type {
 	AutocompleteItem,
 	AutocompleteProvider,
@@ -46,8 +38,16 @@ import {
 import chalk from "chalk";
 import { spawn, spawnSync } from "child_process";
 import { APP_NAME, APP_TITLE, getDebugLogPath, getShareViewerUrl, VERSION } from "../../config.ts";
+import type { AgentMessage } from "../../core/agent/index.ts";
 import { type AgentSession, type AgentSessionEvent, parseSkillBlock } from "../../core/agent-session.ts";
 import { type AgentSessionRuntime, SessionImportFileNotFoundError } from "../../core/agent-session-runtime.ts";
+import {
+	type AssistantMessage,
+	getProviders,
+	type ImageContent,
+	type Message,
+	type Model,
+} from "../../core/ai/index.ts";
 import {
 	getActiveSessionIds,
 	isDiscordBridgeRunning,

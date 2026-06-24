@@ -2,9 +2,9 @@
  * List available models with optional fuzzy search
  */
 
-import type { Api, Model } from "@earendil-works/tau-ai";
 import { fuzzyFilter } from "@earendil-works/tau-tui";
 import chalk from "chalk";
+import type { Api, Model } from "../core/ai/index.ts";
 import type { ModelRegistry } from "../core/model-registry.ts";
 
 /**

@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { OpenAICompletionsCompat } from "@earendil-works/tau-ai";
-import { getApiProvider } from "@earendil-works/tau-ai";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import type { OpenAICompletionsCompat } from "../src/core/ai/index.ts";
+import { getApiProvider } from "../src/core/ai/index.ts";
 import { AuthStorage } from "../src/core/auth-storage.ts";
 import { clearApiKeyCache, ModelRegistry, type ProviderConfigInput } from "../src/core/model-registry.ts";
 import { clearDeprecationWarningsForTests } from "../src/utils/deprecation.ts";
