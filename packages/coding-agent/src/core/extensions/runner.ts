@@ -2,7 +2,6 @@
  * Extension runner - executes extensions and manages their lifecycle.
  */
 
-import type { KeyId } from "@earendil-works/tau-tui";
 import { type Theme, theme } from "../../modes/interactive/theme/theme.ts";
 import type { AgentMessage } from "../agent/index.ts";
 import type { ImageContent, Model } from "../ai/index.ts";
@@ -11,6 +10,7 @@ import type { KeybindingsConfig } from "../keybindings.ts";
 import type { ModelRegistry } from "../model-registry.ts";
 import type { SessionManager } from "../session-manager.ts";
 import type { BuildSystemPromptOptions } from "../system-prompt.ts";
+import type { KeyId } from "../tui/index.ts";
 import type {
 	BeforeAgentStartEvent,
 	BeforeAgentStartEventResult,

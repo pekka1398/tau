@@ -26,7 +26,7 @@ import {
 	ProcessTerminal,
 	SelectList,
 	TUI,
-} from "@earendil-works/tau-tui";
+} from "../src/core/tui/index.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

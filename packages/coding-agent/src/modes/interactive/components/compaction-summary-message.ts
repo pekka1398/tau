@@ -1,5 +1,5 @@
-import { Box, Markdown, type MarkdownTheme, Spacer, Text } from "@earendil-works/tau-tui";
 import type { CompactionSummaryMessage } from "../../../core/messages.ts";
+import { Box, Markdown, type MarkdownTheme, Spacer, Text } from "../../../core/tui/index.ts";
 import { getMarkdownTheme, theme } from "../theme/theme.ts";
 import { keyText } from "./keybinding-hints.ts";
 

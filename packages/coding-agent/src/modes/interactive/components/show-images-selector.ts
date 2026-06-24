@@ -1,4 +1,4 @@
-import { Container, type SelectItem, SelectList, type SelectListLayoutOptions } from "@earendil-works/tau-tui";
+import { Container, type SelectItem, SelectList, type SelectListLayoutOptions } from "../../../core/tui/index.ts";
 import { getSelectListTheme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
 

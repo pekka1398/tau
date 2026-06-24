@@ -4,6 +4,9 @@
 
 import { homedir } from "node:os";
 import { basename, dirname, relative } from "node:path";
+import { getProjectDir } from "../../../config.ts";
+import type { PathMetadata, ResolvedPaths, ResolvedResource } from "../../../core/package-manager.ts";
+import type { PackageSource, SettingsManager } from "../../../core/settings-manager.ts";
 import {
 	type Component,
 	Container,
@@ -14,10 +17,7 @@ import {
 	Spacer,
 	truncateToWidth,
 	visibleWidth,
-} from "@earendil-works/tau-tui";
-import { getProjectDir } from "../../../config.ts";
-import type { PathMetadata, ResolvedPaths, ResolvedResource } from "../../../core/package-manager.ts";
-import type { PackageSource, SettingsManager } from "../../../core/settings-manager.ts";
+} from "../../../core/tui/index.ts";
 import { theme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
 import { rawKeyHint } from "./keybinding-hints.ts";

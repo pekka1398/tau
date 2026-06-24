@@ -1,5 +1,5 @@
-import { truncateToWidth, visibleWidth } from "@earendil-works/tau-tui";
 import { describe, expect, it } from "vitest";
+import { truncateToWidth, visibleWidth } from "../src/core/tui/index.ts";
 
 /**
  * Tests for truncateToWidth behavior with Unicode characters.

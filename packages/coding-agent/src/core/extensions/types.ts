@@ -8,17 +8,6 @@
  * - Interact with the user via UI primitives
  */
 
-import type {
-	AutocompleteItem,
-	AutocompleteProvider,
-	Component,
-	EditorComponent,
-	EditorTheme,
-	KeyId,
-	OverlayHandle,
-	OverlayOptions,
-	TUI,
-} from "@earendil-works/tau-tui";
 import type { Static, TSchema } from "typebox";
 import type { Theme } from "../../modes/interactive/theme/theme.ts";
 import type {
@@ -59,6 +48,17 @@ import type { SourceInfo } from "../source-info.ts";
 import type { BuildSystemPromptOptions } from "../system-prompt.ts";
 import type { BashOperations } from "../tools/bash.ts";
 import type { BashToolDetails, BashToolInput } from "../tools/index.ts";
+import type {
+	AutocompleteItem,
+	AutocompleteProvider,
+	Component,
+	EditorComponent,
+	EditorTheme,
+	KeyId,
+	OverlayHandle,
+	OverlayOptions,
+	TUI,
+} from "../tui/index.ts";
 
 type RemovedToolInput = Record<string, unknown>;
 type RemovedToolDetails = unknown;

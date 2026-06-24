@@ -7,6 +7,7 @@ import { spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import type { KeybindingsManager } from "../../../core/keybindings.ts";
 import {
 	Container,
 	Editor,
@@ -16,8 +17,7 @@ import {
 	Spacer,
 	Text,
 	type TUI,
-} from "@earendil-works/tau-tui";
-import type { KeybindingsManager } from "../../../core/keybindings.ts";
+} from "../../../core/tui/index.ts";
 import { getEditorTheme, theme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
 import { keyHint } from "./keybinding-hints.ts";

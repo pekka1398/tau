@@ -37,8 +37,7 @@ tau todo add "Fix the bug" --priority high --tag bug
 ## Architecture
 
 ```
-packages/coding-agent    Main Tau CLI/app, including AI access and agent runtime
-packages/tui             Terminal UI components (Ink-based)
+packages/coding-agent    Main Tau CLI/app, including AI access, agent runtime, and TUI
 packages/ai-dash         Sandboxed shell (C, modified dash)
 ```
 

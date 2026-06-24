@@ -1,8 +1,8 @@
-import type { Component } from "@earendil-works/tau-tui";
-import { Box, Container, Markdown, type MarkdownTheme, Spacer, Text } from "@earendil-works/tau-tui";
 import type { TextContent } from "../../../core/ai/index.ts";
 import type { CustomMessage } from "../../../core/messages.ts";
 import type { MessageRenderer } from "../../../core/tool-types.ts";
+import type { Component } from "../../../core/tui/index.ts";
+import { Box, Container, Markdown, type MarkdownTheme, Spacer, Text } from "../../../core/tui/index.ts";
 import { getMarkdownTheme, theme } from "../theme/theme.ts";
 
 /**

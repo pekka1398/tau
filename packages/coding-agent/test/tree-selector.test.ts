@@ -1,4 +1,3 @@
-import { setKeybindings } from "@earendil-works/tau-tui";
 import { beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { KeybindingsManager } from "../src/core/keybindings.ts";
 import type {
@@ -7,6 +6,7 @@ import type {
 	SessionMessageEntry,
 	SessionTreeNode,
 } from "../src/core/session-manager.ts";
+import { setKeybindings } from "../src/core/tui/index.ts";
 import { TreeSelectorComponent } from "../src/modes/interactive/components/tree-selector.ts";
 import { initTheme } from "../src/modes/interactive/theme/theme.ts";
 

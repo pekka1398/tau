@@ -1,4 +1,3 @@
-import { Markdown, type MarkdownTheme } from "@earendil-works/tau-tui";
 import chalk from "chalk";
 import { selectConfig } from "./cli/config-selector.ts";
 import {
@@ -15,6 +14,7 @@ import {
 import { DefaultPackageManager } from "./core/package-manager.ts";
 import { SettingsManager } from "./core/settings-manager.ts";
 import { hasProjectTrustInputs, ProjectTrustStore } from "./core/trust-manager.ts";
+import { Markdown, type MarkdownTheme } from "./core/tui/index.ts";
 import { spawnProcess } from "./utils/child-process.ts";
 import { getLatestTauRelease, isNewerPackageVersion } from "./utils/version-check.ts";
 import {

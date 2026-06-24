@@ -1,5 +1,5 @@
-import { Editor, type EditorOptions, type EditorTheme, type TUI } from "@earendil-works/tau-tui";
 import type { AppKeybinding, KeybindingsManager } from "../../../core/keybindings.ts";
+import { Editor, type EditorOptions, type EditorTheme, type TUI } from "../../../core/tui/index.ts";
 
 /**
  * Custom editor that handles app-level keybindings for coding-agent.

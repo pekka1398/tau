@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
+import { getAgentDir } from "../config.ts";
 import {
 	type Keybinding,
 	type KeybindingDefinitions,
@@ -5,10 +8,7 @@ import {
 	type KeyId,
 	TUI_KEYBINDINGS,
 	KeybindingsManager as TuiKeybindingsManager,
-} from "@earendil-works/tau-tui";
-import { existsSync, readFileSync } from "fs";
-import { join } from "path";
-import { getAgentDir } from "../config.ts";
+} from "./tui/index.ts";
 
 export interface AppKeybindings {
 	"app.bash.background": true;
@@ -57,7 +57,7 @@ export interface AppKeybindings {
 
 export type AppKeybinding = keyof AppKeybindings;
 
-declare module "@earendil-works/tau-tui" {
+declare module "./tui/keybindings.ts" {
 	interface Keybindings extends AppKeybindings {}
 }
 

@@ -1,7 +1,6 @@
 import { appendFileSync, constants, createWriteStream, existsSync } from "node:fs";
 import { access as fsAccess } from "node:fs/promises";
 import { resolve as pathResolve } from "node:path";
-import { Container, Text } from "@earendil-works/tau-tui";
 import { AI_DASH } from "ai-dash";
 import { spawn } from "child_process";
 import { type Static, Type } from "typebox";
@@ -11,6 +10,7 @@ import { waitForChildProcess } from "../../utils/child-process.ts";
 import { getShellEnv, killProcessTree, trackDetachedChildPid, untrackDetachedChildPid } from "../../utils/shell.ts";
 import type { AgentTool } from "../agent/index.ts";
 import type { AgentToolResult, ToolDefinition, ToolRenderResultOptions } from "../tool-types.ts";
+import { Container, Text } from "../tui/index.ts";
 import { OutputAccumulator } from "./output-accumulator.ts";
 import { getTextOutput, invalidArgText } from "./render-utils.ts";
 import { wrapToolDefinition } from "./tool-definition-wrapper.ts";

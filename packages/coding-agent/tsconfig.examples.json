@@ -5,7 +5,6 @@
 		"paths": {
 			"@earendil-works/tau-coding-agent": ["./src/index.ts"],
 			"@earendil-works/tau-coding-agent/hooks": ["./src/core/hooks/index.ts"],
-			"@earendil-works/tau-tui": ["../tui/src/index.ts"],
 			"typebox": ["../../node_modules/typebox"]
 		},
 		"skipLibCheck": true

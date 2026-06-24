@@ -1,3 +1,4 @@
+import type { SessionTreeNode } from "../../../core/session-manager.ts";
 import {
 	type Component,
 	Container,
@@ -8,8 +9,7 @@ import {
 	Text,
 	TruncatedText,
 	truncateToWidth,
-} from "@earendil-works/tau-tui";
-import type { SessionTreeNode } from "../../../core/session-manager.ts";
+} from "../../../core/tui/index.ts";
 import { theme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
 import { keyHint, keyText } from "./keybinding-hints.ts";

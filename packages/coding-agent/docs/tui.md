@@ -4,7 +4,7 @@
 
 Extensions and custom tools can render custom TUI components for interactive user interfaces. This page covers the component system and available building blocks.
 
-**Source:** [`@earendil-works/tau-tui`](https://github.com/pekka1398/tau/tree/main/packages/tui)
+**Source:** [`@earendil-works/tau-coding-agent`](https://github.com/pekka1398/tau/tree/main/packages/coding-agent/src/core/tui)
 
 ## Component Interface
 
@@ -33,7 +33,7 @@ The TUI appends a full SGR reset and OSC 8 reset at the end of each rendered lin
 Components that display a text cursor and need IME (Input Method Editor) support should implement the `Focusable` interface:
 
 ```typescript
-import { CURSOR_MARKER, type Component, type Focusable } from "@earendil-works/tau-tui";
+import { CURSOR_MARKER, type Component, type Focusable } from "@earendil-works/tau-coding-agent";
 
 class MyInput implements Component, Focusable {
   focused: boolean = false;  // Set by TUI when focus changes
@@ -59,7 +59,7 @@ The cursor remains hidden by default. This keeps the fake cursor rendering, whil
 When a container component (dialog, selector, etc.) contains an `Input` or `Editor` child, the container must implement `Focusable` and propagate the focus state to the child. Otherwise, the hardware cursor won't be positioned correctly for IME input.
 
 ```typescript
-import { Container, type Focusable, Input } from "@earendil-works/tau-tui";
+import { Container, type Focusable, Input } from "@earendil-works/tau-coding-agent";
 
 class SearchDialog extends Container implements Focusable {
   private searchInput: Input;
@@ -186,10 +186,10 @@ await showMenu();  // "Back" = just call again
 
 ## Built-in Components
 
-Import from `@earendil-works/tau-tui`:
+Import from `@earendil-works/tau-coding-agent`:
 
 ```typescript
-import { Text, Box, Container, Spacer, Markdown } from "@earendil-works/tau-tui";
+import { Text, Box, Container, Spacer, Markdown } from "@earendil-works/tau-coding-agent";
 ```
 
 ### Text
@@ -271,7 +271,7 @@ const image = new Image(
 Use `matchesKey()` for key detection:
 
 ```typescript
-import { matchesKey, Key } from "@earendil-works/tau-tui";
+import { matchesKey, Key } from "@earendil-works/tau-coding-agent";
 
 handleInput(data: string) {
   if (matchesKey(data, Key.up)) {
@@ -297,7 +297,7 @@ handleInput(data: string) {
 **Critical:** Each line from `render()` must not exceed the `width` parameter.
 
 ```typescript
-import { visibleWidth, truncateToWidth } from "@earendil-works/tau-tui";
+import { visibleWidth, truncateToWidth } from "@earendil-works/tau-coding-agent";
 
 render(width: number): string[] {
   // Truncate long lines
@@ -318,7 +318,7 @@ Example: Interactive selector
 import {
   matchesKey, Key,
   truncateToWidth, visibleWidth
-} from "@earendil-works/tau-tui";
+} from "@earendil-works/tau-coding-agent";
 
 class MySelector {
   private items: string[];
@@ -433,7 +433,7 @@ renderResult(result, options, theme, context) {
 
 ```typescript
 import { getMarkdownTheme } from "@earendil-works/tau-coding-agent";
-import { Markdown } from "@earendil-works/tau-tui";
+import { Markdown } from "@earendil-works/tau-coding-agent";
 
 renderResult(result, options, theme, context) {
   const mdTheme = getMarkdownTheme();
@@ -455,7 +455,7 @@ interface MyTheme {
 Set `TAU_TUI_WRITE_LOG` to capture the raw ANSI stream written to stdout.
 
 ```bash
-TAU_TUI_WRITE_LOG=/tmp/tui-ansi.log npx tsx packages/tui/test/chat-simple.ts
+TAU_TUI_WRITE_LOG=/tmp/tui-ansi.log npx tsx packages/coding-agent/test/core/tui/chat-simple.ts
 ```
 
 ## Performance
@@ -594,12 +594,12 @@ These patterns cover the most common UI needs in extensions. **Copy these patter
 
 ### Pattern 1: Selection Dialog (SelectList)
 
-For letting users pick from a list of options. Use `SelectList` from `@earendil-works/tau-tui` with `DynamicBorder` for framing.
+For letting users pick from a list of options. Use `SelectList` from `@earendil-works/tau-coding-agent` with `DynamicBorder` for framing.
 
 ```typescript
 import type { ExtensionAPI } from "@earendil-works/tau-coding-agent";
 import { DynamicBorder } from "@earendil-works/tau-coding-agent";
-import { Container, type SelectItem, SelectList, Text } from "@earendil-works/tau-tui";
+import { Container, type SelectItem, SelectList, Text } from "@earendil-works/tau-coding-agent";
 
 tau.registerCommand("pick", {
   handler: async (_args, ctx) => {
@@ -682,11 +682,11 @@ tau.registerCommand("fetch", {
 
 ### Pattern 3: Settings/Toggles (SettingsList)
 
-For toggling multiple settings. Use `SettingsList` from `@earendil-works/tau-tui` with `getSettingsListTheme()`.
+For toggling multiple settings. Use `SettingsList` from `@earendil-works/tau-coding-agent` with `getSettingsListTheme()`.
 
 ```typescript
 import { getSettingsListTheme } from "@earendil-works/tau-coding-agent";
-import { Container, type SettingItem, SettingsList, Text } from "@earendil-works/tau-tui";
+import { Container, type SettingItem, SettingsList, Text } from "@earendil-works/tau-coding-agent";
 
 tau.registerCommand("settings", {
   handler: async (_args, ctx) => {
@@ -816,7 +816,7 @@ Replace the main input editor with a custom implementation. Useful for modal edi
 
 ```typescript
 import { CustomEditor, type ExtensionAPI } from "@earendil-works/tau-coding-agent";
-import { matchesKey, truncateToWidth } from "@earendil-works/tau-tui";
+import { matchesKey, truncateToWidth } from "@earendil-works/tau-coding-agent";
 
 type Mode = "normal" | "insert";
 

@@ -119,7 +119,7 @@ function generateFileTable(cwd: string): string {
 		"packages/coding-agent/src",
 		"packages/coding-agent/src/core/agent",
 		"packages/coding-agent/src/core/ai",
-		"packages/tui/src",
+		"packages/coding-agent/src/core/tui",
 	];
 	const rows: string[] = [];
 
@@ -235,9 +235,7 @@ export function createRoadmap(cwd: string): string {
 packages/coding-agent    Main Tau CLI/app
 ├─ src/core/ai           OpenRouter model registry, streaming, image generation
 ├─ src/core/agent        Agent loop core, EventStream, tool execution
-packages/tui             Terminal UI components (Ink-based, themes, keybindings)
-packages/ai-dash         Sandboxed shell (C, modified dash) — spawned as subprocess
-
+├─ src/core/tui          Terminal UI components, themes, keybindings
 ├─ src/cli/              CLI argument parsing
 ├─ src/core/             Session management, tools, subagent, config
 │  ├─ tools/             Bash, Transcribe, Vision tool definitions
@@ -249,6 +247,8 @@ packages/ai-dash         Sandboxed shell (C, modified dash) — spawned as subpr
 │  ├─ print-mode.ts      Single-shot mode (-p flag)
 │  └─ rpc/               JSON-RPC mode
 └─ src/bun/              Bun-specific entry point and sandbox fix
+
+packages/ai-dash         Sandboxed shell (C, modified dash) — spawned as subprocess
 \`\`\`
 
 ## Dependencies

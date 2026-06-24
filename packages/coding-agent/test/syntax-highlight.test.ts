@@ -1,5 +1,5 @@
-import { resetCapabilitiesCache, setCapabilities } from "@earendil-works/tau-tui";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { resetCapabilitiesCache, setCapabilities } from "../src/core/tui/index.ts";
 import { highlightCode, initTheme } from "../src/modes/interactive/theme/theme.ts";
 import { highlight, renderHighlightedHtml, supportsLanguage } from "../src/utils/syntax-highlight.ts";
 

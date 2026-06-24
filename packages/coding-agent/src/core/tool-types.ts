@@ -5,12 +5,12 @@
  * No extension infrastructure required.
  */
 
-import type { Component } from "@earendil-works/tau-tui";
 import type { Static, TSchema } from "typebox";
 import type { Theme } from "../modes/interactive/theme/theme.ts";
 import type { AgentToolResult, AgentToolUpdateCallback, ToolExecutionMode } from "./agent/index.ts";
 import type { Model } from "./ai/index.ts";
 import type { ModelRegistry } from "./model-registry.ts";
+import type { Component } from "./tui/index.ts";
 
 export type { AgentToolResult, AgentToolUpdateCallback, ToolExecutionMode };
 

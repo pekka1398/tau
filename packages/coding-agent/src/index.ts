@@ -234,6 +234,7 @@ export {
 	truncateTail,
 } from "./core/tools/index.ts";
 export { hasProjectTrustInputs, type ProjectTrustDecision, ProjectTrustStore } from "./core/trust-manager.ts";
+export * from "./core/tui/index.ts";
 // Main entry point
 export { type MainOptions, main } from "./main.ts";
 // Run modes for programmatic SDK usage

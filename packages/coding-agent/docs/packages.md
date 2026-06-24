@@ -168,7 +168,7 @@ If no `tau` manifest is present, Tau auto-discovers resources from these directo
 
 Third party runtime dependencies belong in `dependencies` in `package.json`. Dependencies that do not register extensions, skills, prompt templates, or themes also belong in `dependencies`. When Tau installs a package from npm or git, it runs `npm install`, so those dependencies are installed automatically.
 
-Tau bundles core packages for extensions and skills. If you import any of these, list them in `peerDependencies` with a `"*"` range and do not bundle them: `@earendil-works/tau-coding-agent`, `@earendil-works/tau-tui`, `typebox`.
+Tau bundles core packages for extensions and skills. If you import any of these, list them in `peerDependencies` with a `"*"` range and do not bundle them: `@earendil-works/tau-coding-agent`, `@earendil-works/tau-coding-agent`, `typebox`.
 
 Other tau packages must be bundled in your tarball. Add them to `dependencies` and `bundledDependencies`, then reference their resources through `node_modules/` paths. Tau loads packages with separate module roots, so separate installs do not collide or share modules.
 

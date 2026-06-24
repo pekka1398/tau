@@ -1,17 +1,17 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import chalk from "chalk";
+import { type Static, Type } from "typebox";
+import { Compile } from "typebox/compile";
+import { getCustomThemesDir, getThemesDir } from "../../../config.ts";
+import type { SourceInfo } from "../../../core/source-info.ts";
 import {
 	type EditorTheme,
 	getCapabilities,
 	type MarkdownTheme,
 	type SelectListTheme,
 	type SettingsListTheme,
-} from "@earendil-works/tau-tui";
-import chalk from "chalk";
-import { type Static, Type } from "typebox";
-import { Compile } from "typebox/compile";
-import { getCustomThemesDir, getThemesDir } from "../../../config.ts";
-import type { SourceInfo } from "../../../core/source-info.ts";
+} from "../../../core/tui/index.ts";
 import { closeWatcher, watchWithErrorHandler } from "../../../utils/fs-watch.ts";
 import { highlight, supportsLanguage } from "../../../utils/syntax-highlight.ts";
 

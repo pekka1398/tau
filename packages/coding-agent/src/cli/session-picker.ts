@@ -2,9 +2,9 @@
  * TUI session selector for --resume flag
  */
 
-import { ProcessTerminal, setKeybindings, TUI } from "@earendil-works/tau-tui";
 import { KeybindingsManager } from "../core/keybindings.ts";
 import type { SessionInfo, SessionListProgress } from "../core/session-manager.ts";
+import { ProcessTerminal, setKeybindings, TUI } from "../core/tui/index.ts";
 import { SessionSelectorComponent } from "../modes/interactive/components/session-selector.ts";
 
 type SessionsLoader = (onProgress?: SessionListProgress) => Promise<SessionInfo[]>;

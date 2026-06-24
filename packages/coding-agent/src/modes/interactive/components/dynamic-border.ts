@@ -1,4 +1,4 @@
-import type { Component } from "@earendil-works/tau-tui";
+import type { Component } from "../../../core/tui/index.ts";
 import { theme } from "../theme/theme.ts";
 
 /**

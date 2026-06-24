@@ -1,4 +1,4 @@
-import { type Component, Container, getKeybindings, Spacer, Text, truncateToWidth } from "@earendil-works/tau-tui";
+import { type Component, Container, getKeybindings, Spacer, Text, truncateToWidth } from "../../../core/tui/index.ts";
 import { theme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
 

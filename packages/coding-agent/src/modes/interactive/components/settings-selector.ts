@@ -1,3 +1,6 @@
+import type { ThinkingLevel } from "../../../core/agent/index.ts";
+import type { Transport } from "../../../core/ai/index.ts";
+import { formatHttpIdleTimeoutMs, HTTP_IDLE_TIMEOUT_CHOICES } from "../../../core/http-dispatcher.ts";
 import {
 	Container,
 	getCapabilities,
@@ -8,10 +11,7 @@ import {
 	SettingsList,
 	Spacer,
 	Text,
-} from "@earendil-works/tau-tui";
-import type { ThinkingLevel } from "../../../core/agent/index.ts";
-import type { Transport } from "../../../core/ai/index.ts";
-import { formatHttpIdleTimeoutMs, HTTP_IDLE_TIMEOUT_CHOICES } from "../../../core/http-dispatcher.ts";
+} from "../../../core/tui/index.ts";
 import { getSelectListTheme, getSettingsListTheme, theme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
 import { keyDisplayText } from "./keybinding-hints.ts";

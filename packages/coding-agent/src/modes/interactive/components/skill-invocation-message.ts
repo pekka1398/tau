@@ -1,5 +1,5 @@
-import { Box, Markdown, type MarkdownTheme, Text } from "@earendil-works/tau-tui";
 import type { ParsedSkillBlock } from "../../../core/agent-session.ts";
+import { Box, Markdown, type MarkdownTheme, Text } from "../../../core/tui/index.ts";
 import { getMarkdownTheme, theme } from "../theme/theme.ts";
 import { keyText } from "./keybinding-hints.ts";
 

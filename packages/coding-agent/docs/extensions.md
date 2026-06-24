@@ -140,7 +140,7 @@ To share extensions via npm or git as tau packages, see [packages.md](packages.m
 | `@earendil-works/tau-coding-agent` | Extension types (`ExtensionAPI`, `ExtensionContext`, events) |
 | `typebox` | Schema definitions for tool parameters |
 | `@earendil-works/tau-coding-agent` | Tau SDK, agent runtime types, and AI utilities (`StringEnum` for compatible string enums) |
-| `@earendil-works/tau-tui` | TUI components for custom rendering |
+| `@earendil-works/tau-coding-agent` | TUI components for custom rendering |
 
 npm dependencies work too. Add a `package.json` next to your extension (or in a parent directory), run `npm install`, and imports from `node_modules/` are resolved automatically.
 
@@ -1388,7 +1388,7 @@ Tau.registerCommand("stats", {
 Optional: add argument auto-completion for `/command ...`:
 
 ```typescript
-import type { AutocompleteItem } from "@earendil-works/tau-tui";
+import type { AutocompleteItem } from "@earendil-works/tau-coding-agent";
 
 Tau.registerCommand("deploy", {
   description: "Deploy to an environment",
@@ -1620,7 +1620,7 @@ async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 ```typescript
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/tau-coding-agent";
-import { Text } from "@earendil-works/tau-tui";
+import { Text } from "@earendil-works/tau-coding-agent";
 
 Tau.registerTool({
   name: "my_tool",
@@ -1922,7 +1922,7 @@ Use `context.state` for cross-slot shared state. Keep slot-local caches on the r
 Renders the tool call or header:
 
 ```typescript
-import { Text } from "@earendil-works/tau-tui";
+import { Text } from "@earendil-works/tau-coding-agent";
 
 renderCall(args, theme, context) {
   const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
@@ -2241,7 +2241,7 @@ Autocomplete providers can preload external data, such as `gh issue list`, and f
 For complex UI, use `ctx.ui.custom()`. This temporarily replaces the editor with your component until `done()` is called:
 
 ```typescript
-import { Text, Component } from "@earendil-works/tau-tui";
+import { Text, Component } from "@earendil-works/tau-coding-agent";
 
 const result = await ctx.ui.custom<boolean>((tui, theme, keybindings, done) => {
   const text = new Text("Press Enter to confirm, Escape to cancel", 1, 1);
@@ -2307,7 +2307,7 @@ Replace the main input editor with a custom implementation (vim mode, emacs mode
 
 ```typescript
 import { CustomEditor, type ExtensionAPI } from "@earendil-works/tau-coding-agent";
-import { matchesKey } from "@earendil-works/tau-tui";
+import { matchesKey } from "@earendil-works/tau-coding-agent";
 
 class VimEditor extends CustomEditor {
   private mode: "normal" | "insert" = "insert";
@@ -2357,7 +2357,7 @@ See [tui.md](tui.md) Pattern 7 for a complete example with mode indicator.
 Register a custom renderer for messages with your `customType`:
 
 ```typescript
-import { Text } from "@earendil-works/tau-tui";
+import { Text } from "@earendil-works/tau-coding-agent";
 
 Tau.registerMessageRenderer("my-extension", (message, options, theme) => {
   const { expanded } = options;

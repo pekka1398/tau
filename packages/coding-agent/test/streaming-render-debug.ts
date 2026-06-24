@@ -4,11 +4,11 @@
  * Run with: npx tsx test/streaming-render-debug.ts
  */
 
-import { ProcessTerminal, TUI } from "@earendil-works/tau-tui";
 import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import type { AssistantMessage } from "../src/core/ai/index.ts";
+import { ProcessTerminal, TUI } from "../src/core/tui/index.ts";
 import { AssistantMessageComponent } from "../src/modes/interactive/components/assistant-message.ts";
 import { initTheme } from "../src/modes/interactive/theme/theme.ts";
 

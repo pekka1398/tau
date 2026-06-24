@@ -7,8 +7,6 @@ import * as fs from "node:fs";
 import { createRequire } from "node:module";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { KeyId } from "@earendil-works/tau-tui";
-import * as _bundledTauTui from "@earendil-works/tau-tui";
 import { createJiti } from "jiti/static";
 // Static imports of packages that extensions may use.
 // These MUST be static so Bun bundles them into the compiled binary.
@@ -25,6 +23,7 @@ import { createEventBus, type EventBus } from "../event-bus.ts";
 import type { ExecOptions } from "../exec.ts";
 import { execCommand } from "../exec.ts";
 import { createSyntheticSourceInfo } from "../source-info.ts";
+import type { KeyId } from "../tui/index.ts";
 import type {
 	Extension,
 	ExtensionAPI,
@@ -45,7 +44,6 @@ const VIRTUAL_MODULES: Record<string, unknown> = {
 	"@sinclair/typebox": _bundledTypebox,
 	"@sinclair/typebox/compile": _bundledTypeboxCompile,
 	"@sinclair/typebox/value": _bundledTypeboxValue,
-	"@earendil-works/tau-tui": _bundledTauTui,
 	"@earendil-works/tau-coding-agent": _bundledTauCodingAgent,
 };
 
@@ -67,21 +65,10 @@ function getAliases(): Record<string, string> {
 	const typeboxCompileEntry = require.resolve("typebox/compile");
 	const typeboxValueEntry = require.resolve("typebox/value");
 
-	const packagesRoot = path.resolve(__dirname, "../../../../");
-	const resolveWorkspaceOrImport = (workspaceRelativePath: string, specifier: string): string => {
-		const workspacePath = path.join(packagesRoot, workspaceRelativePath);
-		if (fs.existsSync(workspacePath)) {
-			return workspacePath;
-		}
-		return fileURLToPath(import.meta.resolve(specifier));
-	};
-
 	const tauCodingAgentEntry = packageIndex;
-	const tauTuiEntry = resolveWorkspaceOrImport("tui/dist/index.js", "@earendil-works/tau-tui");
 
 	_aliases = {
 		"@earendil-works/tau-coding-agent": tauCodingAgentEntry,
-		"@earendil-works/tau-tui": tauTuiEntry,
 		typebox: typeboxEntry,
 		"typebox/compile": typeboxCompileEntry,
 		"typebox/value": typeboxValueEntry,

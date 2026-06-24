@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
-import { Container, Image, Spacer, Text } from "@earendil-works/tau-tui";
 import { getBundledInteractiveAssetPath } from "../../../config.ts";
+import { Container, Image, Spacer, Text } from "../../../core/tui/index.ts";
 import { theme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
 

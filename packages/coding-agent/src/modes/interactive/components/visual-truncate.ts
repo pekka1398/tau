@@ -3,7 +3,7 @@
  * Used by both tool-execution.ts and bash-execution.ts for consistent behavior.
  */
 
-import { Text } from "@earendil-works/tau-tui";
+import { Text } from "../../../core/tui/index.ts";
 
 export interface VisualTruncateResult {
 	/** The visual lines to display */

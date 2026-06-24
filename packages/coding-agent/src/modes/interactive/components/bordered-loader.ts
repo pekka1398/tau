@@ -1,4 +1,4 @@
-import { CancellableLoader, Container, Loader, Spacer, Text, type TUI } from "@earendil-works/tau-tui";
+import { CancellableLoader, Container, Loader, Spacer, Text, type TUI } from "../../../core/tui/index.ts";
 import type { Theme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
 import { keyHint } from "./keybinding-hints.ts";

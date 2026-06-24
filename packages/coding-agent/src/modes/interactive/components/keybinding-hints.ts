@@ -2,7 +2,7 @@
  * Utilities for formatting keybinding hints in the UI.
  */
 
-import { getKeybindings, type Keybinding, type KeyId } from "@earendil-works/tau-tui";
+import { getKeybindings, type Keybinding, type KeyId } from "../../../core/tui/index.ts";
 import { theme } from "../theme/theme.ts";
 
 export interface KeyTextFormatOptions {

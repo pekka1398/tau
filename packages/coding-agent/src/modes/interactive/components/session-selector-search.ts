@@ -1,5 +1,5 @@
-import { fuzzyMatch } from "@earendil-works/tau-tui";
 import type { SessionInfo } from "../../../core/session-manager.ts";
+import { fuzzyMatch } from "../../../core/tui/index.ts";
 
 export type SortMode = "threaded" | "recent" | "relevance";
 

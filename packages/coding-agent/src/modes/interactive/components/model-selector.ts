@@ -1,3 +1,6 @@
+import { type Model, modelsAreEqual } from "../../../core/ai/index.ts";
+import type { ModelRegistry } from "../../../core/model-registry.ts";
+import type { SettingsManager } from "../../../core/settings-manager.ts";
 import {
 	Container,
 	type Focusable,
@@ -7,10 +10,7 @@ import {
 	Spacer,
 	Text,
 	type TUI,
-} from "@earendil-works/tau-tui";
-import { type Model, modelsAreEqual } from "../../../core/ai/index.ts";
-import type { ModelRegistry } from "../../../core/model-registry.ts";
-import type { SettingsManager } from "../../../core/settings-manager.ts";
+} from "../../../core/tui/index.ts";
 import { theme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
 import { keyHint } from "./keybinding-hints.ts";

@@ -2,6 +2,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { unlink } from "node:fs/promises";
 import * as os from "node:os";
+import { KeybindingsManager } from "../../../core/keybindings.ts";
+import type { SessionInfo, SessionListProgress } from "../../../core/session-manager.ts";
 import {
 	type Component,
 	Container,
@@ -12,9 +14,7 @@ import {
 	Text,
 	truncateToWidth,
 	visibleWidth,
-} from "@earendil-works/tau-tui";
-import { KeybindingsManager } from "../../../core/keybindings.ts";
-import type { SessionInfo, SessionListProgress } from "../../../core/session-manager.ts";
+} from "../../../core/tui/index.ts";
 import { canonicalizePath as _canonicalizePath } from "../../../utils/paths.ts";
 import { theme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";

@@ -7,34 +7,6 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type {
-	AutocompleteItem,
-	AutocompleteProvider,
-	EditorComponent,
-	Keybinding,
-	KeyId,
-	MarkdownTheme,
-	OverlayHandle,
-	OverlayOptions,
-	SlashCommand,
-} from "@earendil-works/tau-tui";
-import {
-	CombinedAutocompleteProvider,
-	type Component,
-	Container,
-	fuzzyFilter,
-	Loader,
-	type LoaderIndicatorOptions,
-	Markdown,
-	matchesKey,
-	ProcessTerminal,
-	Spacer,
-	setKeybindings,
-	Text,
-	TruncatedText,
-	TUI,
-	visibleWidth,
-} from "@earendil-works/tau-tui";
 import chalk from "chalk";
 import { spawn, spawnSync } from "child_process";
 import { APP_NAME, APP_TITLE, getDebugLogPath, getShareViewerUrl, VERSION } from "../../config.ts";
@@ -74,6 +46,34 @@ import { BUILTIN_SLASH_COMMANDS } from "../../core/slash-commands.ts";
 import type { SourceInfo } from "../../core/source-info.ts";
 import type { TruncationResult } from "../../core/tools/truncate.ts";
 import { hasProjectTrustInputs, ProjectTrustStore } from "../../core/trust-manager.ts";
+import type {
+	AutocompleteItem,
+	AutocompleteProvider,
+	EditorComponent,
+	Keybinding,
+	KeyId,
+	MarkdownTheme,
+	OverlayHandle,
+	OverlayOptions,
+	SlashCommand,
+} from "../../core/tui/index.ts";
+import {
+	CombinedAutocompleteProvider,
+	type Component,
+	Container,
+	fuzzyFilter,
+	Loader,
+	type LoaderIndicatorOptions,
+	Markdown,
+	matchesKey,
+	ProcessTerminal,
+	Spacer,
+	setKeybindings,
+	Text,
+	TruncatedText,
+	TUI,
+	visibleWidth,
+} from "../../core/tui/index.ts";
 import { getChangelogPath, getNewEntries, parseChangelog } from "../../utils/changelog.ts";
 import { copyToClipboard } from "../../utils/clipboard.ts";
 import { readClipboardImage } from "../../utils/clipboard-image.ts";

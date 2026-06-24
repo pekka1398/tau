@@ -6,9 +6,7 @@
 			"*": ["./*"],
 			"@earendil-works/tau-coding-agent": ["./packages/coding-agent/src/index.ts"],
 			"@earendil-works/tau-coding-agent/*": ["./packages/coding-agent/src/*"],
-			"typebox": ["./node_modules/typebox"],
-			"@earendil-works/tau-tui": ["./packages/tui/src/index.ts"],
-			"@earendil-works/tau-tui/*": ["./packages/tui/src/*"]
+			"typebox": ["./node_modules/typebox"]
 		}
 	},
 	"include": ["packages/*/src/**/*", "packages/*/test/**/*", "packages/coding-agent/examples/**/*"],

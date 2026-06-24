@@ -1,5 +1,5 @@
-import { Container, getKeybindings, Spacer, Text } from "@earendil-works/tau-tui";
 import type { ProjectTrustDecision } from "../../../core/trust-manager.ts";
+import { Container, getKeybindings, Spacer, Text } from "../../../core/tui/index.ts";
 import { theme } from "../theme/theme.ts";
 import { DynamicBorder } from "./dynamic-border.ts";
 import { keyHint, rawKeyHint } from "./keybinding-hints.ts";
