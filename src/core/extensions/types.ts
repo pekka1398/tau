@@ -1252,8 +1252,8 @@ export interface ExtensionAPI {
 	/**
 	 * Register or override a model provider.
 	 *
-	 * Tau is OpenRouter-only in production. Extensions may override OpenRouter
-	 * connection details or register OpenAI-compatible test/local providers.
+	 * Tau is OpenRouter-only. Extensions may override OpenRouter connection
+	 * details when they need to route through a trusted proxy.
 	 *
 	 * During initial extension load this call is queued and applied once the
 	 * runner has bound its context. After that it takes effect immediately, so
@@ -1261,28 +1261,10 @@ export interface ExtensionAPI {
 	 * requiring a `/reload`.
 	 *
 	 * @example
-	 * // Register an OpenRouter-compatible local proxy
-	 * tau.registerProvider("local-proxy", {
+	 * // Route OpenRouter through a trusted proxy
+	 * tau.registerProvider("openrouter", {
 	 *   baseUrl: "https://proxy.example.com/v1",
 	 *   apiKey: "$OPENROUTER_API_KEY",
-	 *   api: "openai-completions",
-	 *   models: [
-	 *     {
-	 *       id: "openrouter/openai/gpt-4o-mini",
-	 *       name: "OpenRouter proxy model",
-	 *       reasoning: false,
-	 *       input: ["text"],
-	 *       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-	 *       contextWindow: 128000,
-	 *       maxTokens: 4096
-	 *     }
-	 *   ]
-	 * });
-	 *
-	 * @example
-	 * // Override OpenRouter baseUrl
-	 * tau.registerProvider("openrouter", {
-	 *   baseUrl: "https://proxy.example.com"
 	 * });
 	 */
 	registerProvider(name: string, config: ProviderConfig): void;

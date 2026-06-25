@@ -554,6 +554,10 @@ export class ModelRegistry {
 		const builtInProviders = new Set<string>(getProviders());
 
 		for (const [providerName, providerConfig] of Object.entries(config.providers)) {
+			if (providerName !== "openrouter") {
+				throw new Error(`Provider ${providerName}: Tau models.json only supports the "openrouter" provider.`);
+			}
+
 			const isBuiltIn = builtInProviders.has(providerName);
 			const hasProviderApi = !!providerConfig.api;
 			const models = providerConfig.models ?? [];

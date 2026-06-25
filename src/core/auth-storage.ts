@@ -310,7 +310,7 @@ export class AuthStorage {
 	 * 1. Runtime override (CLI --api-key)
 	 * 2. API key from auth.json
 	 * 3. Environment variable
-	 * 4. Fallback resolver (models.json custom providers)
+	 * 4. Fallback resolver (OpenRouter model config)
 	 */
 	async getApiKey(providerId: string, options?: { includeFallback?: boolean }): Promise<string | undefined> {
 		const runtimeKey = this.runtimeOverrides.get(providerId);

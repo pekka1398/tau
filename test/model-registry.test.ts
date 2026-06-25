@@ -189,7 +189,7 @@ describe("ModelRegistry", () => {
 			});
 		});
 
-		test("non-built-in providers require baseUrl and apiKey when defining models", () => {
+		test("non-OpenRouter providers are rejected in models.json", () => {
 			writeRawModelsJson({
 				"local-proxy": {
 					api: "openai-completions",
@@ -199,11 +199,11 @@ describe("ModelRegistry", () => {
 
 			const registry = ModelRegistry.create(authStorage, modelsJsonPath);
 
-			expect(registry.getError()).toContain('"baseUrl" is required');
+			expect(registry.getError()).toContain('only supports the "openrouter" provider');
 			expect(registry.find("local-proxy", "local-model")).toBeUndefined();
 		});
 
-		test("custom OpenAI-compatible providers are supported through models.json", () => {
+		test("non-OpenRouter providers are rejected even when fully configured", () => {
 			writeRawModelsJson({
 				"local-proxy": {
 					baseUrl: "http://localhost:11434/v1",
@@ -214,14 +214,9 @@ describe("ModelRegistry", () => {
 			});
 
 			const registry = ModelRegistry.create(authStorage, modelsJsonPath);
-			const model = registry.find("local-proxy", "local-model");
 
-			expect(registry.getError()).toBeUndefined();
-			expect(model).toMatchObject({
-				api: "openai-completions",
-				baseUrl: "http://localhost:11434/v1",
-				name: "Local Model",
-			});
+			expect(registry.getError()).toContain('only supports the "openrouter" provider');
+			expect(registry.find("local-proxy", "local-model")).toBeUndefined();
 		});
 	});
 
@@ -472,23 +467,23 @@ describe("ModelRegistry", () => {
 			expect(readFileSync(markerPath, "utf-8").trim()).toBe("ran");
 		});
 
-		test("authHeader adds Authorization for OpenAI-compatible custom providers", async () => {
+		test("authHeader adds Authorization for OpenRouter request auth", async () => {
 			writeRawModelsJson({
-				"local-proxy": {
-					baseUrl: "https://local.example.com/v1",
-					apiKey: "local-key",
-					api: "openai-completions",
+				openrouter: {
+					baseUrl: "https://openrouter.example.com/v1",
+					apiKey: "openrouter-key",
 					authHeader: true,
-					models: [modelConfig("local-model")],
 				},
 			});
 
 			const registry = ModelRegistry.create(authStorage, modelsJsonPath);
 
-			expect(await registry.getApiKeyAndHeaders(registry.find("local-proxy", "local-model")!)).toEqual({
+			expect(
+				await registry.getApiKeyAndHeaders(registry.find("openrouter", "anthropic/claude-sonnet-4.5")!),
+			).toEqual({
 				ok: true,
-				apiKey: "local-key",
-				headers: { Authorization: "Bearer local-key" },
+				apiKey: "openrouter-key",
+				headers: { Authorization: "Bearer openrouter-key" },
 			});
 		});
 	});
