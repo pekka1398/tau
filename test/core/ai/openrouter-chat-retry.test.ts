@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { streamOpenAICompletions } from "../../../src/core/ai/providers/openai-completions.ts";
+import { streamOpenRouterChat } from "../../../src/core/ai/providers/openrouter-chat.ts";
 import type { Context, Model } from "../../../src/core/ai/types.ts";
 
 const mockState = vi.hoisted(() => ({
@@ -42,10 +42,10 @@ vi.mock("openai", () => {
 	return { default: FakeOpenAI };
 });
 
-const model: Model<"openai-completions"> = {
+const model: Model<"openrouter-chat"> = {
 	id: "test-model",
 	name: "Test Model",
-	api: "openai-completions",
+	api: "openrouter-chat",
 	provider: "opencode-go",
 	baseUrl: "https://opencode.ai/zen/go/v1",
 	reasoning: false,
@@ -62,14 +62,14 @@ const context: Context = {
 };
 
 async function consume(options?: { maxRetries?: number }) {
-	const stream = streamOpenAICompletions(model, context, { apiKey: "test", ...options });
+	const stream = streamOpenRouterChat(model, context, { apiKey: "test", ...options });
 	for await (const _event of stream) {
 		void _event;
 	}
 	return stream.result();
 }
 
-describe("openai-completions provider retries", () => {
+describe("openrouter-chat provider retries", () => {
 	beforeEach(() => {
 		mockState.requestOptions = [];
 	});

@@ -19,7 +19,7 @@ function msg(id: string, parentId: string | null, role: "user" | "assistant", te
 		message: {
 			role,
 			content: [{ type: "text", text }],
-			api: "openai-completions",
+			api: "openrouter-chat",
 			provider: "openrouter",
 			model: "claude-test",
 			usage: {

@@ -45,7 +45,7 @@ import {
 
 const FAUX_PROVIDER = "faux";
 const FAUX_MODEL_ID = "faux-1";
-const FAUX_API = "openai-completions" as const;
+const FAUX_API = "openrouter-chat" as const;
 
 export const fauxModel: Model<typeof FAUX_API> = {
 	id: FAUX_MODEL_ID,

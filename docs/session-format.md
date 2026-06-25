@@ -212,7 +212,7 @@ A message in the conversation. The `message` field contains an `AgentMessage`.
 Emitted when the user switches models mid-session.
 
 ```json
-{"type":"model_change","id":"d4e5f6g7","parentId":"c3d4e5f6","timestamp":"2024-12-03T14:05:00.000Z","provider":"openai","modelId":"gpt-4o"}
+{"type":"model_change","id":"d4e5f6g7","parentId":"c3d4e5f6","timestamp":"2024-12-03T14:05:00.000Z","provider":"openrouter","modelId":"gpt-4o"}
 ```
 
 ### ThinkingLevelChangeEntry

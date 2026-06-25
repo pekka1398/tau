@@ -38,7 +38,7 @@ function createAssistantMessage(options?: {
 	return {
 		role: "assistant",
 		content: options?.text ? [{ type: "text", text: options.text }] : [],
-		api: "openai-completions",
+		api: "openrouter-chat",
 		provider: "openrouter",
 		model: "gpt-4o-mini",
 		usage: {

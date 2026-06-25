@@ -3,11 +3,11 @@ import type { Model } from "../src/core/ai/index.ts";
 import { findInitialModel, parseModelPattern, resolveCliModel } from "../src/core/model-resolver.ts";
 
 // Mock models for testing
-const mockModels: Model<"openai-completions">[] = [
+const mockModels: Model<"openrouter-chat">[] = [
 	{
 		id: "anthropic/claude-sonnet-4.5",
 		name: "Claude Sonnet 4.5",
-		api: "openai-completions",
+		api: "openrouter-chat",
 		provider: "openrouter",
 		baseUrl: "https://openrouter.ai/api/v1",
 		reasoning: true,
@@ -19,8 +19,8 @@ const mockModels: Model<"openai-completions">[] = [
 	{
 		id: "openai/gpt-4o",
 		name: "GPT-4o",
-		api: "openai-completions", // Using same type for simplicity
-		provider: "openai",
+		api: "openrouter-chat", // Using same type for simplicity
+		provider: "openrouter",
 		baseUrl: "https://openrouter.ai/api/v1",
 		reasoning: false,
 		input: ["text", "image"],
@@ -31,11 +31,11 @@ const mockModels: Model<"openai-completions">[] = [
 ];
 
 // Mock OpenRouter models with colons in IDs
-const mockOpenRouterModels: Model<"openai-completions">[] = [
+const mockOpenRouterModels: Model<"openrouter-chat">[] = [
 	{
 		id: "qwen/qwen3-coder:exacto",
 		name: "Qwen3 Coder Exacto",
-		api: "openai-completions",
+		api: "openrouter-chat",
 		provider: "openrouter",
 		baseUrl: "https://openrouter.ai/api/v1",
 		reasoning: true,
@@ -47,7 +47,7 @@ const mockOpenRouterModels: Model<"openai-completions">[] = [
 	{
 		id: "openai/gpt-4o:extended",
 		name: "GPT-4o Extended",
-		api: "openai-completions",
+		api: "openrouter-chat",
 		provider: "openrouter",
 		baseUrl: "https://openrouter.ai/api/v1",
 		reasoning: false,
@@ -213,7 +213,7 @@ describe("resolveCliModel", () => {
 		});
 
 		expect(result.error).toBeUndefined();
-		expect(result.model?.provider).toBe("openai");
+		expect(result.model?.provider).toBe("openrouter");
 		expect(result.model?.id).toBe("openai/gpt-4o");
 	});
 
@@ -223,14 +223,14 @@ describe("resolveCliModel", () => {
 		} as unknown as Parameters<typeof resolveCliModel>[0]["modelRegistry"];
 
 		const result = resolveCliModel({
-			cliProvider: "openai",
-			cliModel: "4o",
+			cliProvider: "openrouter",
+			cliModel: "sonnet",
 			modelRegistry: registry,
 		});
 
 		expect(result.error).toBeUndefined();
-		expect(result.model?.provider).toBe("openai");
-		expect(result.model?.id).toBe("openai/gpt-4o");
+		expect(result.model?.provider).toBe("openrouter");
+		expect(result.model?.id).toBe("anthropic/claude-sonnet-4.5");
 	});
 
 	test("supports --model <pattern>:<thinking> (without explicit --thinking)", () => {
@@ -269,14 +269,14 @@ describe("resolveCliModel", () => {
 		} as unknown as Parameters<typeof resolveCliModel>[0]["modelRegistry"];
 
 		const result = resolveCliModel({
-			cliProvider: "openai",
+			cliProvider: "openrouter",
 			cliModel: "gpt-4o:extended",
 			modelRegistry: registry,
 		});
 
 		expect(result.error).toBeUndefined();
-		expect(result.model?.provider).toBe("openai");
-		expect(result.model?.id).toBe("gpt-4o:extended");
+		expect(result.model?.provider).toBe("openrouter");
+		expect(result.model?.id).toBe("openai/gpt-4o:extended");
 	});
 
 	test("allows custom model ids for explicit providers without double prefixing", () => {
@@ -301,54 +301,13 @@ describe("resolveCliModel", () => {
 		} as unknown as Parameters<typeof resolveCliModel>[0]["modelRegistry"];
 
 		const result = resolveCliModel({
-			cliProvider: "openai",
+			cliProvider: "openrouter",
 			cliModel: "openai/gpt-4o",
 			modelRegistry: registry,
 		});
 
 		expect(result.model).toBeUndefined();
 		expect(result.error).toContain("No models available");
-	});
-
-	test("prefers provider/model split over gateway model with matching id", () => {
-		// When a user writes "zai/glm-5", and both a zai provider model (id: "glm-5")
-		// and a gateway model (id: "zai/glm-5") exist, prefer the zai provider model.
-		const zaiModel: Model<"openai-completions"> = {
-			id: "glm-5",
-			name: "GLM-5",
-			api: "openai-completions",
-			provider: "zai",
-			baseUrl: "https://open.bigmodel.cn/api/paas/v4",
-			reasoning: true,
-			input: ["text"],
-			cost: { input: 1, output: 2, cacheRead: 0.1, cacheWrite: 1 },
-			contextWindow: 128000,
-			maxTokens: 8192,
-		};
-		const gatewayModel: Model<"openai-completions"> = {
-			id: "zai/glm-5",
-			name: "GLM-5",
-			api: "openai-completions",
-			provider: "vercel-ai-gateway",
-			baseUrl: "https://ai-gateway.vercel.sh",
-			reasoning: true,
-			input: ["text"],
-			cost: { input: 1, output: 2, cacheRead: 0.1, cacheWrite: 1 },
-			contextWindow: 128000,
-			maxTokens: 8192,
-		};
-		const registry = {
-			getAll: () => [...allModels, zaiModel, gatewayModel],
-		} as unknown as Parameters<typeof resolveCliModel>[0]["modelRegistry"];
-
-		const result = resolveCliModel({
-			cliModel: "zai/glm-5",
-			modelRegistry: registry,
-		});
-
-		expect(result.error).toBeUndefined();
-		expect(result.model?.provider).toBe("zai");
-		expect(result.model?.id).toBe("glm-5");
 	});
 
 	test("resolves provider-prefixed fuzzy patterns (openrouter/qwen -> openrouter model)", () => {
@@ -383,33 +342,5 @@ describe("default model selection", () => {
 
 		expect(result.model?.provider).toBe("openrouter");
 		expect(result.model?.id).toBe("openai/ghost-model");
-	});
-
-	test("findInitialModel selects ai-gateway default when available", async () => {
-		const aiGatewayModel: Model<"openai-completions"> = {
-			id: "anthropic/claude-opus-4-6",
-			name: "Claude Opus 4.6",
-			api: "openai-completions",
-			provider: "vercel-ai-gateway",
-			baseUrl: "https://ai-gateway.vercel.sh",
-			reasoning: true,
-			input: ["text", "image"],
-			cost: { input: 5, output: 15, cacheRead: 0.5, cacheWrite: 5 },
-			contextWindow: 200000,
-			maxTokens: 8192,
-		};
-
-		const registry = {
-			getAvailable: async () => [aiGatewayModel],
-		} as unknown as Parameters<typeof findInitialModel>[0]["modelRegistry"];
-
-		const result = await findInitialModel({
-			scopedModels: [],
-			isContinuing: false,
-			modelRegistry: registry,
-		});
-
-		expect(result.model?.provider).toBe("vercel-ai-gateway");
-		expect(result.model?.id).toBe("anthropic/claude-opus-4-6");
 	});
 });

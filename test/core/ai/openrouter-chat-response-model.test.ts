@@ -38,11 +38,11 @@ vi.mock("openai", () => {
 	return { default: FakeOpenAI };
 });
 
-function openRouterAuto(): Model<"openai-completions"> {
+function openRouterAuto(): Model<"openrouter-chat"> {
 	return {
 		id: "openrouter/auto",
 		name: "OpenRouter Auto",
-		api: "openai-completions",
+		api: "openrouter-chat",
 		provider: "openrouter",
 		baseUrl: "https://openrouter.ai/api/v1",
 		reasoning: false,
@@ -53,7 +53,7 @@ function openRouterAuto(): Model<"openai-completions"> {
 	};
 }
 
-describe("openai-completions responseModel", () => {
+describe("openrouter-chat responseModel", () => {
 	beforeEach(() => {
 		mockState.chunks = [];
 	});

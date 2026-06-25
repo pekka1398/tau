@@ -1,7 +1,7 @@
 import { Type } from "typebox";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getModel } from "../../../src/core/ai/models.ts";
-import { streamOpenAICompletions } from "../../../src/core/ai/providers/openai-completions.ts";
+import { streamOpenRouterChat } from "../../../src/core/ai/providers/openrouter-chat.ts";
 import type { Model } from "../../../src/core/ai/types.ts";
 
 interface CacheControl {
@@ -72,12 +72,12 @@ vi.mock("openai", () => {
 });
 
 async function capturePayload(
-	model: Model<"openai-completions">,
+	model: Model<"openrouter-chat">,
 	options?: { cacheRetention?: "none" | "short" | "long" },
 ): Promise<CapturedParams> {
 	const timestamp = Date.now();
 
-	await streamOpenAICompletions(
+	await streamOpenRouterChat(
 		model,
 		{
 			systemPrompt: "System prompt",
@@ -121,16 +121,16 @@ function expectAnthropicCacheMarkers(params: CapturedParams): void {
 	expect((lastMessage.content as TextPart[])[0]?.cache_control).toEqual({ type: "ephemeral" });
 }
 
-describe("openai-completions cacheControlFormat", () => {
+describe("openrouter-chat cacheControlFormat", () => {
 	beforeEach(() => {
 		mockState.lastParams = undefined;
 	});
 
 	it("applies Anthropic-style cache markers when model compat enables them", async () => {
-		const model: Model<"openai-completions"> = {
+		const model: Model<"openrouter-chat"> = {
 			id: "custom-qwen",
 			name: "Custom Qwen",
-			api: "openai-completions",
+			api: "openrouter-chat",
 			provider: "openrouter",
 			baseUrl: "https://example.com/v1",
 			reasoning: true,
@@ -159,10 +159,10 @@ describe("openai-completions cacheControlFormat", () => {
 	});
 
 	it("omits Anthropic-style cache markers when cacheRetention is none", async () => {
-		const model: Model<"openai-completions"> = {
+		const model: Model<"openrouter-chat"> = {
 			id: "custom-qwen",
 			name: "Custom Qwen",
-			api: "openai-completions",
+			api: "openrouter-chat",
 			provider: "openrouter",
 			baseUrl: "https://example.com/v1",
 			reasoning: true,

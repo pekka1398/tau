@@ -6,7 +6,7 @@ function createErrorMessage(errorMessage: string): AssistantMessage {
 	return {
 		role: "assistant",
 		content: [],
-		api: "openai-completions",
+		api: "openrouter-chat",
 		provider: "ollama",
 		model: "qwen3.5:35b",
 		usage: {
@@ -85,7 +85,7 @@ describe("isContextOverflow", () => {
 		return {
 			role: "assistant",
 			content: [],
-			api: "openai-completions",
+			api: "openrouter-chat",
 			provider: "xiaomi",
 			model: "mimo-v2.5-pro",
 			usage: {

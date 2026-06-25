@@ -2,13 +2,13 @@ import { once } from "node:events";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { describe, expect, it } from "vitest";
-import { convertMessages, streamOpenAICompletions } from "../../../src/core/ai/providers/openai-completions.ts";
+import { convertMessages, streamOpenRouterChat } from "../../../src/core/ai/providers/openrouter-chat.ts";
 import type {
 	AssistantMessage,
 	AssistantMessageEvent,
 	Context,
 	Model,
-	OpenAICompletionsCompat,
+	OpenRouterChatCompat,
 	Usage,
 } from "../../../src/core/ai/types.ts";
 
@@ -33,21 +33,20 @@ const compat = {
 	requiresReasoningContentOnAssistantMessages: false,
 	thinkingFormat: "openai",
 	openRouterRouting: {},
-	vercelGatewayRouting: {},
 	zaiToolStream: false,
 	supportsStrictMode: true,
 	cacheControlFormat: undefined,
 	sendSessionAffinityHeaders: false,
 	supportsLongCacheRetention: true,
-} satisfies Required<Omit<OpenAICompletionsCompat, "cacheControlFormat">> & {
-	cacheControlFormat?: OpenAICompletionsCompat["cacheControlFormat"];
+} satisfies Required<Omit<OpenRouterChatCompat, "cacheControlFormat">> & {
+	cacheControlFormat?: OpenRouterChatCompat["cacheControlFormat"];
 };
 
-function buildModel(baseUrl = "http://127.0.0.1:1"): Model<"openai-completions"> {
+function buildModel(baseUrl = "http://127.0.0.1:1"): Model<"openrouter-chat"> {
 	return {
 		id: "repro-model",
 		name: "Repro Model",
-		api: "openai-completions",
+		api: "openrouter-chat",
 		provider: "repro-provider",
 		baseUrl,
 		reasoning: true,
@@ -63,7 +62,7 @@ function buildAssistant(content: AssistantMessage["content"]): AssistantMessage 
 	return {
 		role: "assistant",
 		content,
-		api: "openai-completions",
+		api: "openrouter-chat",
 		provider: "repro-provider",
 		model: "repro-model",
 		usage: emptyUsage,
@@ -97,7 +96,7 @@ interface ChatCompletionsRequestBody {
 	stream_options?: { include_usage?: boolean };
 }
 
-describe("openai-completions thinking-as-text replay", () => {
+describe("openrouter-chat thinking-as-text replay", () => {
 	it("serializes same-model thinking-plus-text replay as assistant text parts", () => {
 		const messages = convertMessages(
 			buildModel(),
@@ -180,7 +179,7 @@ describe("openai-completions thinking-as-text replay", () => {
 		try {
 			const { port } = server.address() as AddressInfo;
 			const events = await collectEvents(
-				streamOpenAICompletions(
+				streamOpenRouterChat(
 					buildModel(`http://127.0.0.1:${port}`),
 					buildContext(
 						buildAssistant([

@@ -17,7 +17,7 @@ import {
 	getProviders,
 	type KnownProvider,
 	type Model,
-	type OpenAICompletionsCompat,
+	type OpenRouterChatCompat,
 	resetApiProviders,
 } from "./ai/index.ts";
 import type { AuthStatus, AuthStorage } from "./auth-storage.ts";
@@ -73,12 +73,6 @@ const OpenRouterRoutingSchema = Type.Object({
 	preferred_max_latency: Type.Optional(Type.Union([Type.Number(), PercentileCutoffsSchema])),
 });
 
-// Schema for Vercel AI Gateway routing preferences
-const VercelGatewayRoutingSchema = Type.Object({
-	only: Type.Optional(Type.Array(Type.String())),
-	order: Type.Optional(Type.Array(Type.String())),
-});
-
 // Schema for thinking level support and provider-specific values
 const ThinkingLevelMapValueSchema = Type.Union([Type.String(), Type.Null()]);
 const ThinkingLevelMapSchema = Type.Object({
@@ -90,7 +84,7 @@ const ThinkingLevelMapSchema = Type.Object({
 	xhigh: Type.Optional(ThinkingLevelMapValueSchema),
 });
 
-const OpenAICompletionsCompatSchema = Type.Object({
+const OpenRouterChatCompatSchema = Type.Object({
 	supportsStore: Type.Optional(Type.Boolean()),
 	supportsDeveloperRole: Type.Optional(Type.Boolean()),
 	supportsReasoningEffort: Type.Optional(Type.Boolean()),
@@ -115,13 +109,12 @@ const OpenAICompletionsCompatSchema = Type.Object({
 	),
 	cacheControlFormat: Type.Optional(Type.Literal("anthropic")),
 	openRouterRouting: Type.Optional(OpenRouterRoutingSchema),
-	vercelGatewayRouting: Type.Optional(VercelGatewayRoutingSchema),
 	supportsStrictMode: Type.Optional(Type.Boolean()),
 	supportsLongCacheRetention: Type.Optional(Type.Boolean()),
 });
 
 // Schema for custom model definition
-// Most fields are optional with sensible defaults for local models (Ollama, LM Studio, etc.)
+// Most fields are optional with sensible defaults inherited from OpenRouter.
 const ModelDefinitionSchema = Type.Object({
 	id: Type.String({ minLength: 1 }),
 	name: Type.Optional(Type.String({ minLength: 1 })),
@@ -141,7 +134,7 @@ const ModelDefinitionSchema = Type.Object({
 	contextWindow: Type.Optional(Type.Number()),
 	maxTokens: Type.Optional(Type.Number()),
 	headers: Type.Optional(Type.Record(Type.String(), Type.String())),
-	compat: Type.Optional(OpenAICompletionsCompatSchema),
+	compat: Type.Optional(OpenRouterChatCompatSchema),
 });
 
 // Schema for per-model overrides (all fields optional, merged with built-in model)
@@ -161,7 +154,7 @@ const ModelOverrideSchema = Type.Object({
 	contextWindow: Type.Optional(Type.Number()),
 	maxTokens: Type.Optional(Type.Number()),
 	headers: Type.Optional(Type.Record(Type.String(), Type.String())),
-	compat: Type.Optional(OpenAICompletionsCompatSchema),
+	compat: Type.Optional(OpenRouterChatCompatSchema),
 });
 
 type ModelOverride = Static<typeof ModelOverrideSchema>;
@@ -172,7 +165,7 @@ const ProviderConfigSchema = Type.Object({
 	apiKey: Type.Optional(Type.String({ minLength: 1 })),
 	api: Type.Optional(Type.String({ minLength: 1 })),
 	headers: Type.Optional(Type.Record(Type.String(), Type.String())),
-	compat: Type.Optional(OpenAICompletionsCompatSchema),
+	compat: Type.Optional(OpenRouterChatCompatSchema),
 	authHeader: Type.Optional(Type.Boolean()),
 	models: Type.Optional(Type.Array(ModelDefinitionSchema)),
 	modelOverrides: Type.Optional(Type.Record(Type.String(), ModelOverrideSchema)),
@@ -313,25 +306,14 @@ function mergeCompat(
 ): Model<Api>["compat"] | undefined {
 	if (!overrideCompat) return baseCompat;
 
-	const base = baseCompat as OpenAICompletionsCompat | undefined;
-	const override = overrideCompat as OpenAICompletionsCompat;
-	const merged = { ...base, ...override } as OpenAICompletionsCompat;
+	const base = baseCompat as OpenRouterChatCompat | undefined;
+	const override = overrideCompat as OpenRouterChatCompat;
+	const merged = { ...base, ...override } as OpenRouterChatCompat;
 
-	const baseCompletions = base as OpenAICompletionsCompat | undefined;
-	const overrideCompletions = override as OpenAICompletionsCompat;
-	const mergedCompletions = merged as OpenAICompletionsCompat;
-
-	if (baseCompletions?.openRouterRouting || overrideCompletions.openRouterRouting) {
-		mergedCompletions.openRouterRouting = {
-			...baseCompletions?.openRouterRouting,
-			...overrideCompletions.openRouterRouting,
-		};
-	}
-
-	if (baseCompletions?.vercelGatewayRouting || overrideCompletions.vercelGatewayRouting) {
-		mergedCompletions.vercelGatewayRouting = {
-			...baseCompletions?.vercelGatewayRouting,
-			...overrideCompletions.vercelGatewayRouting,
+	if (base?.openRouterRouting || override.openRouterRouting) {
+		merged.openRouterRouting = {
+			...base?.openRouterRouting,
+			...override.openRouterRouting,
 		};
 	}
 

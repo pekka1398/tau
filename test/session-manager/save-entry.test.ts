@@ -15,7 +15,7 @@ describe("SessionManager.saveCustomEntry", () => {
 		const msg2Id = session.appendMessage({
 			role: "assistant",
 			content: [{ type: "text", text: "hi" }],
-			api: "openai-completions",
+			api: "openrouter-chat",
 			provider: "openrouter",
 			model: "test",
 			usage: {

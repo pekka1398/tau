@@ -74,7 +74,7 @@ describe("config value env var syntax migration", () => {
 						"custom-provider": {
 							baseUrl: "https://example.com/v1",
 							apiKey: "CUSTOM_API_KEY",
-							api: "openai-completions",
+							api: "openrouter-chat",
 							headers: {
 								"x-api-key": "HEADER_API_KEY",
 								"x-literal": "literal",

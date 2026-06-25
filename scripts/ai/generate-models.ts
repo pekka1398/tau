@@ -51,7 +51,7 @@ async function fetchOpenRouterModels(): Promise<Model<any>[]> {
 			const normalizedModel: Model<any> = {
 				id: model.id,
 				name: model.name,
-				api: "openai-completions",
+				api: "openrouter-chat",
 				baseUrl: "https://openrouter.ai/api/v1",
 				provider: "openrouter" as KnownProvider,
 				reasoning: model.supported_parameters?.includes("reasoning") || false,

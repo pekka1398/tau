@@ -9,7 +9,7 @@ export * from "./images-api-registry.ts";
 export * from "./models.ts";
 export * from "./providers/faux.ts";
 export * from "./providers/images/register-builtins.ts";
-export type { OpenAICompletionsOptions } from "./providers/openai-completions.ts";
+export type { OpenRouterChatOptions } from "./providers/openrouter-chat.ts";
 export * from "./providers/register-builtins.ts";
 export * from "./session-resources.ts";
 export * from "./stream.ts";

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getModel } from "../../../src/core/ai/models.ts";
-import { streamOpenAICompletions } from "../../../src/core/ai/providers/openai-completions.ts";
+import { streamOpenRouterChat } from "../../../src/core/ai/providers/openrouter-chat.ts";
 import type { Model } from "../../../src/core/ai/types.ts";
 
 interface FakeOpenAIClientOptions {
@@ -63,7 +63,7 @@ vi.mock("openai", () => {
 	return { default: FakeOpenAI };
 });
 
-describe("openai-completions prompt caching", () => {
+describe("openrouter-chat prompt caching", () => {
 	const originalEnv = process.env.TAU_CACHE_RETENTION;
 
 	beforeEach(() => {
@@ -80,11 +80,11 @@ describe("openai-completions prompt caching", () => {
 		}
 	});
 
-	function createModel(overrides: Partial<Model<"openai-completions">> = {}): Model<"openai-completions"> {
+	function createModel(overrides: Partial<Model<"openrouter-chat">> = {}): Model<"openrouter-chat"> {
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini");
 		return {
-			...(baseModel as Omit<Model<"openai-completions">, "api">),
-			api: "openai-completions",
+			...(baseModel as Omit<Model<"openrouter-chat">, "api">),
+			api: "openrouter-chat",
 			...overrides,
 		};
 	}
@@ -95,9 +95,9 @@ describe("openai-completions prompt caching", () => {
 			sessionId?: string;
 			headers?: Record<string, string>;
 		},
-		model: Model<"openai-completions"> = createModel(),
+		model: Model<"openrouter-chat"> = createModel(),
 	) {
-		await streamOpenAICompletions(
+		await streamOpenRouterChat(
 			model,
 			{
 				systemPrompt: "sys",

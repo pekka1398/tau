@@ -342,9 +342,7 @@ export function resolveCliModel(options: {
 
 	// If no explicit --provider, try to interpret "provider/model" format first.
 	// When the prefix before the first slash matches a known provider, prefer that
-	// interpretation over matching models whose IDs literally contain slashes
-	// (e.g. "zai/glm-5" should resolve to provider=zai, model=glm-5, not to a
-	// vercel-ai-gateway model with id "zai/glm-5").
+	// interpretation over matching models whose IDs literally contain slashes.
 	let pattern = cliModel;
 	let inferredProvider = false;
 

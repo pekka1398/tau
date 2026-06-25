@@ -3,7 +3,7 @@ import type { AssistantMessageEventStream } from "./utils/event-stream.ts";
 
 export type { AssistantMessageEventStream } from "./utils/event-stream.ts";
 
-export type KnownApi = "openai-completions";
+export type KnownApi = "openrouter-chat";
 
 export type Api = KnownApi | (string & {});
 
@@ -328,10 +328,11 @@ export type AssistantMessageEvent =
 	| { type: "error"; reason: Extract<StopReason, "aborted" | "error">; error: AssistantMessage };
 
 /**
- * Compatibility settings for OpenAI-compatible completions APIs.
- * Use this to override URL-based auto-detection for OpenRouter-compatible endpoints.
+ * Compatibility settings for OpenRouter chat requests.
+ * Use this only for OpenRouter-routed model quirks that are not covered by
+ * generated model metadata.
  */
-export interface OpenAICompletionsCompat {
+export interface OpenRouterChatCompat {
 	/** Whether the provider supports the `store` field. Default: auto-detected from URL. */
 	supportsStore?: boolean;
 	/** Whether the provider supports the `developer` role (vs `system`). Default: auto-detected from URL. */
@@ -363,8 +364,6 @@ export interface OpenAICompletionsCompat {
 		| "ant-ling";
 	/** OpenRouter-compatible routing preferences sent as the `provider` request field. */
 	openRouterRouting?: OpenRouterRouting;
-	/** Vercel AI Gateway routing preferences. Only used when baseUrl points to Vercel AI Gateway. */
-	vercelGatewayRouting?: VercelGatewayRouting;
 	/** Whether z.ai supports top-level `tool_stream: true` for streaming tool call deltas. Default: false. */
 	zaiToolStream?: boolean;
 	/** Whether the provider supports the `strict` field in tool definitions. Default: true. */
@@ -452,18 +451,6 @@ export interface OpenRouterRouting {
 		  };
 }
 
-/**
- * Vercel AI Gateway routing preferences.
- * Controls which upstream providers the gateway routes requests to.
- * @see https://vercel.com/docs/ai-gateway/models-and-providers/provider-options
- */
-export interface VercelGatewayRouting {
-	/** List of provider slugs to exclusively use for this request. */
-	only?: string[];
-	/** List of provider slugs to try in order. */
-	order?: string[];
-}
-
 // Model interface for the unified model system
 export interface Model<TApi extends Api> {
 	id: string;
@@ -487,8 +474,8 @@ export interface Model<TApi extends Api> {
 	contextWindow: number;
 	maxTokens: number;
 	headers?: Record<string, string>;
-	/** Compatibility overrides for OpenAI-compatible APIs. If not set, auto-detected from baseUrl. */
-	compat?: OpenAICompletionsCompat;
+	/** Compatibility overrides for OpenRouter-routed model quirks. */
+	compat?: OpenRouterChatCompat;
 }
 
 export interface ImagesModel<TApi extends ImagesApi>

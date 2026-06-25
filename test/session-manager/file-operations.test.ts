@@ -199,7 +199,7 @@ describe("SessionManager custom flat session directory", () => {
 		session.appendMessage({
 			role: "assistant",
 			content: [{ type: "text", text: `reply to ${label}` }],
-			api: "openai-completions",
+			api: "openrouter-chat",
 			provider: "openrouter",
 			model: "test",
 			usage: {

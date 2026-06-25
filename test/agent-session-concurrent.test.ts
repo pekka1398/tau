@@ -42,7 +42,7 @@ function createAssistantMessage(text: string): AssistantMessage {
 	return {
 		role: "assistant",
 		content: [{ type: "text", text }],
-		api: "openai-completions",
+		api: "openrouter-chat",
 		provider: "openrouter",
 		model: "mock",
 		usage: {
@@ -370,7 +370,7 @@ describe("AgentSession concurrent prompt guard", () => {
 						const message: AssistantMessage = {
 							role: "assistant",
 							content: [{ type: "text", text: "done" }],
-							api: "openai-completions",
+							api: "openrouter-chat",
 							provider: "openrouter",
 							model: "mock",
 							usage: {
@@ -395,7 +395,7 @@ describe("AgentSession concurrent prompt guard", () => {
 							{ type: "toolCall", id: "toolu_1", name: "dummy", arguments: { q: "x" } },
 							{ type: "toolCall", id: "toolu_2", name: "dummy", arguments: { q: "y" } },
 						],
-						api: "openai-completions",
+						api: "openrouter-chat",
 						provider: "openrouter",
 						model: "mock",
 						usage: {
@@ -517,7 +517,7 @@ describe("AgentSession concurrent prompt guard", () => {
 						const message: AssistantMessage = {
 							role: "assistant",
 							content: [{ type: "text", text: "done" }],
-							api: "openai-completions",
+							api: "openrouter-chat",
 							provider: "openrouter",
 							model: "mock",
 							usage: {
@@ -542,7 +542,7 @@ describe("AgentSession concurrent prompt guard", () => {
 							{ type: "text", text: "calling tool" },
 							{ type: "toolCall", id: "toolu_1", name: "dummy", arguments: { q: "x" } },
 						],
-						api: "openai-completions",
+						api: "openrouter-chat",
 						provider: "openrouter",
 						model: "mock",
 						usage: {

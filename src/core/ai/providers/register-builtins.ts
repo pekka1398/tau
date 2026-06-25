@@ -10,7 +10,7 @@ import type {
 	StreamOptions,
 } from "../types.ts";
 import { AssistantMessageEventStream } from "../utils/event-stream.ts";
-import type { OpenAICompletionsOptions } from "./openai-completions.ts";
+import type { OpenRouterChatOptions } from "./openrouter-chat.ts";
 
 interface LazyProviderModule<
 	TApi extends Api,
@@ -25,13 +25,13 @@ interface LazyProviderModule<
 	) => AsyncIterable<AssistantMessageEvent>;
 }
 
-interface OpenAICompletionsProviderModule {
-	streamOpenAICompletions: StreamFunction<"openai-completions", OpenAICompletionsOptions>;
-	streamSimpleOpenAICompletions: StreamFunction<"openai-completions", SimpleStreamOptions>;
+interface OpenRouterChatProviderModule {
+	streamOpenRouterChat: StreamFunction<"openrouter-chat", OpenRouterChatOptions>;
+	streamSimpleOpenRouterChat: StreamFunction<"openrouter-chat", SimpleStreamOptions>;
 }
 
-let openAICompletionsProviderModulePromise:
-	| Promise<LazyProviderModule<"openai-completions", OpenAICompletionsOptions, SimpleStreamOptions>>
+let openRouterChatProviderModulePromise:
+	| Promise<LazyProviderModule<"openrouter-chat", OpenRouterChatOptions, SimpleStreamOptions>>
 	| undefined;
 
 function forwardStream(target: AssistantMessageEventStream, source: AsyncIterable<AssistantMessageEvent>): void {
@@ -108,27 +108,27 @@ function createLazySimpleStream<
 	};
 }
 
-function loadOpenAICompletionsProviderModule(): Promise<
-	LazyProviderModule<"openai-completions", OpenAICompletionsOptions, SimpleStreamOptions>
+function loadOpenRouterChatProviderModule(): Promise<
+	LazyProviderModule<"openrouter-chat", OpenRouterChatOptions, SimpleStreamOptions>
 > {
-	openAICompletionsProviderModulePromise ||= import("./openai-completions.ts").then((module) => {
-		const provider = module as OpenAICompletionsProviderModule;
+	openRouterChatProviderModulePromise ||= import("./openrouter-chat.ts").then((module) => {
+		const provider = module as OpenRouterChatProviderModule;
 		return {
-			stream: provider.streamOpenAICompletions,
-			streamSimple: provider.streamSimpleOpenAICompletions,
+			stream: provider.streamOpenRouterChat,
+			streamSimple: provider.streamSimpleOpenRouterChat,
 		};
 	});
-	return openAICompletionsProviderModulePromise;
+	return openRouterChatProviderModulePromise;
 }
 
-export const streamOpenAICompletions = createLazyStream(loadOpenAICompletionsProviderModule);
-export const streamSimpleOpenAICompletions = createLazySimpleStream(loadOpenAICompletionsProviderModule);
+export const streamOpenRouterChat = createLazyStream(loadOpenRouterChatProviderModule);
+export const streamSimpleOpenRouterChat = createLazySimpleStream(loadOpenRouterChatProviderModule);
 
 export function registerBuiltInApiProviders(): void {
 	registerApiProvider({
-		api: "openai-completions",
-		stream: streamOpenAICompletions,
-		streamSimple: streamSimpleOpenAICompletions,
+		api: "openrouter-chat",
+		stream: streamOpenRouterChat,
+		streamSimple: streamSimpleOpenRouterChat,
 	});
 }
 

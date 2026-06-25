@@ -1212,7 +1212,7 @@ Source files:
 {
   "id": "anthropic/claude-sonnet-4.5",
   "name": "Claude Sonnet 4",
-  "api": "openai-completions",
+  "api": "openrouter-chat",
   "provider": "openrouter",
   "baseUrl": "https://openrouter.ai/api/v1",
   "reasoning": true,
@@ -1251,7 +1251,7 @@ The `content` field can be a string or an array of `TextContent`/`ImageContent` 
     {"type": "thinking", "thinking": "User is greeting me..."},
     {"type": "toolCall", "id": "call_123", "name": "bash", "arguments": {"command": "ls"}}
   ],
-  "api": "openai-completions",
+  "api": "openrouter-chat",
   "provider": "openrouter",
   "model": "anthropic/claude-sonnet-4.5",
   "usage": {

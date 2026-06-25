@@ -29,7 +29,7 @@ function createAssistantMessage(text: string, overrides?: Partial<AssistantMessa
 	return {
 		role: "assistant",
 		content: [{ type: "text", text }],
-		api: "openai-completions",
+		api: "openrouter-chat",
 		provider: "openrouter",
 		model: "mock",
 		usage: {

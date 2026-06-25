@@ -63,7 +63,7 @@ vi.mock("openai", () => {
 	return { default: FakeOpenAI };
 });
 
-describe("openai-completions tool_choice", () => {
+describe("openrouter-chat tool_choice", () => {
 	beforeEach(() => {
 		mockState.lastParams = undefined;
 		mockState.chunks = undefined;
@@ -71,7 +71,7 @@ describe("openai-completions tool_choice", () => {
 
 	it("forwards toolChoice from simple options to payload", async () => {
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = { ...baseModel, api: "openrouter-chat" } as const;
 		const tools: Tool[] = [
 			{
 				name: "ping",
@@ -114,7 +114,7 @@ describe("openai-completions tool_choice", () => {
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini")!;
 		const model = {
 			...baseModel,
-			api: "openai-completions",
+			api: "openrouter-chat",
 			compat: { supportsStrictMode: false },
 		} as const;
 		const tools: Tool[] = [
@@ -318,7 +318,7 @@ describe("openai-completions tool_choice", () => {
 		];
 
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = { ...baseModel, api: "openrouter-chat" } as const;
 		const response = await streamSimple(
 			model,
 			{
@@ -353,7 +353,7 @@ describe("openai-completions tool_choice", () => {
 		];
 
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = { ...baseModel, api: "openrouter-chat" } as const;
 		const response = await streamSimple(
 			model,
 			{
@@ -437,7 +437,7 @@ describe("openai-completions tool_choice", () => {
 		];
 
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = { ...baseModel, api: "openrouter-chat" } as const;
 		const tool: Tool = {
 			name: "read",
 			description: "Read a file",
@@ -584,7 +584,7 @@ describe("openai-completions tool_choice", () => {
 		];
 
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = { ...baseModel, api: "openrouter-chat" } as const;
 		const tools: Tool[] = [
 			{
 				name: "read",
@@ -766,7 +766,7 @@ describe("openai-completions tool_choice", () => {
 
 	it("keeps developer messages for OpenAI reasoning model instructions", async () => {
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-5.5")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = { ...baseModel, api: "openrouter-chat" } as const;
 		let payload: unknown;
 
 		await streamSimple(
@@ -796,7 +796,7 @@ describe("openai-completions tool_choice", () => {
 		];
 
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = { ...baseModel, api: "openrouter-chat" } as const;
 		const response = await streamSimple(
 			model,
 			{
@@ -851,7 +851,7 @@ describe("openai-completions tool_choice", () => {
 		];
 
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = { ...baseModel, api: "openrouter-chat" } as const;
 		const response = await streamSimple(
 			model,
 			{
@@ -890,7 +890,7 @@ describe("openai-completions tool_choice", () => {
 		];
 
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = { ...baseModel, api: "openrouter-chat" } as const;
 		const response = await streamSimple(
 			model,
 			{
@@ -936,7 +936,7 @@ describe("openai-completions tool_choice", () => {
 		];
 
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = { ...baseModel, api: "openrouter-chat" } as const;
 		const response = await streamSimple(
 			model,
 			{

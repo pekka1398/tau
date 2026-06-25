@@ -54,7 +54,7 @@ vi.mock("openai", () => {
 	return { default: FakeOpenAI };
 });
 
-describe("openai-completions empty tools handling", () => {
+describe("openrouter-chat empty tools handling", () => {
 	beforeEach(() => {
 		mockState.lastParams = undefined;
 		mockState.lastClientOptions = undefined;
@@ -62,7 +62,7 @@ describe("openai-completions empty tools handling", () => {
 
 	it("omits tools field when context.tools is an empty array", async () => {
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = { ...baseModel, api: "openrouter-chat" } as const;
 
 		await streamSimple(
 			model,
@@ -79,7 +79,7 @@ describe("openai-completions empty tools handling", () => {
 
 	it("omits tools field when context.tools is undefined", async () => {
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = { ...baseModel, api: "openrouter-chat" } as const;
 
 		await streamSimple(
 			model,
@@ -95,7 +95,7 @@ describe("openai-completions empty tools handling", () => {
 
 	it("does not send default max token fields", async () => {
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = { ...baseModel, api: "openrouter-chat" } as const;
 
 		await streamSimple(
 			model,
@@ -112,7 +112,7 @@ describe("openai-completions empty tools handling", () => {
 
 	it("sends explicit maxTokens", async () => {
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = { ...baseModel, api: "openrouter-chat" } as const;
 
 		await streamSimple(
 			model,
@@ -129,7 +129,7 @@ describe("openai-completions empty tools handling", () => {
 
 	it("still emits tools: [] for OpenRouter-compatible proxies when conversation has tool history", async () => {
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini")!;
-		const model = { ...baseModel, api: "openai-completions" } as const;
+		const model = { ...baseModel, api: "openrouter-chat" } as const;
 
 		await streamSimple(
 			model,
@@ -155,8 +155,8 @@ describe("openai-completions empty tools handling", () => {
 							totalTokens: 0,
 							cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 						},
-						api: "openai-completions",
-						provider: "openai",
+						api: "openrouter-chat",
+						provider: "openrouter",
 						model: "gpt-4o-mini",
 						timestamp: Date.now(),
 					},

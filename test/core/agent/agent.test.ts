@@ -25,7 +25,7 @@ function createAssistantMessage(text: string): AssistantMessage {
 	return {
 		role: "assistant",
 		content: [{ type: "text", text }],
-		api: "openai-completions",
+		api: "openrouter-chat",
 		provider: "openrouter",
 		model: "mock",
 		usage: {

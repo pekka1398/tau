@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { getModel } from "../../../src/core/ai/models.ts";
-import { convertMessages } from "../../../src/core/ai/providers/openai-completions.ts";
+import { convertMessages } from "../../../src/core/ai/providers/openrouter-chat.ts";
 import type {
 	AssistantMessage,
 	Context,
 	Model,
-	OpenAICompletionsCompat,
+	OpenRouterChatCompat,
 	ToolResultMessage,
 	Usage,
 } from "../../../src/core/ai/types.ts";
@@ -19,7 +19,7 @@ const emptyUsage: Usage = {
 	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 };
 
-const compat: Required<OpenAICompletionsCompat> = {
+const compat: Required<OpenRouterChatCompat> = {
 	supportsStore: true,
 	supportsDeveloperRole: true,
 	supportsReasoningEffort: true,
@@ -31,7 +31,6 @@ const compat: Required<OpenAICompletionsCompat> = {
 	requiresReasoningContentOnAssistantMessages: false,
 	thinkingFormat: "openai",
 	openRouterRouting: {},
-	vercelGatewayRouting: {},
 	zaiToolStream: false,
 	supportsStrictMode: true,
 	cacheControlFormat: "anthropic",
@@ -53,12 +52,12 @@ function buildToolResult(toolCallId: string, timestamp: number): ToolResultMessa
 	};
 }
 
-describe("openai-completions convertMessages", () => {
+describe("openrouter-chat convertMessages", () => {
 	it("batches tool-result images after consecutive tool results", () => {
 		const { compat: _compat, ...baseModel } = getModel("openrouter", "openai/gpt-4o-mini");
-		const model: Model<"openai-completions"> = {
+		const model: Model<"openrouter-chat"> = {
 			...baseModel,
-			api: "openai-completions",
+			api: "openrouter-chat",
 			input: ["text", "image"],
 		};
 

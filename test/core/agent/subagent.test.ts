@@ -26,7 +26,7 @@ function createAssistantMessage(text: string, usage?: Partial<AssistantMessage["
 	return {
 		role: "assistant",
 		content: [{ type: "text", text }],
-		api: "openai-completions",
+		api: "openrouter-chat",
 		provider: "openrouter",
 		model: "mock",
 		usage: {
@@ -262,7 +262,7 @@ describe("runSubagent", () => {
 										arguments: { text: "hello" },
 									},
 								],
-								api: "openai-completions",
+								api: "openrouter-chat",
 								provider: "openrouter",
 								model: "mock",
 								usage: {

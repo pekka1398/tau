@@ -40,7 +40,7 @@ function assistantMessage(id: string, parentId: string | null, text: string): Se
 		message: {
 			role: "assistant",
 			content: [{ type: "text", text }],
-			api: "openai-completions",
+			api: "openrouter-chat",
 			provider: "openrouter",
 			model: "claude-sonnet-4",
 			usage: {
@@ -67,7 +67,7 @@ function toolCallOnlyAssistant(id: string, parentId: string | null): SessionMess
 		message: {
 			role: "assistant",
 			content: [{ type: "toolCall", id: `tc-${id}`, name: "read", arguments: { path: "test.ts" } }],
-			api: "openai-completions",
+			api: "openrouter-chat",
 			provider: "openrouter",
 			model: "claude-sonnet-4",
 			usage: {

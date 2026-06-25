@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type { OpenAICompletionsCompat } from "../src/core/ai/index.ts";
+import type { OpenRouterChatCompat } from "../src/core/ai/index.ts";
 import { AuthStorage } from "../src/core/auth-storage.ts";
 import { clearApiKeyCache, ModelRegistry, type ProviderConfigInput } from "../src/core/model-registry.ts";
 import { clearDeprecationWarningsForTests } from "../src/utils/deprecation.ts";
@@ -66,7 +66,7 @@ describe("ModelRegistry", () => {
 		return {
 			baseUrl: "https://example.com/v1",
 			apiKey,
-			api: "openai-completions",
+			api: "openrouter-chat",
 			models: [modelConfig("test-model")],
 		};
 	}
@@ -155,7 +155,7 @@ describe("ModelRegistry", () => {
 
 			expect(registry.getError()).toBeUndefined();
 			expect(model).toMatchObject({
-				api: "openai-completions",
+				api: "openrouter-chat",
 				baseUrl: "https://openrouter.ai/api/v1",
 				provider: "openrouter",
 				reasoning: true,
@@ -169,7 +169,7 @@ describe("ModelRegistry", () => {
 					models: [
 						modelConfig("anthropic/claude-sonnet-4.5", {
 							name: "Overridden Sonnet",
-							api: "openai-completions",
+							api: "openrouter-chat",
 							baseUrl: "https://model.example.com/v1",
 						}),
 					],
@@ -191,7 +191,7 @@ describe("ModelRegistry", () => {
 		test("non-OpenRouter providers are rejected in models.json", () => {
 			writeRawModelsJson({
 				"local-proxy": {
-					api: "openai-completions",
+					api: "openrouter-chat",
 					models: [{ id: "local-model", input: ["text"] }],
 				},
 			});
@@ -207,7 +207,7 @@ describe("ModelRegistry", () => {
 				"local-proxy": {
 					baseUrl: "http://localhost:11434/v1",
 					apiKey: "local-key",
-					api: "openai-completions",
+					api: "openrouter-chat",
 					models: [modelConfig("local-model", { name: "Local Model" })],
 				},
 			});
@@ -239,7 +239,7 @@ describe("ModelRegistry", () => {
 
 			expect(sonnet?.name).toBe("Preferred Sonnet");
 			expect(sonnet?.cost.input).toBe(1);
-			expect((sonnet?.compat as OpenAICompletionsCompat | undefined)?.openRouterRouting).toEqual({
+			expect((sonnet?.compat as OpenRouterChatCompat | undefined)?.openRouterRouting).toEqual({
 				only: ["amazon-bedrock"],
 			});
 			expect(gpt?.name).not.toBe("Preferred Sonnet");
@@ -261,7 +261,7 @@ describe("ModelRegistry", () => {
 
 			const registry = ModelRegistry.create(authStorage, modelsJsonPath);
 			const compat = registry.find("openrouter", "anthropic/claude-sonnet-4.5")?.compat as
-				| OpenAICompletionsCompat
+				| OpenRouterChatCompat
 				| undefined;
 
 			expect(compat?.openRouterRouting).toEqual({
@@ -313,7 +313,7 @@ describe("ModelRegistry", () => {
 					name: "Local Proxy",
 					baseUrl: "http://localhost:11434/v1",
 					apiKey: "local-key",
-					api: "openai-completions",
+					api: "openrouter-chat",
 					models: [modelConfig("local-model")],
 				}),
 			).toThrow('only supports runtime registration for "openrouter"');
@@ -326,7 +326,7 @@ describe("ModelRegistry", () => {
 				name: "Local Proxy",
 				baseUrl: "http://localhost:11434/v1",
 				apiKey: "local-key",
-				api: "openai-completions",
+				api: "openrouter-chat",
 				models: [modelConfig("local-model")],
 			});
 
@@ -351,7 +351,7 @@ describe("ModelRegistry", () => {
 			registry.registerProvider("openrouter", {
 				baseUrl: "https://dynamic.example.com/v1",
 				apiKey: "dynamic-key",
-				api: "openai-completions",
+				api: "openrouter-chat",
 				models: [modelConfig("dynamic-model")],
 			});
 

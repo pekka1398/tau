@@ -23,8 +23,8 @@ function createSessionFile(path: string): void {
 	mgr.appendMessage({
 		role: "assistant",
 		content: [{ type: "text", text: "hi" }],
-		api: "openai-completions",
-		provider: "openai",
+		api: "openrouter-chat",
+		provider: "openrouter",
 		model: "test",
 		usage: {
 			input: 1,
@@ -59,8 +59,8 @@ describe("SessionInfo.modified", () => {
 		mgr.appendMessage({
 			role: "assistant",
 			content: [{ type: "text", text: "later" }],
-			api: "openai-completions",
-			provider: "openai",
+			api: "openrouter-chat",
+			provider: "openrouter",
 			model: "test",
 			usage: {
 				input: 1,

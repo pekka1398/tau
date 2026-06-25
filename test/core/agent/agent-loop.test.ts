@@ -42,11 +42,11 @@ function createUsage() {
 	};
 }
 
-function createModel(): Model<"openai-completions"> {
+function createModel(): Model<"openrouter-chat"> {
 	return {
 		id: "mock",
 		name: "mock",
-		api: "openai-completions",
+		api: "openrouter-chat",
 		provider: "openrouter",
 		baseUrl: "https://example.invalid",
 		reasoning: false,
@@ -64,7 +64,7 @@ function createAssistantMessage(
 	return {
 		role: "assistant",
 		content,
-		api: "openai-completions",
+		api: "openrouter-chat",
 		provider: "openrouter",
 		model: "mock",
 		usage: createUsage(),

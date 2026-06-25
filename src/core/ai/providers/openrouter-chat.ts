@@ -18,7 +18,7 @@ import type {
 	ImageContent,
 	Message,
 	Model,
-	OpenAICompletionsCompat,
+	OpenRouterChatCompat,
 	SimpleStreamOptions,
 	StopReason,
 	StreamFunction,
@@ -72,7 +72,7 @@ function isImageContentBlock(block: { type: string }): block is ImageContent {
 	return block.type === "image";
 }
 
-export interface OpenAICompletionsOptions extends StreamOptions {
+export interface OpenRouterChatOptions extends StreamOptions {
 	toolChoice?: "auto" | "none" | "required" | { type: "function"; function: { name: string } };
 	reasoningEffort?: "minimal" | "low" | "medium" | "high" | "xhigh";
 }
@@ -82,8 +82,8 @@ interface OpenAICompatCacheControl {
 	ttl?: string;
 }
 
-type ResolvedOpenAICompletionsCompat = Omit<Required<OpenAICompletionsCompat>, "cacheControlFormat"> & {
-	cacheControlFormat?: OpenAICompletionsCompat["cacheControlFormat"];
+type ResolvedOpenRouterChatCompat = Omit<Required<OpenRouterChatCompat>, "cacheControlFormat"> & {
+	cacheControlFormat?: OpenRouterChatCompat["cacheControlFormat"];
 };
 
 type ChatCompletionInstructionMessageParam = ChatCompletionDeveloperMessageParam | ChatCompletionSystemMessageParam;
@@ -106,10 +106,10 @@ function resolveCacheRetention(cacheRetention?: CacheRetention): CacheRetention 
 	return "short";
 }
 
-export const streamOpenAICompletions: StreamFunction<"openai-completions", OpenAICompletionsOptions> = (
-	model: Model<"openai-completions">,
+export const streamOpenRouterChat: StreamFunction<"openrouter-chat", OpenRouterChatOptions> = (
+	model: Model<"openrouter-chat">,
 	context: Context,
-	options?: OpenAICompletionsOptions,
+	options?: OpenRouterChatOptions,
 ): AssistantMessageEventStream => {
 	const stream = new AssistantMessageEventStream();
 
@@ -423,8 +423,8 @@ export const streamOpenAICompletions: StreamFunction<"openai-completions", OpenA
 	return stream;
 };
 
-export const streamSimpleOpenAICompletions: StreamFunction<"openai-completions", SimpleStreamOptions> = (
-	model: Model<"openai-completions">,
+export const streamSimpleOpenRouterChat: StreamFunction<"openrouter-chat", SimpleStreamOptions> = (
+	model: Model<"openrouter-chat">,
 	context: Context,
 	options?: SimpleStreamOptions,
 ): AssistantMessageEventStream => {
@@ -436,22 +436,22 @@ export const streamSimpleOpenAICompletions: StreamFunction<"openai-completions",
 	const base = buildBaseOptions(model, options, apiKey);
 	const clampedReasoning = options?.reasoning ? clampThinkingLevel(model, options.reasoning) : undefined;
 	const reasoningEffort = clampedReasoning === "off" ? undefined : clampedReasoning;
-	const toolChoice = (options as OpenAICompletionsOptions | undefined)?.toolChoice;
+	const toolChoice = (options as OpenRouterChatOptions | undefined)?.toolChoice;
 
-	return streamOpenAICompletions(model, context, {
+	return streamOpenRouterChat(model, context, {
 		...base,
 		reasoningEffort,
 		toolChoice,
-	} satisfies OpenAICompletionsOptions);
+	} satisfies OpenRouterChatOptions);
 };
 
 function createClient(
-	model: Model<"openai-completions">,
+	model: Model<"openrouter-chat">,
 	_context: Context,
 	apiKey: string,
 	optionsHeaders?: Record<string, string>,
 	sessionId?: string,
-	compat: ResolvedOpenAICompletionsCompat = getCompat(model),
+	compat: ResolvedOpenRouterChatCompat = getCompat(model),
 ) {
 	const headers = { ...model.headers };
 
@@ -531,10 +531,10 @@ function createClient(
 }
 
 function buildParams(
-	model: Model<"openai-completions">,
+	model: Model<"openrouter-chat">,
 	context: Context,
-	options?: OpenAICompletionsOptions,
-	compat: ResolvedOpenAICompletionsCompat = getCompat(model),
+	options?: OpenRouterChatOptions,
+	compat: ResolvedOpenRouterChatCompat = getCompat(model),
 	cacheRetention: CacheRetention = resolveCacheRetention(options?.cacheRetention),
 ) {
 	const messages = convertMessages(model, context, compat);
@@ -547,8 +547,7 @@ function buildParams(
 		messages,
 		stream: true,
 		prompt_cache_key:
-			(model.baseUrl.includes("api.openai.com") && cacheRetention !== "none") ||
-			(cacheRetention === "long" && compat.supportsLongCacheRetention)
+			cacheRetention === "long" && compat.supportsLongCacheRetention
 				? clampOpenAIPromptCacheKey(options?.sessionId)
 				: undefined,
 		prompt_cache_retention: cacheRetention === "long" && compat.supportsLongCacheRetention ? "24h" : undefined,
@@ -659,22 +658,11 @@ function buildParams(
 		(params as any).provider = model.compat.openRouterRouting;
 	}
 
-	// Vercel AI Gateway provider routing preferences
-	if (model.baseUrl.includes("ai-gateway.vercel.sh") && model.compat?.vercelGatewayRouting) {
-		const routing = model.compat.vercelGatewayRouting;
-		if (routing.only || routing.order) {
-			const gatewayOptions: Record<string, string[]> = {};
-			if (routing.only) gatewayOptions.only = routing.only;
-			if (routing.order) gatewayOptions.order = routing.order;
-			(params as any).providerOptions = { gateway: gatewayOptions };
-		}
-	}
-
 	return params;
 }
 
 function getCompatCacheControl(
-	compat: ResolvedOpenAICompletionsCompat,
+	compat: ResolvedOpenRouterChatCompat,
 	cacheRetention: CacheRetention,
 ): OpenAICompatCacheControl | undefined {
 	if (compat.cacheControlFormat !== "anthropic" || cacheRetention === "none") {
@@ -789,14 +777,14 @@ function addCacheControlToTextContent(
 }
 
 export function convertMessages(
-	model: Model<"openai-completions">,
+	model: Model<"openrouter-chat">,
 	context: Context,
-	compat: ResolvedOpenAICompletionsCompat,
+	compat: ResolvedOpenRouterChatCompat,
 ): ChatCompletionMessageParam[] {
 	const params: ChatCompletionMessageParam[] = [];
 
 	const normalizeToolCallId = (id: string): string => {
-		// Handle pipe-separated IDs from imported sessions or OpenAI-compatible proxies.
+		// Handle pipe-separated IDs from imported sessions.
 		// Format: {call_id}|{id} where {id} can be 400+ chars with special chars (+, /, =)
 		// Extract just the call_id part and normalize it
 		if (id.includes("|")) {
@@ -805,7 +793,6 @@ export function convertMessages(
 			return callId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40);
 		}
 
-		if (model.provider === "openai") return id.length > 40 ? id.slice(0, 40) : id;
 		return id;
 	};
 
@@ -1035,7 +1022,7 @@ export function convertMessages(
 
 function convertTools(
 	tools: Tool[],
-	compat: ResolvedOpenAICompletionsCompat,
+	compat: ResolvedOpenRouterChatCompat,
 ): OpenAI.Chat.Completions.ChatCompletionTool[] {
 	return tools.map((tool) => ({
 		type: "function",
@@ -1057,7 +1044,7 @@ function parseChunkUsage(
 		prompt_tokens_details?: { cached_tokens?: number; cache_write_tokens?: number };
 		cost?: number;
 	},
-	model: Model<"openai-completions">,
+	model: Model<"openrouter-chat">,
 ): AssistantMessage["usage"] {
 	const promptTokens = rawUsage.prompt_tokens || 0;
 	const cacheReadTokens = rawUsage.prompt_tokens_details?.cached_tokens ?? rawUsage.prompt_cache_hit_tokens ?? 0;
@@ -1116,9 +1103,9 @@ function mapStopReason(reason: ChatCompletionChunk.Choice["finish_reason"] | str
 /**
  * Detect compatibility settings from provider and baseUrl for known providers.
  * Provider takes precedence over URL-based detection since it's explicitly configured.
- * Returns a fully resolved OpenAICompletionsCompat object with all fields set.
+ * Returns a fully resolved OpenRouterChatCompat object with all fields set.
  */
-function detectCompat(model: Model<"openai-completions">): ResolvedOpenAICompletionsCompat {
+function detectCompat(model: Model<"openrouter-chat">): ResolvedOpenRouterChatCompat {
 	const isOpenRouterDeveloperRoleModel = model.id.startsWith("anthropic/") || model.id.startsWith("openai/");
 	const isDeepSeek = model.id.includes("deepseek");
 	const cacheControlFormat = model.id.startsWith("anthropic/") ? "anthropic" : undefined;
@@ -1135,7 +1122,6 @@ function detectCompat(model: Model<"openai-completions">): ResolvedOpenAIComplet
 		requiresReasoningContentOnAssistantMessages: isDeepSeek,
 		thinkingFormat: isDeepSeek ? "deepseek" : "openrouter",
 		openRouterRouting: {},
-		vercelGatewayRouting: {},
 		zaiToolStream: false,
 		supportsStrictMode: true,
 		cacheControlFormat,
@@ -1148,7 +1134,7 @@ function detectCompat(model: Model<"openai-completions">): ResolvedOpenAIComplet
  * Get resolved compatibility settings for a model.
  * Uses explicit model.compat if provided, otherwise auto-detects from provider/URL.
  */
-function getCompat(model: Model<"openai-completions">): ResolvedOpenAICompletionsCompat {
+function getCompat(model: Model<"openrouter-chat">): ResolvedOpenRouterChatCompat {
 	const detected = detectCompat(model);
 	if (!model.compat) return detected;
 
@@ -1167,7 +1153,6 @@ function getCompat(model: Model<"openai-completions">): ResolvedOpenAICompletion
 			detected.requiresReasoningContentOnAssistantMessages,
 		thinkingFormat: model.compat.thinkingFormat ?? detected.thinkingFormat,
 		openRouterRouting: model.compat.openRouterRouting ?? {},
-		vercelGatewayRouting: model.compat.vercelGatewayRouting ?? detected.vercelGatewayRouting,
 		zaiToolStream: model.compat.zaiToolStream ?? detected.zaiToolStream,
 		supportsStrictMode: model.compat.supportsStrictMode ?? detected.supportsStrictMode,
 		cacheControlFormat: model.compat.cacheControlFormat ?? detected.cacheControlFormat,

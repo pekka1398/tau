@@ -96,7 +96,7 @@ export function assistantMsg(text: string) {
 	return {
 		role: "assistant" as const,
 		content: [{ type: "text" as const, text }],
-		api: "openai-completions" as const,
+		api: "openrouter-chat" as const,
 		provider: "openrouter",
 		model: "test/openrouter",
 		usage: {

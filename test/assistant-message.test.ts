@@ -10,7 +10,7 @@ function createAssistantMessage(content: AssistantMessage["content"]): Assistant
 	return {
 		role: "assistant",
 		content,
-		api: "openai-completions",
+		api: "openrouter-chat",
 		provider: "openrouter",
 		model: "gpt-4o-mini",
 		usage: {
