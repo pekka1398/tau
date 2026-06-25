@@ -126,13 +126,9 @@ export class ExtensionEditorComponent extends Container implements Focusable {
 			const [editor, ...editorArgs] = editorCmd.split(" ");
 			process.stdout.write(`Launching external editor: ${editorCmd}\nPi will resume when the editor exits.\n`);
 
-			// Do not use spawnSync here. On Windows, synchronous child_process calls can keep
-			// Node/libuv's console input read active after tui.stop() pauses stdin, racing
-			// vim/nvim for the console input buffer until Ctrl+C cancels the pending read.
 			const status = await new Promise<number | null>((resolve) => {
 				const child = spawn(editor, [...editorArgs, tmpFile], {
 					stdio: "inherit",
-					shell: process.platform === "win32",
 				});
 				child.on("error", () => resolve(null));
 				child.on("close", (code) => resolve(code));

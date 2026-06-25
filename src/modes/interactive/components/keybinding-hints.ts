@@ -10,8 +10,7 @@ export interface KeyTextFormatOptions {
 }
 
 function formatKeyPart(part: string, options: KeyTextFormatOptions): string {
-	const displayPart = process.platform === "darwin" && part.toLowerCase() === "alt" ? "option" : part;
-	return options.capitalize ? displayPart.charAt(0).toUpperCase() + displayPart.slice(1) : displayPart;
+	return options.capitalize ? part.charAt(0).toUpperCase() + part.slice(1) : part;
 }
 
 export function formatKeyText(key: string, options: KeyTextFormatOptions = {}): string {

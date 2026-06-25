@@ -147,4 +147,4 @@ Use `--mode json` for JSON event output or `--mode rpc` for process integration.
 - [Keybindings](keybindings.md) - shortcuts and customization.
 - [Packages](packages.md) - install shared extensions, skills, prompts, and themes.
 
-Platform notes: [Termux](termux.md), [tmux](tmux.md), [Terminal setup](terminal-setup.md), [Shell aliases](shell-aliases.md).
+Platform notes: [tmux](tmux.md), [Terminal setup](terminal-setup.md), [Shell aliases](shell-aliases.md).

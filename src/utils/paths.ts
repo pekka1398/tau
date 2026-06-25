@@ -66,7 +66,7 @@ export function normalizePath(input: string, options: PathInputOptions = {}): st
 	if (options.expandTilde ?? true) {
 		const home = options.homeDir ?? homedir();
 		if (normalized === "~") return home;
-		if (normalized.startsWith("~/") || (process.platform === "win32" && normalized.startsWith("~\\"))) {
+		if (normalized.startsWith("~/")) {
 			return join(home, normalized.slice(2));
 		}
 	}
@@ -101,18 +101,8 @@ export function formatPathRelativeToCwdOrAbsolute(filePath: string, cwd: string)
 }
 
 export function markPathIgnoredByCloudSync(path: string): void {
-	const attrs =
-		process.platform === "darwin"
-			? ["com.dropbox.ignored", "com.apple.fileprovider.ignore#P"]
-			: process.platform === "linux"
-				? ["user.com.dropbox.ignored"]
-				: [];
-
-	for (const attr of attrs) {
-		if (process.platform === "darwin") {
-			spawnProcessSync("xattr", ["-w", attr, "1", path], { encoding: "utf-8", stdio: "ignore" });
-		} else {
-			spawnProcessSync("setfattr", ["-n", attr, "-v", "1", path], { encoding: "utf-8", stdio: "ignore" });
-		}
-	}
+	spawnProcessSync("setfattr", ["-n", "user.com.dropbox.ignored", "-v", "1", path], {
+		encoding: "utf-8",
+		stdio: "ignore",
+	});
 }

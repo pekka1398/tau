@@ -45,7 +45,6 @@
 		"@silvia-odwyer/photon-node": "0.3.4",
 		"ai-dash": "file:./ai-dash",
 		"chalk": "5.6.2",
-		"cross-spawn": "7.0.6",
 		"diff": "8.0.4",
 		"discord.js": "14.26.4",
 		"get-east-asian-width": "1.6.0",
@@ -74,7 +73,6 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.5",
-		"@types/cross-spawn": "6.0.6",
 		"@types/diff": "7.0.2",
 		"@types/hosted-git-info": "3.0.5",
 		"@types/ms": "2.1.0",

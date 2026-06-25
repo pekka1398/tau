@@ -2,7 +2,6 @@ import chalk from "chalk";
 import { selectConfig } from "./cli/config-selector.ts";
 import {
 	APP_NAME,
-	detectInstallMethod,
 	getAgentDir,
 	getSelfUpdateCommand,
 	getSelfUpdateUnavailableInstruction,
@@ -576,15 +575,6 @@ export async function handlePackageCommand(args: string[]): Promise<boolean> {
 				if (updateTargetIncludesSelf(target)) {
 					const selfUpdatePlan = await getSelfUpdatePlan(options.force);
 					if (!selfUpdatePlan.shouldRun) {
-						return true;
-					}
-					const installMethod = detectInstallMethod();
-					if (process.platform === "win32" && installMethod !== "npm" && installMethod !== "pnpm") {
-						console.error(
-							chalk.red(`${APP_NAME} self-update on Windows is only supported for npm and pnpm installs.`),
-						);
-						console.error(chalk.dim(`Detected install method: ${installMethod}. Update ${APP_NAME} manually.`));
-						process.exitCode = 1;
 						return true;
 					}
 					const selfUpdateCommand = getSelfUpdateCommand(

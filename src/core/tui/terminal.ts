@@ -144,11 +144,8 @@ export class ProcessTerminal implements Terminal {
 		// Set up resize handler immediately
 		process.stdout.on("resize", this.resizeHandler);
 
-		// Refresh terminal dimensions - they may be stale after suspend/resume
-		// (SIGWINCH is lost while process is stopped). Unix only.
-		if (process.platform !== "win32") {
-			process.kill(process.pid, "SIGWINCH");
-		}
+		// Refresh terminal dimensions - they may be stale after suspend/resume.
+		process.kill(process.pid, "SIGWINCH");
 
 		// Query Kitty keyboard protocol and fall back to modifyOtherKeys when DA confirms no Kitty response.
 		// See: https://sw.kovidgoyal.net/kitty/keyboard-protocol/

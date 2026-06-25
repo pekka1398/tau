@@ -3,8 +3,7 @@
  * Used by auth-storage.ts and model-registry.ts.
  */
 
-import { execSync, spawnSync } from "child_process";
-import { getShellConfig } from "../utils/shell.ts";
+import { execSync } from "child_process";
 
 // Cache for shell command results (persists for process lifetime)
 const commandResultCache = new Map<string, string | undefined>();
@@ -155,36 +154,6 @@ export function resolveConfigValue(config: string): string | undefined {
 	return resolveTemplate(reference.parts);
 }
 
-function executeWithConfiguredShell(command: string): { executed: boolean; value: string | undefined } {
-	try {
-		const { shell, args } = getShellConfig();
-		const result = spawnSync(shell, [...args, command], {
-			encoding: "utf-8",
-			timeout: 10000,
-			stdio: ["ignore", "pipe", "ignore"],
-			shell: false,
-			windowsHide: true,
-		});
-
-		if (result.error) {
-			const error = result.error as NodeJS.ErrnoException;
-			if (error.code === "ENOENT") {
-				return { executed: false, value: undefined };
-			}
-			return { executed: true, value: undefined };
-		}
-
-		if (result.status !== 0) {
-			return { executed: true, value: undefined };
-		}
-
-		const value = (result.stdout ?? "").trim();
-		return { executed: true, value: value || undefined };
-	} catch {
-		return { executed: false, value: undefined };
-	}
-}
-
 function executeWithDefaultShell(command: string): string | undefined {
 	try {
 		const output = execSync(command, {
@@ -200,12 +169,7 @@ function executeWithDefaultShell(command: string): string | undefined {
 
 function executeCommandUncached(commandConfig: string): string | undefined {
 	const command = commandConfig.slice(1);
-	return process.platform === "win32"
-		? (() => {
-				const configuredResult = executeWithConfiguredShell(command);
-				return configuredResult.executed ? configuredResult.value : executeWithDefaultShell(command);
-			})()
-		: executeWithDefaultShell(command);
+	return executeWithDefaultShell(command);
 }
 
 function executeCommand(commandConfig: string): string | undefined {

@@ -90,10 +90,9 @@ export function createLocalBashOperations(): BashOperations {
 			// Spawn ai-dash with fd 3 piped for metadata
 			const child = spawn(AI_DASH, ["-c", command], {
 				cwd,
-				detached: process.platform !== "win32",
+				detached: true,
 				env: env ?? getShellEnv(),
 				stdio: ["ignore", "pipe", "pipe", "pipe"],
-				windowsHide: true,
 			});
 			if (child.pid) trackDetachedChildPid(child.pid);
 			onSpawn?.(child);
