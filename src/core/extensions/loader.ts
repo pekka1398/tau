@@ -31,7 +31,6 @@ import type {
 	ExtensionRuntime,
 	LoadExtensionsResult,
 	MessageRenderer,
-	ProviderConfig,
 	RegisteredCommand,
 	ToolDefinition,
 } from "./types.ts";
@@ -114,20 +113,11 @@ export function createExtensionRuntime(): ExtensionRuntime {
 		getThinkingLevel: notInitialized,
 		setThinkingLevel: notInitialized,
 		flagValues: new Map(),
-		pendingProviderRegistrations: [],
 		assertActive,
 		invalidate: (message) => {
 			state.staleMessage ??=
 				message ??
 				"This extension ctx is stale after session replacement or reload. Do not use a captured tau or command ctx after ctx.newSession(), ctx.fork(), ctx.switchSession(), or ctx.reload(). For newSession, fork, and switchSession, move post-replacement work into withSession and use the ctx passed to withSession. For reload, do not use the old ctx after await ctx.reload().";
-		},
-		// Pre-bind: queue registrations so bindCore() can flush them once the
-		// model registry is available. bindCore() replaces both with direct calls.
-		registerProvider: (name, config, extensionPath = "<unknown>") => {
-			runtime.pendingProviderRegistrations.push({ name, config, extensionPath });
-		},
-		unregisterProvider: (name) => {
-			runtime.pendingProviderRegistrations = runtime.pendingProviderRegistrations.filter((r) => r.name !== name);
 		},
 	};
 
@@ -275,16 +265,6 @@ function createExtensionAPI(
 		setThinkingLevel(level) {
 			runtime.assertActive();
 			runtime.setThinkingLevel(level);
-		},
-
-		registerProvider(name: string, config: ProviderConfig) {
-			runtime.assertActive();
-			runtime.registerProvider(name, config, extension.path);
-		},
-
-		unregisterProvider(name: string) {
-			runtime.assertActive();
-			runtime.unregisterProvider(name, extension.path);
 		},
 
 		events: eventBus,

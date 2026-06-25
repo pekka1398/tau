@@ -38,7 +38,6 @@ import type {
 	MessageEndEvent,
 	MessageEndEventResult,
 	MessageRenderer,
-	ProviderConfig,
 	RegisteredCommand,
 	RegisteredTool,
 	ReplacedSessionContext,
@@ -266,14 +265,7 @@ export class ExtensionRunner {
 		this.modelRegistry = modelRegistry;
 	}
 
-	bindCore(
-		actions: ExtensionActions,
-		contextActions: ExtensionContextActions,
-		providerActions?: {
-			registerProvider?: (name: string, config: ProviderConfig) => void;
-			unregisterProvider?: (name: string) => void;
-		},
-	): void {
+	bindCore(actions: ExtensionActions, contextActions: ExtensionContextActions): void {
 		// Copy actions into the shared runtime (all extension APIs reference this)
 		this.runtime.sendMessage = actions.sendMessage;
 		this.runtime.sendUserMessage = actions.sendUserMessage;
@@ -301,42 +293,6 @@ export class ExtensionRunner {
 		this.compactFn = contextActions.compact;
 		this.getSystemPromptFn = contextActions.getSystemPrompt;
 		this.getSystemPromptOptionsFn = contextActions.getSystemPromptOptions ?? (() => ({ cwd: this.cwd }));
-
-		// Flush provider registrations queued during extension loading
-		for (const { name, config, extensionPath } of this.runtime.pendingProviderRegistrations) {
-			try {
-				if (providerActions?.registerProvider) {
-					providerActions.registerProvider(name, config);
-				} else {
-					this.modelRegistry.registerProvider(name, config);
-				}
-			} catch (err) {
-				this.emitError({
-					extensionPath,
-					event: "register_provider",
-					error: err instanceof Error ? err.message : String(err),
-					stack: err instanceof Error ? err.stack : undefined,
-				});
-			}
-		}
-		this.runtime.pendingProviderRegistrations = [];
-
-		// From this point on, provider registration/unregistration takes effect immediately
-		// without requiring a /reload.
-		this.runtime.registerProvider = (name, config) => {
-			if (providerActions?.registerProvider) {
-				providerActions.registerProvider(name, config);
-				return;
-			}
-			this.modelRegistry.registerProvider(name, config);
-		};
-		this.runtime.unregisterProvider = (name) => {
-			if (providerActions?.unregisterProvider) {
-				providerActions.unregisterProvider(name);
-				return;
-			}
-			this.modelRegistry.unregisterProvider(name);
-		};
 	}
 
 	bindCommandContext(actions?: ExtensionCommandContextActions): void {

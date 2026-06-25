@@ -17,17 +17,7 @@ import type {
 	ThinkingLevel,
 	ToolExecutionMode,
 } from "../agent/index.ts";
-import type {
-	Api,
-	AssistantMessageEvent,
-	AssistantMessageEventStream,
-	Context,
-	ImageContent,
-	Model,
-	SimpleStreamOptions,
-	TextContent,
-	ToolResultMessage,
-} from "../ai/index.ts";
+import type { AssistantMessageEvent, ImageContent, Model, TextContent, ToolResultMessage } from "../ai/index.ts";
 import type { BashResult } from "../bash-executor.ts";
 import type { CompactionResult } from "../compaction/index.ts";
 import type { EventBus } from "../event-bus.ts";
@@ -1245,99 +1235,8 @@ export interface ExtensionAPI {
 	/** Set thinking level (clamped to model capabilities). */
 	setThinkingLevel(level: ThinkingLevel): void;
 
-	// =========================================================================
-	// Provider Registration
-	// =========================================================================
-
-	/**
-	 * Register or override a model provider.
-	 *
-	 * Tau is OpenRouter-only. Extensions may override OpenRouter connection
-	 * details when they need to route through a trusted proxy.
-	 *
-	 * During initial extension load this call is queued and applied once the
-	 * runner has bound its context. After that it takes effect immediately, so
-	 * it is safe to call from command handlers or event callbacks without
-	 * requiring a `/reload`.
-	 *
-	 * @example
-	 * // Route OpenRouter through a trusted proxy
-	 * tau.registerProvider("openrouter", {
-	 *   baseUrl: "https://proxy.example.com/v1",
-	 *   apiKey: "$OPENROUTER_API_KEY",
-	 * });
-	 */
-	registerProvider(name: string, config: ProviderConfig): void;
-
-	/**
-	 * Unregister a previously registered provider.
-	 *
-	 * Removes all models belonging to the named provider and restores any
-	 * built-in models that were overridden by it. Has no effect if the provider
-	 * is not currently registered.
-	 *
-	 * Like `registerProvider`, this takes effect immediately when called after
-	 * the initial load phase.
-	 *
-	 * @example
-	 * tau.unregisterProvider("my-proxy");
-	 */
-	unregisterProvider(name: string): void;
-
 	/** Shared event bus for extension communication. */
 	events: EventBus;
-}
-
-// ============================================================================
-// Provider Registration Types
-// ============================================================================
-
-/** Configuration for registering a provider via tau.registerProvider(). */
-export interface ProviderConfig {
-	/** Display name for the provider in UI. */
-	name?: string;
-	/** Base URL for the API endpoint. Required when defining models. */
-	baseUrl?: string;
-	/** API key literal, env interpolation ($ENV_VAR or ${ENV_VAR}), or leading !command. */
-	apiKey?: string;
-	/** API type. Only OpenAI-compatible chat completions are supported by Tau. */
-	api?: Api;
-	/** Optional streamSimple handler for custom APIs. */
-	streamSimple?: (model: Model<Api>, context: Context, options?: SimpleStreamOptions) => AssistantMessageEventStream;
-	/** Custom headers to include in requests. */
-	headers?: Record<string, string>;
-	/** If true, adds Authorization: Bearer header with the resolved API key. */
-	authHeader?: boolean;
-	/** Models to register. If provided, replaces all existing models for this provider. */
-	models?: ProviderModelConfig[];
-}
-
-/** Configuration for a model within a provider. */
-export interface ProviderModelConfig {
-	/** Model ID (e.g., "claude-sonnet-4-20250514"). */
-	id: string;
-	/** Display name (e.g., "Claude 4 Sonnet"). */
-	name: string;
-	/** API type override for this model. */
-	api?: Api;
-	/** API endpoint URL override for this model. */
-	baseUrl?: string;
-	/** Whether the model supports extended thinking. */
-	reasoning: boolean;
-	/** Maps tau thinking levels to provider/model-specific values; null marks a level unsupported. */
-	thinkingLevelMap?: Model<Api>["thinkingLevelMap"];
-	/** Supported input types. */
-	input: ("text" | "image")[];
-	/** Cost per token (for tracking, can be 0). */
-	cost: { input: number; output: number; cacheRead: number; cacheWrite: number };
-	/** Maximum context window size in tokens. */
-	contextWindow: number;
-	/** Maximum output tokens. */
-	maxTokens: number;
-	/** Custom headers for this model. */
-	headers?: Record<string, string>;
-	/** OpenAI compatibility settings. */
-	compat?: Model<Api>["compat"];
 }
 
 /** Extension factory function type. Supports both sync and async initialization. */
@@ -1414,20 +1313,10 @@ export type SetLabelHandler = (entryId: string, label: string | undefined) => vo
  */
 export interface ExtensionRuntimeState {
 	flagValues: Map<string, boolean | string>;
-	/** Provider registrations queued during extension loading, processed when runner binds */
-	pendingProviderRegistrations: Array<{ name: string; config: ProviderConfig; extensionPath: string }>;
 	/** Throws when this extension instance is stale after runtime replacement. */
 	assertActive: () => void;
 	/** Marks this extension instance as stale after runtime replacement or reload. */
 	invalidate: (message?: string) => void;
-	/**
-	 * Register or unregister a provider.
-	 *
-	 * Before bindCore(): queues registrations / removes from queue.
-	 * After bindCore(): calls ModelRegistry directly for immediate effect.
-	 */
-	registerProvider: (name: string, config: ProviderConfig, extensionPath?: string) => void;
-	unregisterProvider: (name: string, extensionPath?: string) => void;
 }
 
 /**

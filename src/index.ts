@@ -93,8 +93,6 @@ export type {
 	LoadExtensionsResult,
 	MessageRenderer,
 	MessageRenderOptions,
-	ProviderConfig,
-	ProviderModelConfig,
 	RegisteredCommand,
 	RegisteredTool,
 	ResolvedCommand,

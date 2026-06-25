@@ -10,6 +10,7 @@ import {
 } from "../../src/core/agent-session-runtime.ts";
 import { fauxAssistantMessage, registerFauxProvider } from "../../src/core/ai/index.ts";
 import { AuthStorage } from "../../src/core/auth-storage.ts";
+import { ModelRegistry } from "../../src/core/model-registry.ts";
 import { SessionManager } from "../../src/core/session-manager.ts";
 import type {
 	ExtensionAPI,
@@ -35,6 +36,30 @@ describe("AgentSessionRuntime characterization", () => {
 		}
 	});
 
+	function createModelRegistry(
+		authStorage: AuthStorage,
+		faux: ReturnType<typeof registerFauxProvider>,
+	): ModelRegistry {
+		const modelRegistry = ModelRegistry.inMemory(authStorage);
+		modelRegistry.registerProvider(faux.getModel().provider, {
+			baseUrl: faux.getModel().baseUrl,
+			apiKey: "faux-key",
+			api: faux.api,
+			models: faux.models.map((registeredModel) => ({
+				id: registeredModel.id,
+				name: registeredModel.name,
+				api: registeredModel.api,
+				reasoning: registeredModel.reasoning,
+				input: registeredModel.input,
+				cost: registeredModel.cost,
+				contextWindow: registeredModel.contextWindow,
+				maxTokens: registeredModel.maxTokens,
+				baseUrl: registeredModel.baseUrl,
+			})),
+		});
+		return modelRegistry;
+	}
+
 	async function createRuntimeForTest(
 		extensionFactory: ExtensionFactory,
 		options?: { cwd?: string; bootstrapModel?: boolean; bootstrapThinkingLevel?: boolean },
@@ -53,33 +78,16 @@ describe("AgentSessionRuntime characterization", () => {
 
 		const authStorage = AuthStorage.inMemory();
 		authStorage.setRuntimeApiKey(faux.getModel().provider, "faux-key");
+		const modelRegistry = createModelRegistry(authStorage, faux);
 
 		const runtimeOptions = {
 			agentDir: tempDir,
 			authStorage,
+			modelRegistry,
 			model: options?.bootstrapModel === false ? undefined : faux.getModel(),
 			thinkingLevel: options?.bootstrapThinkingLevel === false ? undefined : undefined,
 			resourceLoaderOptions: {
-				extensionFactories: [
-					(pi: ExtensionAPI) => {
-						pi.registerProvider(faux.getModel().provider, {
-							baseUrl: faux.getModel().baseUrl,
-							apiKey: "faux-key",
-							api: faux.api,
-							models: faux.models.map((registeredModel) => ({
-								id: registeredModel.id,
-								name: registeredModel.name,
-								api: registeredModel.api,
-								reasoning: registeredModel.reasoning,
-								input: registeredModel.input,
-								cost: registeredModel.cost,
-								contextWindow: registeredModel.contextWindow,
-								maxTokens: registeredModel.maxTokens,
-							})),
-						});
-						extensionFactory(pi);
-					},
-				],
+				extensionFactories: [extensionFactory],
 				noSkills: true,
 				noPromptTemplates: true,
 				noThemes: true,
@@ -347,31 +355,14 @@ describe("AgentSessionRuntime characterization", () => {
 
 		const authStorage = AuthStorage.inMemory();
 		authStorage.setRuntimeApiKey(faux.getModel().provider, "faux-key");
+		const modelRegistry = createModelRegistry(authStorage, faux);
 
 		const runtimeOptions = {
 			agentDir: tempDir,
 			authStorage,
+			modelRegistry,
 			model: faux.getModel(),
 			resourceLoaderOptions: {
-				extensionFactories: [
-					(pi: ExtensionAPI) => {
-						pi.registerProvider(faux.getModel().provider, {
-							baseUrl: faux.getModel().baseUrl,
-							apiKey: "faux-key",
-							api: faux.api,
-							models: faux.models.map((registeredModel) => ({
-								id: registeredModel.id,
-								name: registeredModel.name,
-								api: registeredModel.api,
-								reasoning: registeredModel.reasoning,
-								input: registeredModel.input,
-								cost: registeredModel.cost,
-								contextWindow: registeredModel.contextWindow,
-								maxTokens: registeredModel.maxTokens,
-							})),
-						});
-					},
-				],
 				noSkills: true,
 				noPromptTemplates: true,
 				noThemes: true,
@@ -458,29 +449,12 @@ describe("AgentSessionRuntime characterization", () => {
 		const { runtime, faux, tempDir } = await createRuntimeForTest(() => {}, { cwd: firstDir });
 		const otherAuthStorage = AuthStorage.inMemory();
 		otherAuthStorage.setRuntimeApiKey(faux.getModel().provider, "faux-key");
+		const otherModelRegistry = createModelRegistry(otherAuthStorage, faux);
 		const otherRuntimeOptions = {
 			agentDir: tempDir,
 			authStorage: otherAuthStorage,
+			modelRegistry: otherModelRegistry,
 			resourceLoaderOptions: {
-				extensionFactories: [
-					(pi: ExtensionAPI) => {
-						pi.registerProvider(faux.getModel().provider, {
-							baseUrl: faux.getModel().baseUrl,
-							apiKey: "faux-key",
-							api: faux.api,
-							models: faux.models.map((registeredModel) => ({
-								id: registeredModel.id,
-								name: registeredModel.name,
-								api: registeredModel.api,
-								reasoning: registeredModel.reasoning,
-								input: registeredModel.input,
-								cost: registeredModel.cost,
-								contextWindow: registeredModel.contextWindow,
-								maxTokens: registeredModel.maxTokens,
-							})),
-						});
-					},
-				],
 				noSkills: true,
 				noPromptTemplates: true,
 				noThemes: true,
@@ -532,29 +506,12 @@ describe("AgentSessionRuntime characterization", () => {
 		mkdirSync(otherDir, { recursive: true });
 		const otherAuthStorage = AuthStorage.inMemory();
 		otherAuthStorage.setRuntimeApiKey(faux.getModel().provider, "faux-key");
+		const otherModelRegistry = createModelRegistry(otherAuthStorage, faux);
 		const otherRuntimeOptions = {
 			agentDir: tempDir,
 			authStorage: otherAuthStorage,
+			modelRegistry: otherModelRegistry,
 			resourceLoaderOptions: {
-				extensionFactories: [
-					(pi: ExtensionAPI) => {
-						pi.registerProvider(faux.getModel().provider, {
-							baseUrl: faux.getModel().baseUrl,
-							apiKey: "faux-key",
-							api: faux.api,
-							models: faux.models.map((registeredModel) => ({
-								id: registeredModel.id,
-								name: registeredModel.name,
-								api: registeredModel.api,
-								reasoning: registeredModel.reasoning,
-								input: registeredModel.input,
-								cost: registeredModel.cost,
-								contextWindow: registeredModel.contextWindow,
-								maxTokens: registeredModel.maxTokens,
-							})),
-						});
-					},
-				],
 				noSkills: true,
 				noPromptTemplates: true,
 				noThemes: true,

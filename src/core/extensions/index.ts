@@ -98,9 +98,6 @@ export type {
 	MessageUpdateEvent,
 	ModelSelectEvent,
 	ModelSelectSource,
-	// Provider Registration
-	ProviderConfig,
-	ProviderModelConfig,
 	ReadToolCallEvent,
 	ReadToolResultEvent,
 	// Commands

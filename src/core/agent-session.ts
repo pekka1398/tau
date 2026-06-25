@@ -1811,20 +1811,6 @@ export class AgentSession {
 			: undefined;
 	}
 
-	private _refreshCurrentModelFromRegistry(): void {
-		const currentModel = this.model;
-		if (!currentModel) {
-			return;
-		}
-
-		const refreshedModel = this._modelRegistry.find(currentModel.provider, currentModel.id);
-		if (!refreshedModel || refreshedModel === currentModel) {
-			return;
-		}
-
-		this.agent.state.model = refreshedModel;
-	}
-
 	private _bindExtensionCore(runner: ExtensionRunner): void {
 		const getCommands = (): SlashCommandInfo[] => {
 			const extensionCommands: SlashCommandInfo[] = runner.getRegisteredCommands().map((command) => ({
@@ -1925,16 +1911,6 @@ export class AgentSession {
 				},
 				getSystemPrompt: () => this.systemPrompt,
 				getSystemPromptOptions: () => this._baseSystemPromptOptions,
-			},
-			{
-				registerProvider: (name, config) => {
-					this._modelRegistry.registerProvider(name, config);
-					this._refreshCurrentModelFromRegistry();
-				},
-				unregisterProvider: (name) => {
-					this._modelRegistry.unregisterProvider(name);
-					this._refreshCurrentModelFromRegistry();
-				},
 			},
 		);
 	}
