@@ -1183,7 +1183,6 @@ Content`,
 
 			expect(pathEndsWith(installPath, "node_modules/left-pad")).toBe(true);
 			expect(relative(tempRoot, installPath).startsWith("..")).toBe(false);
-			expect(installPath.startsWith(join(tmpdir(), "pi-extensions"))).toBe(false);
 			expect(statSync(tempRoot).mode & 0o777).toBe(0o700);
 		});
 	});

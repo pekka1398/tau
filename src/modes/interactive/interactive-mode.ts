@@ -3783,7 +3783,7 @@ export class InteractiveMode {
 			// Split by space to support editor arguments (e.g., "code --wait")
 			const [editor, ...editorArgs] = editorCmd.split(" ");
 
-			process.stdout.write(`Launching external editor: ${editorCmd}\nPi will resume when the editor exits.\n`);
+			process.stdout.write(`Launching external editor: ${editorCmd}\nTau will resume when the editor exits.\n`);
 
 			const status = await new Promise<number | null>((resolve) => {
 				const child = spawn(editor, [...editorArgs, tmpFile], {

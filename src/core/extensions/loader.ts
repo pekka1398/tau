@@ -402,19 +402,19 @@ export async function loadExtensions(paths: string[], cwd: string, eventBus?: Ev
 	};
 }
 
-interface PiManifest {
+interface TauManifest {
 	extensions?: string[];
 	themes?: string[];
 	skills?: string[];
 	prompts?: string[];
 }
 
-function readPiManifest(packageJsonPath: string): PiManifest | null {
+function readTauManifest(packageJsonPath: string): TauManifest | null {
 	try {
 		const content = fs.readFileSync(packageJsonPath, "utf-8");
 		const pkg = JSON.parse(content);
 		if (pkg.tau && typeof pkg.tau === "object") {
-			return pkg.tau as PiManifest;
+			return pkg.tau as TauManifest;
 		}
 		return null;
 	} catch {
@@ -439,7 +439,7 @@ function resolveExtensionEntries(dir: string): string[] | null {
 	// Check for package.json with "tau" field first
 	const packageJsonPath = path.join(dir, "package.json");
 	if (fs.existsSync(packageJsonPath)) {
-		const manifest = readPiManifest(packageJsonPath);
+		const manifest = readTauManifest(packageJsonPath);
 		if (manifest?.extensions?.length) {
 			const entries: string[] = [];
 			for (const extPath of manifest.extensions) {
