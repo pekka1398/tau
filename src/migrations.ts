@@ -10,8 +10,8 @@ import { migrateKeybindingsConfig } from "./core/keybindings.ts";
 import { isLegacyEnvVarNameConfigValue } from "./core/resolve-config-value.ts";
 import { stripJsonComments } from "./utils/json.ts";
 
-const MIGRATION_GUIDE_URL = "https://github.com/earendil-works/tau-mono/blob/main/CHANGELOG.md#extensions-migration";
-const EXTENSIONS_DOC_URL = "https://github.com/earendil-works/tau-mono/blob/main/docs/extensions.md";
+const MIGRATION_GUIDE_URL = "https://github.com/pekka1398/tau/blob/main/CHANGELOG.md#extensions-migration";
+const EXTENSIONS_DOC_URL = "https://github.com/pekka1398/tau/blob/main/docs/extensions.md";
 
 /**
  * Migrate legacy settings.json apiKeys to auth.json.
@@ -193,7 +193,7 @@ function migrateExplicitEnvVarConfigValues(): void {
  * ~/.tau/agent/sessions/<encoded-cwd>/. This migration moves them
  * to the correct location based on the cwd in their session header.
  *
- * See: https://github.com/earendil-works/tau-mono/issues/320
+ * See: https://github.com/pekka1398/tau/issues/320
  */
 export function migrateSessionsFromAgentRoot(): void {
 	const agentDir = getAgentDir();

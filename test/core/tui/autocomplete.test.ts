@@ -214,8 +214,8 @@ describe("CombinedAutocompleteProvider", () => {
 		test("matches deeply nested paths", async () => {
 			setupFolder(baseDir, {
 				files: {
-					"packages/coding-agent/src/core/tui/autocomplete.ts": "export {};",
-					"packages/ai/src/autocomplete.ts": "export {};",
+					"src/core/tui/autocomplete.ts": "export {};",
+					"vendor/ai/src/autocomplete.ts": "export {};",
 				},
 			});
 
@@ -224,8 +224,8 @@ describe("CombinedAutocompleteProvider", () => {
 			const result = await getSuggestions(provider, [line], 0, line.length);
 
 			const values = result?.items.map((item) => item.value);
-			assert.ok(values?.includes("@packages/coding-agent/src/core/tui/autocomplete.ts"));
-			assert.ok(!values?.includes("@packages/ai/src/autocomplete.ts"));
+			assert.ok(values?.includes("@src/core/tui/autocomplete.ts"));
+			assert.ok(!values?.includes("@vendor/ai/src/autocomplete.ts"));
 		});
 
 		test("matches directory in middle of path with --full-path", async () => {
@@ -362,10 +362,10 @@ describe("CombinedAutocompleteProvider", () => {
 			mkdirSync(queryInPathBaseDir, { recursive: true });
 
 			const structure = {
-				dirs: ["packages/coding-agent/examples/extensions/plan-mode"],
+				dirs: ["examples/extensions/plan-mode"],
 				files: {
-					"packages/coding-agent/examples/extensions/plan-mode/README.md": "readme",
-					"packages/coding-agent/src/core/tui/docs/plan.md": "plan",
+					"examples/extensions/plan-mode/README.md": "readme",
+					"src/core/tui/docs/plan.md": "plan",
 				},
 			};
 			setupFolder(normalBaseDir, structure);
@@ -382,10 +382,8 @@ describe("CombinedAutocompleteProvider", () => {
 				(result?.items ?? []).map((item) => `${item.label} :: ${item.description ?? ""}`).sort();
 
 			assert.deepStrictEqual(normalize(queryInPathResult), normalize(normalResult));
-			assert.ok(
-				normalize(normalResult).includes("plan-mode/ :: packages/coding-agent/examples/extensions/plan-mode"),
-			);
-			assert.ok(normalize(normalResult).includes("plan.md :: packages/coding-agent/src/core/tui/docs/plan.md"));
+			assert.ok(normalize(normalResult).includes("plan-mode/ :: examples/extensions/plan-mode"));
+			assert.ok(normalize(normalResult).includes("plan.md :: src/core/tui/docs/plan.md"));
 		});
 
 		test("continues autocomplete inside quoted @ paths", async () => {

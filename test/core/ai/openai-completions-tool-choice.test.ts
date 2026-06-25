@@ -508,7 +508,7 @@ describe("openai-completions tool_choice", () => {
 								{
 									id: "tc_list_no_index",
 									type: "function",
-									function: { name: "list", arguments: '{"path":"packages' },
+									function: { name: "list", arguments: '{"path":"src/core' },
 								},
 								{
 									id: "tc_write_no_index",
@@ -705,7 +705,7 @@ describe("openai-completions tool_choice", () => {
 		expect(grepCall).not.toHaveProperty("partialArgs");
 		expect(listCall.id).toBe("tc_list_no_index");
 		expect(listCall.name).toBe("list");
-		expect(listCall.arguments).toEqual({ path: "packages/ai" });
+		expect(listCall.arguments).toEqual({ path: "src/core/ai" });
 		expect(listCall).not.toHaveProperty("streamIndex");
 		expect(listCall).not.toHaveProperty("partialArgs");
 		expect(writeCall.id).toBe("tc_write_no_index");
