@@ -712,25 +712,14 @@ function matchesModifyOtherKeys(data: string, expectedKeycode: number, expectedM
 	return parsed.codepoint === expectedKeycode && parsed.modifier === expectedModifier;
 }
 
-function isWindowsTerminalSession(): boolean {
-	return (
-		Boolean(process.env.WT_SESSION) && !process.env.SSH_CONNECTION && !process.env.SSH_CLIENT && !process.env.SSH_TTY
-	);
-}
-
 /**
  * Raw 0x08 (BS) is ambiguous in legacy terminals.
- *
- * - Windows Terminal uses it for Ctrl+Backspace.
- * - Some legacy terminals and tmux setups send it for plain Backspace.
- *
- * Prefer explicit Kitty / CSI-u / modifyOtherKeys sequences whenever they are
- * available. Fall back to a Windows Terminal heuristic only for raw BS bytes.
+ * Prefer explicit Kitty / CSI-u / modifyOtherKeys sequences whenever available.
  */
 function matchesRawBackspace(data: string, expectedModifier: number): boolean {
 	if (data === "\x7f") return expectedModifier === 0;
 	if (data !== "\x08") return false;
-	return isWindowsTerminalSession() ? expectedModifier === MODIFIERS.ctrl : expectedModifier === 0;
+	return expectedModifier === 0;
 }
 
 // =============================================================================
@@ -1284,7 +1273,7 @@ export function parseKey(data: string): string | undefined {
 	if (data === "\x00") return "ctrl+space";
 	if (data === " ") return "space";
 	if (data === "\x7f") return "backspace";
-	if (data === "\x08") return isWindowsTerminalSession() ? "ctrl+backspace" : "backspace";
+	if (data === "\x08") return "backspace";
 	if (data === "\x1b[Z") return "shift+tab";
 	if (!_kittyProtocolActive && data === "\x1b\r") return "alt+enter";
 	if (!_kittyProtocolActive && data === "\x1b ") return "alt+space";

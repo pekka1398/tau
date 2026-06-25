@@ -96,10 +96,6 @@ export function detectCapabilities(tmuxForwardsHyperlink: () => boolean = probeT
 		return { images: "iterm2", trueColor: true, hyperlinks: true };
 	}
 
-	if (process.env.WT_SESSION) {
-		return { images: null, trueColor: true, hyperlinks: true };
-	}
-
 	if (termProgram === "vscode") {
 		return { images: null, trueColor: true, hyperlinks: true };
 	}

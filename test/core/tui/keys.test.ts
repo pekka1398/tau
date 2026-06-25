@@ -13,31 +13,6 @@ import {
 	setKittyProtocolActive,
 } from "../../../src/core/tui/keys.ts";
 
-function withEnv(name: string, value: string | undefined, fn: () => void): void {
-	const previous = process.env[name];
-	if (value === undefined) delete process.env[name];
-	else process.env[name] = value;
-	try {
-		fn();
-	} finally {
-		if (previous === undefined) delete process.env[name];
-		else process.env[name] = previous;
-	}
-}
-
-function withEnvVars(vars: Record<string, string | undefined>, fn: () => void): void {
-	const entries = Object.entries(vars);
-	const run = (index: number): void => {
-		if (index >= entries.length) {
-			fn();
-			return;
-		}
-		const [name, value] = entries[index]!;
-		withEnv(name, value, () => run(index + 1));
-	};
-	run(0);
-}
-
 describe("matchesKey", () => {
 	describe("Kitty protocol with alternate keys (non-Latin layouts)", () => {
 		// Kitty protocol flag 4 (Report alternate keys) sends:
@@ -366,53 +341,15 @@ describe("matchesKey", () => {
 			assert.strictEqual(parseKey("\x1b\x1f"), "ctrl+alt+-");
 		});
 
-		it("should treat raw 0x08 as plain backspace outside Windows Terminal", () => {
+		it("should treat raw 0x08 as plain backspace", () => {
 			setKittyProtocolActive(false);
-			withEnv("WT_SESSION", undefined, () => {
-				assert.strictEqual(matchesKey("\x7f", "backspace"), true);
-				assert.strictEqual(matchesKey("\x7f", "ctrl+backspace"), false);
-				assert.strictEqual(parseKey("\x7f"), "backspace");
-				assert.strictEqual(matchesKey("\x08", "backspace"), true);
-				assert.strictEqual(matchesKey("\x08", "ctrl+backspace"), false);
-				assert.strictEqual(parseKey("\x08"), "backspace");
-				assert.strictEqual(matchesKey("\x08", "ctrl+h"), true);
-			});
-		});
-
-		it("should treat raw 0x08 as ctrl+backspace in local Windows Terminal", () => {
-			setKittyProtocolActive(false);
-			withEnvVars(
-				{
-					WT_SESSION: "test-session",
-					SSH_CONNECTION: undefined,
-					SSH_CLIENT: undefined,
-					SSH_TTY: undefined,
-				},
-				() => {
-					assert.strictEqual(matchesKey("\x08", "ctrl+backspace"), true);
-					assert.strictEqual(matchesKey("\x08", "backspace"), false);
-					assert.strictEqual(parseKey("\x08"), "ctrl+backspace");
-					assert.strictEqual(matchesKey("\x08", "ctrl+h"), true);
-				},
-			);
-		});
-
-		it("should treat raw 0x08 as plain backspace in Windows Terminal over SSH", () => {
-			setKittyProtocolActive(false);
-			withEnvVars(
-				{
-					WT_SESSION: "test-session",
-					SSH_CONNECTION: "1 2 3 4",
-					SSH_CLIENT: "1 2 3",
-					SSH_TTY: "/dev/pts/1",
-				},
-				() => {
-					assert.strictEqual(matchesKey("\x08", "ctrl+backspace"), false);
-					assert.strictEqual(matchesKey("\x08", "backspace"), true);
-					assert.strictEqual(parseKey("\x08"), "backspace");
-					assert.strictEqual(matchesKey("\x08", "ctrl+h"), true);
-				},
-			);
+			assert.strictEqual(matchesKey("\x7f", "backspace"), true);
+			assert.strictEqual(matchesKey("\x7f", "ctrl+backspace"), false);
+			assert.strictEqual(parseKey("\x7f"), "backspace");
+			assert.strictEqual(matchesKey("\x08", "backspace"), true);
+			assert.strictEqual(matchesKey("\x08", "ctrl+backspace"), false);
+			assert.strictEqual(parseKey("\x08"), "backspace");
+			assert.strictEqual(matchesKey("\x08", "ctrl+h"), true);
 		});
 
 		it("should parse legacy alt-prefixed sequences when kitty inactive", () => {

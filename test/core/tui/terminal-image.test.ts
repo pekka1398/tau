@@ -28,7 +28,6 @@ const ENV_KEYS = [
 	"GHOSTTY_RESOURCES_DIR",
 	"WEZTERM_PANE",
 	"ITERM_SESSION_ID",
-	"WT_SESSION",
 	"CMUX_WORKSPACE_ID",
 ] as const;
 
@@ -285,28 +284,10 @@ describe("detectCapabilities", () => {
 		});
 	});
 
-	it("enables truecolor and hyperlinks for Windows Terminal outside multiplexers", () => {
-		withEnv({ WT_SESSION: "session", TERM: "xterm-256color" }, () => {
-			const caps = detectCapabilities();
-			assert.strictEqual(caps.trueColor, true);
-			assert.strictEqual(caps.hyperlinks, true);
-			assert.strictEqual(caps.images, null);
-		});
-	});
-
 	it("enables truecolor without hyperlinks for JetBrains terminal", () => {
 		withEnv({ TERMINAL_EMULATOR: "JetBrains-JediTerm", TERM: "xterm-256color" }, () => {
 			const caps = detectCapabilities();
 			assert.strictEqual(caps.trueColor, true);
-			assert.strictEqual(caps.hyperlinks, false);
-			assert.strictEqual(caps.images, null);
-		});
-	});
-
-	it("does not inherit Windows Terminal truecolor through tmux", () => {
-		withEnv({ WT_SESSION: "session", TMUX: "/tmp/tmux-1000/default,1234,0", TERM: "tmux-256color" }, () => {
-			const caps = detectCapabilities(() => false);
-			assert.strictEqual(caps.trueColor, false);
 			assert.strictEqual(caps.hyperlinks, false);
 			assert.strictEqual(caps.images, null);
 		});
