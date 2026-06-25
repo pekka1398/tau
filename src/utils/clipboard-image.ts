@@ -168,10 +168,6 @@ export async function readClipboardImage(options?: {
 	const env = options?.env ?? process.env;
 	const platform = options?.platform ?? process.platform;
 
-	if (env.TERMUX_VERSION) {
-		return null;
-	}
-
 	let image: ClipboardImage | null = null;
 
 	if (platform === "linux") {

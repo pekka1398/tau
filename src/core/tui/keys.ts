@@ -931,9 +931,7 @@ export function matchesKey(data: string, keyId: KeyId): boolean {
 				);
 			}
 			if (modifier === MODIFIERS.ctrl) {
-				// Legacy raw 0x08 is ambiguous: it can be Ctrl+Backspace on Windows
-				// Terminal or plain Backspace on other terminals, while also
-				// overlapping with Ctrl+H.
+				// Legacy raw 0x08 is ambiguous and overlaps with Ctrl+H.
 				if (matchesRawBackspace(data, MODIFIERS.ctrl)) return true;
 				return (
 					matchesKittySequence(data, CODEPOINTS.backspace, MODIFIERS.ctrl) ||
