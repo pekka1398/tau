@@ -100,26 +100,10 @@ describe("resolvePath", () => {
 	});
 
 	it("preserves POSIX absolute paths with literal percent sequences", () => {
-		if (process.platform === "win32") {
-			return;
-		}
-
 		const dir = createTempDir();
 		for (const filePath of [join(dir, "report%2026.md"), join(dir, "foo%2Fbar"), join(dir, "malformed%A.md")]) {
 			expect(resolvePath(filePath, join(dir, "base"))).toBe(resolve(filePath));
 		}
-	});
-
-	it("does not treat Windows file URL pathname strings as native paths", () => {
-		if (process.platform !== "win32") {
-			return;
-		}
-
-		const dir = createTempDir();
-		const filePath = join(dir, "dir", "SKILL.md");
-		const pathname = pathToFileURL(filePath).pathname;
-		expect(pathname).toMatch(/^\/[A-Za-z]:/);
-		expect(resolvePath(pathname, "E:\\project")).toBe(resolve(pathname));
 	});
 });
 

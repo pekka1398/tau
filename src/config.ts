@@ -1,6 +1,6 @@
 import { accessSync, constants, existsSync, mkdirSync, readFileSync, realpathSync } from "fs";
 import { homedir } from "os";
-import { basename, dirname, join, resolve, sep, win32 } from "path";
+import { basename, dirname, join, resolve, sep } from "path";
 import { fileURLToPath } from "url";
 import { spawnProcessSync } from "./utils/child-process.ts";
 import { normalizePath, resolvePath } from "./utils/paths.ts";
@@ -83,20 +83,16 @@ export function detectInstallMethod(): InstallMethod {
 
 function getInferredNpmInstall(): { root: string; prefix: string } | undefined {
 	const packageDir = getPackageDir();
-	const path = process.platform === "win32" || packageDir.includes("\\") ? win32 : { basename, dirname };
-	const parent = path.dirname(packageDir);
+	const parent = dirname(packageDir);
 	let root: string | undefined;
-	if (path.basename(parent).startsWith("@") && path.basename(path.dirname(parent)) === "node_modules") {
-		root = path.dirname(parent);
-	} else if (path.basename(parent) === "node_modules") {
+	if (basename(parent).startsWith("@") && basename(dirname(parent)) === "node_modules") {
+		root = dirname(parent);
+	} else if (basename(parent) === "node_modules") {
 		root = parent;
 	}
 	if (!root) return undefined;
-	const rootParent = path.dirname(root);
-	if (path.basename(rootParent) === "lib") return { root, prefix: path.dirname(rootParent) };
-	// Windows global npm prefixes use `<prefix>\\node_modules`, which is
-	// indistinguishable from local project installs by path shape alone. Do not
-	// infer unsupported Windows custom prefixes without `npm root -g` evidence.
+	const rootParent = dirname(root);
+	if (basename(rootParent) === "lib") return { root, prefix: dirname(rootParent) };
 	return undefined;
 }
 
@@ -237,9 +233,6 @@ function normalizeExistingPathForComparison(path: string, resolveSymlinks: boole
 		} catch {
 			return undefined;
 		}
-	}
-	if (process.platform === "win32") {
-		normalizedPath = normalizedPath.toLowerCase();
 	}
 	return normalizedPath;
 }

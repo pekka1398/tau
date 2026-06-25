@@ -505,9 +505,7 @@ Content`,
 				const agentSkillsDir = join(agentDir, "skills");
 				const agentsSkillsDir = join(tempDir, ".agents", "skills");
 				mkdirSync(agentsSkillsDir, { recursive: true });
-				// Use junction on Windows to avoid EPERM when symlink privileges are unavailable.
-				const directoryLinkType = process.platform === "win32" ? "junction" : "dir";
-				symlinkSync(agentsSkillsDir, agentSkillsDir, directoryLinkType);
+				symlinkSync(agentsSkillsDir, agentSkillsDir, "dir");
 
 				const skillPath = join(agentsSkillsDir, "foo", "SKILL.md");
 				mkdirSync(join(agentsSkillsDir, "foo"), { recursive: true });
@@ -1143,13 +1141,13 @@ Content`,
 		});
 
 		it("should never parse dot-relative paths as git", () => {
-			const dotSlash = (packageManager as any).parseSource("./packages/agent-timers");
+			const dotSlash = (packageManager as any).parseSource("./local-agent-timers");
 			expect(dotSlash.type).toBe("local");
-			expect(dotSlash.path).toBe("./packages/agent-timers");
+			expect(dotSlash.path).toBe("./local-agent-timers");
 
-			const dotDotSlash = (packageManager as any).parseSource("../packages/agent-timers");
+			const dotDotSlash = (packageManager as any).parseSource("../local-agent-timers");
 			expect(dotDotSlash.type).toBe("local");
-			expect(dotDotSlash.path).toBe("../packages/agent-timers");
+			expect(dotDotSlash.path).toBe("../local-agent-timers");
 		});
 	});
 
@@ -1186,19 +1184,17 @@ Content`,
 			expect(pathEndsWith(installPath, "node_modules/left-pad")).toBe(true);
 			expect(relative(tempRoot, installPath).startsWith("..")).toBe(false);
 			expect(installPath.startsWith(join(tmpdir(), "pi-extensions"))).toBe(false);
-			if (process.platform !== "win32") {
-				expect(statSync(tempRoot).mode & 0o777).toBe(0o700);
-			}
+			expect(statSync(tempRoot).mode & 0o777).toBe(0o700);
 		});
 	});
 
 	describe("settings source normalization", () => {
 		it("should store global local packages relative to agent settings base", () => {
-			const pkgDir = join(tempDir, "packages", "local-global-pkg");
+			const pkgDir = join(tempDir, "local-global-pkg");
 			mkdirSync(join(pkgDir, "extensions"), { recursive: true });
 			writeFileSync(join(pkgDir, "extensions", "index.ts"), "export default function() {}");
 
-			const added = packageManager.addSourceToSettings("./packages/local-global-pkg");
+			const added = packageManager.addSourceToSettings("./local-global-pkg");
 			expect(added).toBe(true);
 
 			const settings = settingsManager.getGlobalSettings();

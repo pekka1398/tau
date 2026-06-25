@@ -7,8 +7,7 @@ import { afterEach, beforeEach, describe, it, test } from "node:test";
 import { CombinedAutocompleteProvider } from "../../../src/core/tui/autocomplete.ts";
 
 const resolveFdPath = (): string | null => {
-	const command = process.platform === "win32" ? "where" : "which";
-	const result = spawnSync(command, ["fd"], { encoding: "utf-8" });
+	const result = spawnSync("which", ["fd"], { encoding: "utf-8" });
 	if (result.status !== 0 || !result.stdout) {
 		return null;
 	}

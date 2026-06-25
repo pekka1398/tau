@@ -63,10 +63,10 @@ describe("package commands", () => {
 	});
 
 	it("should persist global relative local package paths relative to settings.json", async () => {
-		const relativePkgDir = join(projectDir, "packages", "local-package");
+		const relativePkgDir = join(projectDir, "local-package");
 		mkdirSync(relativePkgDir, { recursive: true });
 
-		await main(["install", "./packages/local-package"]);
+		await main(["install", "./local-package"]);
 
 		const settingsPath = join(agentDir, "settings.json");
 		const settings = JSON.parse(readFileSync(settingsPath, "utf-8")) as { packages?: string[] };

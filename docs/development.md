@@ -65,11 +65,15 @@ Top-level `reference-repo/`, `test`, and `note` directories are ignored local sc
 ## Project Structure
 
 ```
-packages/
-  ai/           # LLM provider abstraction
-  agent/        # Agent loop and message types  
-  tui/          # Terminal UI components
-  coding-agent/ # CLI and interactive mode
+src/
+  cli/          # Argument parsing and print-mode file handling
+  core/         # Agent runtime, OpenRouter AI layer, tools, TUI, sessions
+  modes/        # Interactive and print mode entry points
+  utils/        # Shared runtime helpers
+scripts/        # Build, model generation, and verification scripts
+docs/           # User and developer documentation
+examples/       # Extension, prompt, and SDK examples
+ai-dash/        # Local bash execution bridge dependency
 ```
 
 ## Debugging Tool Result Rendering
