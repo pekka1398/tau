@@ -40,24 +40,24 @@ syntax.jsonl
 out.jsonl
 pi-*.html
 out.html
-packages/coding-agent/binaries/
+native/
 
 # ai-dash build artifacts
 .dirstamp
-packages/ai-dash/autom4te.cache/
-packages/ai-dash/src/.deps/
-packages/ai-dash/src/bltin/.deps/
-packages/ai-dash/src/*.o
-packages/ai-dash/src/bltin/*.o
-packages/ai-dash/src/dash
-packages/ai-dash/src/Makefile
-packages/ai-dash/src/config.h
-packages/ai-dash/src/stamp-h1
-packages/ai-dash/Makefile
-packages/ai-dash/config.h
-packages/ai-dash/config.log
-packages/ai-dash/config.status
-packages/ai-dash/stamp-h1
+ai-dash/autom4te.cache/
+ai-dash/src/.deps/
+ai-dash/src/bltin/.deps/
+ai-dash/src/*.o
+ai-dash/src/bltin/*.o
+ai-dash/src/dash
+ai-dash/src/Makefile
+ai-dash/src/config.h
+ai-dash/src/stamp-h1
+ai-dash/Makefile
+ai-dash/config.h
+ai-dash/config.log
+ai-dash/config.status
+ai-dash/stamp-h1
 
 # Tau sessions / data
 .tau/

@@ -20,7 +20,6 @@
 	},
 	"files": [
 		"dist",
-		"native",
 		"docs",
 		"examples",
 		"docs/containerization.md",
@@ -33,7 +32,7 @@
 		"build": "bun run clean && bun run generate-models && tsgo -p tsconfig.build.json && shx chmod +x dist/cli.js && bun run copy-assets",
 		"build:binary": "bun run build && bun build --compile ./dist/bun/cli.js ./src/utils/image-resize-worker.ts --outfile dist/tau && bun run copy-binary-assets",
 		"copy-assets": "shx mkdir -p dist/modes/interactive/theme && shx cp src/modes/interactive/theme/*.json dist/modes/interactive/theme/ && shx mkdir -p dist/modes/interactive/assets && shx cp src/modes/interactive/assets/*.png dist/modes/interactive/assets/ && shx mkdir -p dist/core/prompts && shx cp src/core/prompts/*.md dist/core/prompts/",
-		"copy-binary-assets": "shx cp package.json dist/ && shx cp README.md dist/ && shx cp CHANGELOG.md dist/ && shx cp -r native dist/ && shx mkdir -p dist/theme && shx cp src/modes/interactive/theme/*.json dist/theme/ && shx mkdir -p dist/assets && shx cp src/modes/interactive/assets/*.png dist/assets/ && shx cp -r docs dist/ && shx cp -r examples dist/ && (shx cp node_modules/@silvia-odwyer/photon-node/photon_rs_bg.wasm dist/ 2>/dev/null || shx cp node_modules/.bun/@silvia-odwyer+photon-node@0.3.4/node_modules/@silvia-odwyer/photon-node/photon_rs_bg.wasm dist/ 2>/dev/null || echo 'WARN: photon_rs_bg.wasm not found') && shx mkdir -p dist/core/prompts && shx cp src/core/prompts/*.md dist/core/prompts/ && shx cp ai-dash/bin/ai-dash dist/ai-dash",
+		"copy-binary-assets": "shx cp package.json dist/ && shx cp README.md dist/ && shx cp CHANGELOG.md dist/ && shx mkdir -p dist/theme && shx cp src/modes/interactive/theme/*.json dist/theme/ && shx mkdir -p dist/assets && shx cp src/modes/interactive/assets/*.png dist/assets/ && shx cp -r docs dist/ && shx cp -r examples dist/ && (shx cp node_modules/@silvia-odwyer/photon-node/photon_rs_bg.wasm dist/ 2>/dev/null || shx cp node_modules/.bun/@silvia-odwyer+photon-node@0.3.4/node_modules/@silvia-odwyer/photon-node/photon_rs_bg.wasm dist/ 2>/dev/null || echo 'WARN: photon_rs_bg.wasm not found') && shx mkdir -p dist/core/prompts && shx cp src/core/prompts/*.md dist/core/prompts/ && shx cp ai-dash/bin/ai-dash dist/ai-dash",
 		"check": "biome check --error-on-warnings . && bun run check:pinned-deps && bun run check:ts-imports && tsgo --noEmit && bun run check:browser-smoke",
 		"check:browser-smoke": "node scripts/check-browser-smoke.mjs",
 		"check:pinned-deps": "node scripts/check-pinned-deps.mjs",
