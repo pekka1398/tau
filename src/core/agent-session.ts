@@ -267,6 +267,7 @@ export class AgentSession {
 
 	// Branch summarization state
 	private _branchSummaryAbortController: AbortController | undefined = undefined;
+	private _manualCompactionInProgress = false;
 
 	// Retry state
 	private _retryAbortController: AbortController | undefined = undefined;
@@ -890,7 +891,7 @@ export class AgentSession {
 
 	/** Whether compaction or branch summarization is currently running */
 	get isCompacting(): boolean {
-		return this._branchSummaryAbortController !== undefined;
+		return this._manualCompactionInProgress || this._branchSummaryAbortController !== undefined;
 	}
 
 	/** All messages including custom types like BashExecutionMessage */
@@ -1695,6 +1696,10 @@ export class AgentSession {
 	 * session. The original session JSONL is left unchanged.
 	 */
 	async compact(instructions?: string): Promise<CompactionResult> {
+		if (this._manualCompactionInProgress) {
+			throw new Error("Compaction already in progress");
+		}
+		this._manualCompactionInProgress = true;
 		this._emit({ type: "compaction_start", reason: "manual" });
 
 		try {
@@ -1754,6 +1759,8 @@ export class AgentSession {
 				errorMessage: aborted ? undefined : `Compaction failed: ${message}`,
 			});
 			throw error;
+		} finally {
+			this._manualCompactionInProgress = false;
 		}
 	}
 

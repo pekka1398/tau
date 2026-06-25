@@ -2,6 +2,38 @@ import { describe, expect, test, vi } from "vitest";
 import { InteractiveMode } from "../src/modes/interactive/interactive-mode.ts";
 
 describe("InteractiveMode compaction events", () => {
+	test("shows status on compaction_start", async () => {
+		const fakeThis = {
+			isInitialized: true,
+			footer: { invalidate: vi.fn() },
+			statusContainer: { clear: vi.fn() },
+			chatContainer: { clear: vi.fn() },
+			rebuildChatFromMessages: vi.fn(),
+			addMessageToChat: vi.fn(),
+			showError: vi.fn(),
+			showStatus: vi.fn(),
+			settingsManager: { getShowTerminalProgress: () => false },
+			ui: { requestRender: vi.fn(), terminal: { setProgress: vi.fn() } },
+		};
+
+		const handleEvent = Reflect.get(InteractiveMode.prototype, "handleEvent") as (
+			this: typeof fakeThis,
+			event: {
+				type: "compaction_start";
+				reason: "manual";
+			},
+		) => Promise<void>;
+
+		await handleEvent.call(fakeThis, {
+			type: "compaction_start",
+			reason: "manual",
+		});
+
+		expect(fakeThis.showStatus).toHaveBeenCalledWith("Compacting context...");
+		expect(fakeThis.footer.invalidate).toHaveBeenCalledTimes(1);
+		expect(fakeThis.ui.requestRender).toHaveBeenCalled();
+	});
+
 	test("rebuilds chat on compaction_end with result", async () => {
 		const fakeThis = {
 			isInitialized: true,

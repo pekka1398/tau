@@ -2993,6 +2993,8 @@ export class InteractiveMode {
 			case "compaction_start": {
 				// Summary generation is a direct text-only model request; the UI updates
 				// after the derived compacted session is created.
+				this.showStatus("Compacting context...");
+				this.ui.requestRender();
 				break;
 			}
 

@@ -107,6 +107,41 @@ describe("AgentSession compaction characterization", () => {
 		expect(streamSpy.getContexts()[0]?.tools).toEqual([]);
 	});
 
+	it("reports manual compaction as in progress while the summary request is pending", async () => {
+		const harness = await createHarness({ withConfiguredAuth: false });
+		harnesses.push(harness);
+		seedCompactableSession(harness);
+
+		let releaseSummary: (() => void) | undefined;
+		harness.session.agent.streamFn = () => {
+			const stream = createAssistantMessageEventStream();
+			releaseSummary = () => {
+				const message: AssistantMessage = {
+					role: "assistant",
+					content: [{ type: "text", text: "delayed summary" }],
+					stopReason: "stop",
+					timestamp: Date.now(),
+					usage: createUsage(100),
+				};
+				stream.push({ type: "done", reason: "stop", message });
+			};
+			return stream;
+		};
+
+		const compactPromise = harness.session.compact();
+		for (let i = 0; i < 20 && !releaseSummary; i++) {
+			await new Promise((resolve) => setTimeout(resolve, 0));
+		}
+		expect(releaseSummary).toBeDefined();
+
+		expect(harness.session.isCompacting).toBe(true);
+
+		releaseSummary?.();
+		await compactPromise;
+
+		expect(harness.session.isCompacting).toBe(false);
+	});
+
 	it("creates a derived persisted session and leaves the original JSONL unchanged", async () => {
 		const harness = await createHarness({ persistSession: true });
 		harnesses.push(harness);
