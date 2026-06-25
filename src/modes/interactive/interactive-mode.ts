@@ -77,7 +77,6 @@ import {
 import { getChangelogPath, getNewEntries, parseChangelog } from "../../utils/changelog.ts";
 import { copyToClipboard } from "../../utils/clipboard.ts";
 import { readClipboardImage } from "../../utils/clipboard-image.ts";
-import { parseGitUrl } from "../../utils/git.ts";
 import { getCwdRelativePath } from "../../utils/paths.ts";
 import { killTrackedDetachedChildren } from "../../utils/shell.ts";
 import { ensureTool } from "../../utils/tools-manager.ts";
@@ -440,16 +439,6 @@ export class InteractiveMode {
 
 		if (source === "auto" || source === "local" || source === "cli") {
 			return scopePrefix;
-		}
-
-		if (source.startsWith("npm:")) {
-			return `${scopePrefix}:${source}`;
-		}
-
-		const gitSource = parseGitUrl(source);
-		if (gitSource) {
-			const ref = gitSource.ref ? `@${gitSource.ref}` : "";
-			return `${scopePrefix}:git:${gitSource.host}/${gitSource.path}${ref}`;
 		}
 
 		return scopePrefix;
@@ -940,12 +929,9 @@ export class InteractiveMode {
 		return this.options.verbose || this.toolOutputExpanded;
 	}
 
-	/**
-	 * Get a short path relative to the package root for display.
-	 */
 	private getShortPath(fullPath: string, sourceInfo?: SourceInfo): string {
 		const baseDir = sourceInfo?.baseDir;
-		if (baseDir && this.isPackageSource(sourceInfo)) {
+		if (baseDir) {
 			const relativePath = path.relative(path.resolve(baseDir), path.resolve(fullPath));
 			if (
 				relativePath &&
@@ -956,17 +942,6 @@ export class InteractiveMode {
 			) {
 				return relativePath.replace(/\\/g, "/");
 			}
-		}
-
-		const source = sourceInfo?.source ?? "";
-		const npmMatch = fullPath.match(/node_modules\/(@?[^/]+(?:\/[^/]+)?)\/(.*)/);
-		if (npmMatch && source.startsWith("npm:")) {
-			return npmMatch[2];
-		}
-
-		const gitMatch = fullPath.match(/git\/[^/]+\/[^/]+\/(.*)/);
-		if (gitMatch && source.startsWith("git:")) {
-			return gitMatch[1];
 		}
 
 		return this.formatDisplayPath(fullPath);
@@ -980,41 +955,6 @@ export class InteractiveMode {
 			return segments[segments.length - 1]!;
 		}
 		return shortPath;
-	}
-
-	private getCompactPackageSourceLabel(sourceInfo?: SourceInfo): string {
-		const source = sourceInfo?.source ?? "";
-		if (source.startsWith("npm:")) {
-			return source.slice("npm:".length) || source;
-		}
-
-		const gitSource = parseGitUrl(source);
-		if (gitSource) {
-			return gitSource.path || source;
-		}
-
-		return source;
-	}
-
-	private getCompactExtensionLabel(resourcePath: string, sourceInfo?: SourceInfo): string {
-		if (!this.isPackageSource(sourceInfo)) {
-			return this.getCompactPathLabel(resourcePath, sourceInfo);
-		}
-
-		const sourceLabel = this.getCompactPackageSourceLabel(sourceInfo);
-		if (!sourceLabel) {
-			return this.getCompactPathLabel(resourcePath, sourceInfo);
-		}
-
-		const shortPath = this.getShortPath(resourcePath, sourceInfo).replace(/\\/g, "/");
-		const packagePath = shortPath.startsWith("extensions/") ? shortPath.slice("extensions/".length) : shortPath;
-		const parsedPath = path.posix.parse(packagePath);
-
-		if (parsedPath.name === "index") {
-			return !parsedPath.dir || parsedPath.dir === "." ? sourceLabel : `${sourceLabel}:${parsedPath.dir}`;
-		}
-
-		return `${sourceLabel}:${packagePath}`;
 	}
 
 	private getCompactDisplayPathSegments(resourcePath: string): string[] {
@@ -1052,32 +992,26 @@ export class InteractiveMode {
 	}
 
 	private getCompactExtensionLabels(extensions: Array<{ path: string; sourceInfo?: SourceInfo }>): string[] {
-		const nonPackageExtensions = extensions
-			.map((extension) => {
-				const segments = this.getCompactDisplayPathSegments(extension.path);
-				const lastSegment = segments[segments.length - 1];
-				if (segments.length > 1 && (lastSegment === "index.ts" || lastSegment === "index.js")) {
-					segments.pop();
-				}
-				return {
-					path: extension.path,
-					sourceInfo: extension.sourceInfo,
-					segments,
-				};
-			})
-			.filter((extension) => !this.isPackageSource(extension.sourceInfo));
+		const extensionEntries = extensions.map((extension) => {
+			const segments = this.getCompactDisplayPathSegments(extension.path);
+			const lastSegment = segments[segments.length - 1];
+			if (segments.length > 1 && (lastSegment === "index.ts" || lastSegment === "index.js")) {
+				segments.pop();
+			}
+			return {
+				path: extension.path,
+				sourceInfo: extension.sourceInfo,
+				segments,
+			};
+		});
 
 		return extensions.map((extension) => {
-			if (this.isPackageSource(extension.sourceInfo)) {
-				return this.getCompactExtensionLabel(extension.path, extension.sourceInfo);
-			}
-
-			const nonPackageIndex = nonPackageExtensions.findIndex((item) => item.path === extension.path);
-			if (nonPackageIndex === -1) {
+			const entryIndex = extensionEntries.findIndex((item) => item.path === extension.path);
+			if (entryIndex === -1) {
 				return this.getCompactPathLabel(extension.path, extension.sourceInfo);
 			}
 
-			return this.getCompactNonPackageExtensionLabel(extension.path, nonPackageIndex, nonPackageExtensions);
+			return this.getCompactNonPackageExtensionLabel(extension.path, entryIndex, extensionEntries);
 		});
 	}
 
@@ -1119,57 +1053,37 @@ export class InteractiveMode {
 		return "path";
 	}
 
-	private isPackageSource(sourceInfo?: SourceInfo): boolean {
-		const source = sourceInfo?.source ?? "";
-		return source.startsWith("npm:") || source.startsWith("git:");
-	}
-
 	private buildScopeGroups(items: Array<{ path: string; sourceInfo?: SourceInfo }>): Array<{
 		scope: "user" | "project" | "path";
 		paths: Array<{ path: string; sourceInfo?: SourceInfo }>;
-		packages: Map<string, Array<{ path: string; sourceInfo?: SourceInfo }>>;
 	}> {
 		const groups: Record<
 			"user" | "project" | "path",
 			{
 				scope: "user" | "project" | "path";
 				paths: Array<{ path: string; sourceInfo?: SourceInfo }>;
-				packages: Map<string, Array<{ path: string; sourceInfo?: SourceInfo }>>;
 			}
 		> = {
-			user: { scope: "user", paths: [], packages: new Map() },
-			project: { scope: "project", paths: [], packages: new Map() },
-			path: { scope: "path", paths: [], packages: new Map() },
+			user: { scope: "user", paths: [] },
+			project: { scope: "project", paths: [] },
+			path: { scope: "path", paths: [] },
 		};
 
 		for (const item of items) {
 			const groupKey = this.getScopeGroup(item.sourceInfo);
-			const group = groups[groupKey];
-			const source = item.sourceInfo?.source ?? "local";
-
-			if (this.isPackageSource(item.sourceInfo)) {
-				const list = group.packages.get(source) ?? [];
-				list.push(item);
-				group.packages.set(source, list);
-			} else {
-				group.paths.push(item);
-			}
+			groups[groupKey].paths.push(item);
 		}
 
-		return [groups.project, groups.user, groups.path].filter(
-			(group) => group.paths.length > 0 || group.packages.size > 0,
-		);
+		return [groups.project, groups.user, groups.path].filter((group) => group.paths.length > 0);
 	}
 
 	private formatScopeGroups(
 		groups: Array<{
 			scope: "user" | "project" | "path";
 			paths: Array<{ path: string; sourceInfo?: SourceInfo }>;
-			packages: Map<string, Array<{ path: string; sourceInfo?: SourceInfo }>>;
 		}>,
 		options: {
 			formatPath: (item: { path: string; sourceInfo?: SourceInfo }) => string;
-			formatPackagePath: (item: { path: string; sourceInfo?: SourceInfo }, source: string) => string;
 		},
 	): string {
 		const lines: string[] = [];
@@ -1180,15 +1094,6 @@ export class InteractiveMode {
 			const sortedPaths = [...group.paths].sort((a, b) => a.path.localeCompare(b.path));
 			for (const item of sortedPaths) {
 				lines.push(theme.fg("dim", `    ${options.formatPath(item)}`));
-			}
-
-			const sortedPackages = Array.from(group.packages.entries()).sort(([a], [b]) => a.localeCompare(b));
-			for (const [source, items] of sortedPackages) {
-				lines.push(`    ${theme.fg("mdLink", source)}`);
-				const sortedPackagePaths = [...items].sort((a, b) => a.path.localeCompare(b.path));
-				for (const item of sortedPackagePaths) {
-					lines.push(theme.fg("dim", `      ${options.formatPackagePath(item, source)}`));
-				}
 			}
 		}
 
@@ -1360,7 +1265,6 @@ export class InteractiveMode {
 				);
 				const skillList = this.formatScopeGroups(groups, {
 					formatPath: (item) => this.formatDisplayPath(item.path),
-					formatPackagePath: (item) => this.getShortPath(item.path, item.sourceInfo),
 				});
 				const skillCompactList = formatCompactList(skills.map((skill) => skill.name));
 				addLoadedSection("Skills", skillCompactList, skillList);
@@ -1377,10 +1281,6 @@ export class InteractiveMode {
 						const template = templateByPath.get(item.path);
 						return template ? `/${template.name}` : this.formatDisplayPath(item.path);
 					},
-					formatPackagePath: (item) => {
-						const template = templateByPath.get(item.path);
-						return template ? `/${template.name}` : this.formatDisplayPath(item.path);
-					},
 				});
 				const promptCompactList = formatCompactList(templates.map((template) => `/${template.name}`));
 				addLoadedSection("Prompts", promptCompactList, templateList);
@@ -1390,8 +1290,6 @@ export class InteractiveMode {
 				const groups = this.buildScopeGroups(extensions);
 				const extList = this.formatScopeGroups(groups, {
 					formatPath: (item) => this.formatExtensionDisplayPath(item.path),
-					formatPackagePath: (item) =>
-						this.formatExtensionDisplayPath(this.getShortPath(item.path, item.sourceInfo)),
 				});
 				const extensionCompactList = formatCompactList(this.getCompactExtensionLabels(extensions));
 				addLoadedSection("Extensions", extensionCompactList, extList, "mdHeading");
@@ -1409,7 +1307,6 @@ export class InteractiveMode {
 				);
 				const themeList = this.formatScopeGroups(groups, {
 					formatPath: (item) => this.formatDisplayPath(item.path),
-					formatPackagePath: (item) => this.getShortPath(item.path, item.sourceInfo),
 				});
 				const themeCompactList = formatCompactList(
 					customThemes.map(
@@ -3420,7 +3317,7 @@ export class InteractiveMode {
 			new Text(
 				theme.fg(
 					"warning",
-					"This project is not trusted. Project instructions (AGENTS.md), project resources, and project packages are ignored. Use /trust to save a trust decision, then restart tau.",
+					"This project is not trusted. Project instructions (AGENTS.md) and project resources are ignored. Use /trust to save a trust decision, then restart tau.",
 				),
 				1,
 				0,

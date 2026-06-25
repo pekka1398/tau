@@ -120,10 +120,6 @@ Additional paths via `settings.json`:
 
 ```json
 {
-  "packages": [
-    "npm:@foo/bar@1.0.0",
-    "git:github.com/user/repo@v1"
-  ],
   "extensions": [
     "/path/to/local/extension.ts",
     "/path/to/local/extension/dir"
@@ -131,7 +127,7 @@ Additional paths via `settings.json`:
 }
 ```
 
-To share extensions via npm or git as tau packages, see [packages.md](packages.md).
+Keep shared extensions in a repository or copy them into `~/.tau/agent/extensions/` or `.tau/extensions/`.
 
 ## Available Imports
 
@@ -144,7 +140,7 @@ To share extensions via npm or git as tau packages, see [packages.md](packages.m
 
 npm dependencies work too. Add a `package.json` next to your extension (or in a parent directory), run `npm install`, and imports from `node_modules/` are resolved automatically.
 
-For distributed tau packages installed with `tau install` (npm or git), runtime deps must be in `dependencies`. Package installation uses production installs (`npm install --omit=dev`) by default, so `devDependencies` are not available at runtime; when `npmCommand` is configured, git packages use plain `install` for compatibility with wrappers.
+For extension directories with their own dependencies, keep runtime deps in `dependencies` and run your package manager in that directory before loading the extension.
 
 Node.js built-ins (`node:fs`, `node:path`, etc.) are also available.
 

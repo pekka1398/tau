@@ -57,21 +57,6 @@ export interface MarkdownSettings {
 
 export type TransportSetting = Transport;
 
-/**
- * Package source for npm/git packages.
- * - String form: load all resources from the package
- * - Object form: filter which resources to load
- */
-export type PackageSource =
-	| string
-	| {
-			source: string;
-			extensions?: string[];
-			skills?: string[];
-			prompts?: string[];
-			themes?: string[];
-	  };
-
 export interface Settings {
 	lastChangelogVersion?: string;
 	defaultProvider?: string;
@@ -88,10 +73,9 @@ export interface Settings {
 	shellPath?: string; // Custom shell path
 	quietStartup?: boolean;
 	shellCommandPrefix?: string; // Prefix prepended to every bash command (e.g., "shopt -s expand_aliases" for alias support)
-	npmCommand?: string[]; // Command used for npm package lookup/install operations, argv-style (e.g., ["mise", "exec", "node@20", "--", "npm"])
+	npmCommand?: string[]; // Command used for self-update npm operations, argv-style (e.g., ["mise", "exec", "node@20", "--", "npm"])
 	collapseChangelog?: boolean; // Show condensed changelog after update (use /changelog for full)
 	enableInstallTelemetry?: boolean; // default: true - anonymous version/update ping after changelog-detected updates
-	packages?: PackageSource[]; // Array of npm/git package sources (string or object with filtering)
 	extensions?: string[]; // Array of local extension file paths or directories
 	skills?: string[]; // Array of local skill file paths or directories
 	prompts?: string[]; // Array of local prompt template paths or directories
@@ -874,22 +858,6 @@ export class SettingsManager {
 		this.globalSettings.enableInstallTelemetry = enabled;
 		this.markModified("enableInstallTelemetry");
 		this.save();
-	}
-
-	getPackages(): PackageSource[] {
-		return [...(this.settings.packages ?? [])];
-	}
-
-	setPackages(packages: PackageSource[]): void {
-		this.globalSettings.packages = packages;
-		this.markModified("packages");
-		this.save();
-	}
-
-	setProjectPackages(packages: PackageSource[]): void {
-		this.updateProjectSettings("packages", (settings) => {
-			settings.packages = packages;
-		});
 	}
 
 	getExtensionPaths(): string[] {

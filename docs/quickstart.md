@@ -23,7 +23,7 @@ yarn global remove @earendil-works/tau-coding-agent
 bun uninstall -g @earendil-works/tau-coding-agent
 ```
 
-Uninstalling Tau leaves settings, credentials, sessions, and installed packages in `~/.tau/agent/`.
+Uninstalling Tau leaves settings, credentials, sessions, and local resources in `~/.tau/agent/`.
 
 Then start Tau in the project directory you want it to work on:
 
@@ -145,6 +145,6 @@ Use `--mode json` for JSON event output or `--mode rpc` for process integration.
 - [Providers](providers.md) - OpenRouter authentication and model setup.
 - [Settings](settings.md) - global and project configuration.
 - [Keybindings](keybindings.md) - shortcuts and customization.
-- [Packages](packages.md) - install shared extensions, skills, prompts, and themes.
+- [Extensions](extensions.md) - add local tools, commands, events, and custom UI.
 
 Platform notes: [tmux](tmux.md), [Terminal setup](terminal-setup.md), [Shell aliases](shell-aliases.md).

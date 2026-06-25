@@ -11,7 +11,7 @@ Edit settings directly or use `/settings` for common interactive options.
 
 ## Project Trust
 
-On interactive startup, Tau asks before trusting a project folder that contains project-local inputs and has no saved decision in `~/.tau/agent/trust.json`. Trusting a project allows Tau to read `AGENTS.md`, load `.tau/settings.json` and `.tau` resources, install missing project packages, and execute project extensions.
+On interactive startup, Tau asks before trusting a project folder that contains project-local inputs and has no saved decision in `~/.tau/agent/trust.json`. Trusting a project allows Tau to read `AGENTS.md`, load `.tau/settings.json` and `.tau` resources, and execute project extensions.
 
 Non-interactive modes (`-p`, `--mode json`, and `--mode rpc`) do not show a trust prompt. Without a saved trust decision, they ignore project-local inputs unless `--approve`/`-a` is passed. Use `--no-approve`/`-na` to ignore project-local inputs for one run even when the project is trusted.
 
@@ -97,7 +97,6 @@ These settings define where to load extensions, skills, prompts, and themes from
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `packages` | array | `[]` | npm/git packages to load resources from |
 | `extensions` | string[] | `[]` | Local extension file paths or directories |
 | `skills` | string[] | `[]` | Local skill file paths or directories |
 | `prompts` | string[] | `[]` | Local prompt template paths or directories |

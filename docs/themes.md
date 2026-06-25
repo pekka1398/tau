@@ -21,7 +21,6 @@ Tau loads themes from:
 - Built-in: `dark`, `light`
 - Global: `~/.tau/agent/themes/*.json`
 - Project: `.tau/themes/*.json` (only after the project is trusted)
-- Packages: `themes/` directories or `tau.themes` entries in `package.json`
 - Settings: `themes` array with files or directories
 - CLI: `--theme <path>` (repeatable)
 

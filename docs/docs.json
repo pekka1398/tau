@@ -65,10 +65,6 @@
           "path": "themes.md"
         },
         {
-          "title": "Packages",
-          "path": "packages.md"
-        },
-        {
           "title": "Custom Models",
           "path": "models.md"
         }

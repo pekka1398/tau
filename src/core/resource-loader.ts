@@ -11,9 +11,9 @@ import { canonicalizePath, isLocalPath, resolvePath } from "../utils/paths.ts";
 import { createEventBus, type EventBus } from "./event-bus.ts";
 import type { Extension, ExtensionFactory, ExtensionRuntime, LoadExtensionsResult } from "./extensions/index.ts";
 import { createExtensionRuntime, loadExtensionFromFactory, loadExtensions } from "./extensions/index.ts";
-import { DefaultPackageManager, type PathMetadata } from "./package-manager.ts";
 import type { PromptTemplate } from "./prompt-templates.ts";
 import { loadPromptTemplates } from "./prompt-templates.ts";
+import { LocalResourceResolver, type PathMetadata } from "./resource-resolver.ts";
 import { SettingsManager } from "./settings-manager.ts";
 import type { Skill } from "./skills.ts";
 import { loadSkills } from "./skills.ts";
@@ -134,7 +134,7 @@ export class DefaultResourceLoader implements ResourceLoader {
 	private agentDir: string;
 	private settingsManager: SettingsManager;
 	private eventBus: EventBus;
-	private packageManager: DefaultPackageManager;
+	private resourceResolver: LocalResourceResolver;
 	private additionalExtensionPaths: string[];
 	private additionalSkillPaths: string[];
 	private additionalPromptTemplatePaths: string[];
@@ -182,7 +182,7 @@ export class DefaultResourceLoader implements ResourceLoader {
 		this.agentDir = resolvePath(options.agentDir);
 		this.settingsManager = options.settingsManager ?? SettingsManager.create(this.cwd, this.agentDir);
 		this.eventBus = options.eventBus ?? createEventBus();
-		this.packageManager = new DefaultPackageManager({
+		this.resourceResolver = new LocalResourceResolver({
 			cwd: this.cwd,
 			agentDir: this.agentDir,
 			settingsManager: this.settingsManager,
@@ -281,8 +281,8 @@ export class DefaultResourceLoader implements ResourceLoader {
 
 	async reload(): Promise<void> {
 		await this.settingsManager.reload();
-		const resolvedPaths = await this.packageManager.resolve();
-		const cliExtensionPaths = await this.packageManager.resolveExtensionSources(this.additionalExtensionPaths, {
+		const resolvedPaths = await this.resourceResolver.resolve();
+		const cliExtensionPaths = await this.resourceResolver.resolveExtensionSources(this.additionalExtensionPaths, {
 			temporary: true,
 		});
 		const metadataByPath = new Map<string, PathMetadata>();
@@ -312,7 +312,7 @@ export class DefaultResourceLoader implements ResourceLoader {
 		const enabledThemes = getEnabledPaths(resolvedPaths.themes);
 
 		const mapSkillPath = (resource: { path: string; metadata: PathMetadata }): string => {
-			if (resource.metadata.source !== "auto" && resource.metadata.origin !== "package") {
+			if (resource.metadata.source !== "auto") {
 				return resource.path;
 			}
 			try {

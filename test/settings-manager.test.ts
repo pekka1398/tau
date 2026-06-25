@@ -112,51 +112,6 @@ describe("SettingsManager", () => {
 		});
 	});
 
-	describe("packages migration", () => {
-		it("should keep local-only extensions in extensions array", () => {
-			const settingsPath = join(agentDir, "settings.json");
-			writeFileSync(
-				settingsPath,
-				JSON.stringify({
-					extensions: ["/local/ext.ts", "./relative/ext.ts"],
-				}),
-			);
-
-			const manager = SettingsManager.create(projectDir, agentDir);
-
-			expect(manager.getPackages()).toEqual([]);
-			expect(manager.getExtensionPaths()).toEqual(["/local/ext.ts", "./relative/ext.ts"]);
-		});
-
-		it("should handle packages with filtering objects", () => {
-			const settingsPath = join(agentDir, "settings.json");
-			writeFileSync(
-				settingsPath,
-				JSON.stringify({
-					packages: [
-						"npm:simple-pkg",
-						{
-							source: "npm:shitty-extensions",
-							extensions: ["extensions/oracle.ts"],
-							skills: [],
-						},
-					],
-				}),
-			);
-
-			const manager = SettingsManager.create(projectDir, agentDir);
-
-			const packages = manager.getPackages();
-			expect(packages).toHaveLength(2);
-			expect(packages[0]).toBe("npm:simple-pkg");
-			expect(packages[1]).toEqual({
-				source: "npm:shitty-extensions",
-				extensions: ["extensions/oracle.ts"],
-				skills: [],
-			});
-		});
-	});
-
 	describe("reload", () => {
 		it("should reload global settings from disk", async () => {
 			const settingsPath = join(agentDir, "settings.json");
@@ -246,16 +201,16 @@ describe("SettingsManager", () => {
 
 		it("should fail project settings writes when project is not trusted", async () => {
 			const projectSettingsPath = join(getProjectDir(projectDir, agentDir), "settings.json");
-			writeFileSync(projectSettingsPath, JSON.stringify({ packages: ["npm:existing"] }));
+			writeFileSync(projectSettingsPath, JSON.stringify({ extensions: ["existing.ts"] }));
 			const manager = SettingsManager.create(projectDir, agentDir, { projectTrusted: false });
 
-			expect(() => manager.setProjectPackages(["npm:new"])).toThrow(
+			expect(() => manager.setProjectExtensionPaths(["new.ts"])).toThrow(
 				"Project is not trusted; refusing to write project settings",
 			);
 			await manager.flush();
 
 			expect(manager.getProjectSettings()).toEqual({});
-			expect(JSON.parse(readFileSync(projectSettingsPath, "utf-8"))).toEqual({ packages: ["npm:existing"] });
+			expect(JSON.parse(readFileSync(projectSettingsPath, "utf-8"))).toEqual({ extensions: ["existing.ts"] });
 		});
 	});
 
@@ -292,7 +247,7 @@ describe("SettingsManager", () => {
 			expect(existsSync(getProjectDir(projectDir, agentDir))).toBe(false);
 
 			// Write a project-specific setting
-			manager.setProjectPackages([{ source: "npm:test-pkg" }]);
+			manager.setProjectExtensionPaths(["extensions/test.ts"]);
 			await manager.flush();
 
 			// Now .tau folder should exist

@@ -34,7 +34,7 @@ export function canonicalizePath(path: string): string {
 }
 
 /**
- * Returns true if the value is NOT a package source (npm:, git:, etc.)
+ * Returns true if the value is a local filesystem path.
  * or a remote URL protocol. Bare names, relative paths, and file: URLs
  * are considered local.
  */

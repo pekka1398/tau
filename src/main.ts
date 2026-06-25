@@ -43,11 +43,11 @@ import { printTimings, resetTimings, time } from "./core/timings.ts";
 import { runTodoCli } from "./core/todo.ts";
 import { hasProjectTrustInputs, ProjectTrustStore } from "./core/trust-manager.ts";
 import { ProcessTerminal, setKeybindings, TUI } from "./core/tui/index.ts";
+import { handleConfigCommand, handleUpdateCommand } from "./management-cli.ts";
 import { runMigrations, showDeprecationWarnings } from "./migrations.ts";
 import { InteractiveMode, runPrintMode } from "./modes/index.ts";
 import { ExtensionSelectorComponent } from "./modes/interactive/components/extension-selector.ts";
 import { initTheme, stopThemeWatcher } from "./modes/interactive/theme/theme.ts";
-import { handleConfigCommand, handlePackageCommand } from "./package-manager-cli.ts";
 import { isLocalPath, normalizePath, resolvePath } from "./utils/paths.ts";
 
 /**
@@ -502,7 +502,7 @@ async function promptForProjectTrust(
 ): Promise<ProjectTrustPromptResult | undefined> {
 	return showStartupSelector(
 		settingsManager,
-		`Trust project folder?\n${cwd}\n\nThis allows tau to read project instructions (AGENTS.md), load project settings and resources, install missing project packages, and execute project extensions.`,
+		`Trust project folder?\n${cwd}\n\nThis allows tau to read project instructions (AGENTS.md), load project settings and resources, and execute project extensions.`,
 		[
 			{ label: "Trust", value: { trusted: true, remember: true } },
 			{ label: "Trust (this session only)", value: { trusted: true, remember: false } },
@@ -580,7 +580,7 @@ export async function main(args: string[], options?: MainOptions) {
 		process.env.TAU_SKIP_VERSION_CHECK = "1";
 	}
 
-	if (await handlePackageCommand(args)) {
+	if (await handleUpdateCommand(args)) {
 		return;
 	}
 

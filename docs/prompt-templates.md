@@ -10,7 +10,6 @@ Tau loads prompt templates from:
 
 - Global: `~/.tau/agent/prompts/*.md`
 - Project: `.tau/prompts/*.md` (only after the project is trusted)
-- Packages: `prompts/` directories or `tau.prompts` entries in `package.json`
 - Settings: `prompts` array with files or directories
 - CLI: `--prompt-template <path>` (repeatable)
 

@@ -136,17 +136,10 @@ export {
 export type { ReadonlyFooterDataProvider } from "./core/footer-data-provider.ts";
 export { convertToLlm } from "./core/messages.ts";
 export { ModelRegistry } from "./core/model-registry.ts";
-export type {
-	PackageManager,
-	PathMetadata,
-	ProgressCallback,
-	ProgressEvent,
-	ResolvedPaths,
-	ResolvedResource,
-} from "./core/package-manager.ts";
-export { DefaultPackageManager } from "./core/package-manager.ts";
 export type { ResourceCollision, ResourceDiagnostic, ResourceLoader } from "./core/resource-loader.ts";
 export { DefaultResourceLoader, loadProjectContextFiles } from "./core/resource-loader.ts";
+export type { PathMetadata, ResolvedPaths, ResolvedResource } from "./core/resource-resolver.ts";
+export { LocalResourceResolver } from "./core/resource-resolver.ts";
 // SDK for programmatic usage
 export {
 	AgentSessionRuntime,
@@ -191,7 +184,6 @@ export {
 } from "./core/session-manager.ts";
 export {
 	type ImageSettings,
-	type PackageSource,
 	type RetrySettings,
 	SettingsManager,
 	type SettingsManagerCreateOptions,

@@ -50,7 +50,7 @@ See [Keybindings](keybindings.md) for all shortcuts and customization.
 
 ## Project Trust
 
-On interactive startup, Tau asks before trusting a project folder that contains project-local inputs and has no saved decision in `~/.tau/agent/trust.json`. Trusting a project allows Tau to read `AGENTS.md`, load `.tau/settings.json` and `.tau` resources, install missing project packages, and execute project extensions.
+On interactive startup, Tau asks before trusting a project folder that contains project-local inputs and has no saved decision in `~/.tau/agent/trust.json`. Trusting a project allows Tau to read `AGENTS.md`, load `.tau/settings.json` and `.tau` resources, and execute project extensions.
 
 Use `/trust` in interactive mode to save a trust decision for future sessions. The current session is not reloaded, so restart Tau for changes to take effect.
 
@@ -83,18 +83,11 @@ Disable loading with `--no-context-files` or `-nc`.
 tau [options] [@files...] [messages...]
 ```
 
-## Package Commands
+## Management Commands
 
 ```bash
-tau install <source> [-l]       # Install package, -l for project-local
-tau remove <source> [-l]        # Remove package
-tau uninstall <source> [-l]     # Alias for remove
-tau update [source|self|tau]    # Update Tau and packages
-tau update --extensions         # Update packages only
-tau update --self               # Update Tau only
-tau update --extension <src>    # Update one package
-tau list                        # List installed packages
-tau config                      # Enable/disable package resources
+tau update [--force]            # Update Tau
+tau config                      # Enable/disable local resources
 ```
 
 ## Modes

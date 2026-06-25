@@ -1,6 +1,6 @@
 # Tau Documentation
 
-Tau is a terminal coding harness built around a single OpenRouter provider surface. It stays small at the core while being extended through TypeScript extensions, skills, prompt templates, themes, and packages.
+Tau is a terminal coding harness built around a single OpenRouter provider surface. It stays small at the core while being extended through local TypeScript extensions, skills, prompt templates, and themes.
 
 ## Quick Start
 
@@ -39,7 +39,6 @@ For the full first-run flow, see [Quickstart](quickstart.md).
 - [Skills](skills.md) - Agent Skills for reusable on-demand capabilities.
 - [Prompt templates](prompt-templates.md) - reusable prompts that expand from slash commands.
 - [Themes](themes.md) - built-in and custom terminal themes.
-- [Packages](packages.md) - bundle and share extensions, skills, prompts, and themes.
 - [Custom models](models.md) - add or scope OpenRouter model entries.
 
 ## Programmatic Usage
