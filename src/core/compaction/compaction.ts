@@ -235,7 +235,7 @@ export function truncateBashOutput(output: string, limit: number): { output: str
 		return { output, truncated: false };
 	}
 	const prefix = output.slice(0, limit);
-	const marker = "\n\n[output truncated during compaction; full output available in archived session]";
+	const marker = "\n\n[truncated]";
 	return { output: `${prefix}${marker}`, truncated: true };
 }
 

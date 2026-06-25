@@ -343,9 +343,7 @@ describe("rebuildMessages", () => {
 		if (bashMessage.role !== "bashExecution") return;
 		expect(bashMessage.command).toBe("bun test");
 		expect(bashMessage.output).toContain("aaaaa");
-		expect(bashMessage.output).toContain(
-			"[output truncated during compaction; full output available in archived session]",
-		);
+		expect(bashMessage.output).toContain("[truncated]");
 		expect(bashMessage.truncated).toBe(true);
 	});
 
