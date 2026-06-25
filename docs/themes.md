@@ -268,7 +268,7 @@ Four formats are supported:
 
 ### Terminal Compatibility
 
-Tau uses 24-bit RGB colors. Most modern terminals support this (iTerm2, Kitty, WezTerm, Windows Terminal, VS Code). For older terminals with only 256-color support, tau falls back to the nearest approximation.
+Tau uses 24-bit RGB colors. Most modern terminals support this (Kitty, Ghostty, WezTerm, Alacritty, VS Code). For older terminals with only 256-color support, tau falls back to the nearest approximation.
 
 Check truecolor support:
 

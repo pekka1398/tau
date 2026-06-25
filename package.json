@@ -72,9 +72,6 @@
 			"rimraf": "6.1.2"
 		}
 	},
-	"optionalDependencies": {
-		"@mariozechner/clipboard": "0.3.9"
-	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.5",
 		"@types/cross-spawn": "6.0.6",

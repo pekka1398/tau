@@ -2,8 +2,7 @@
  * Test for BMP to PNG conversion in clipboard image handling.
  * Separate from clipboard-image.test.ts due to different mocking requirements.
  *
- * This tests the fix for WSL2/WSLg where clipboard often provides image/bmp
- * instead of image/png.
+ * Some Wayland clipboard providers expose image/bmp instead of image/png.
  */
 import { describe, expect, test, vi } from "vitest";
 
@@ -58,19 +57,10 @@ vi.mock("child_process", async () => {
 	};
 });
 
-// Mock the native clipboard (not used in Wayland path, but needs to be mocked)
-vi.mock("@mariozechner/clipboard", () => ({
-	default: {
-		hasImage: vi.fn(() => false),
-		getImageBinary: vi.fn(() => Promise.resolve(null)),
-	},
-}));
-
 describe("readClipboardImage BMP conversion", () => {
-	test("converts BMP to PNG on Wayland/WSLg", async () => {
+	test("converts BMP to PNG on Wayland", async () => {
 		const { readClipboardImage } = await import("../src/utils/clipboard-image.ts");
 
-		// Simulate Wayland session (WSLg)
 		const image = await readClipboardImage({
 			env: { WAYLAND_DISPLAY: "wayland-0" },
 			platform: "linux",

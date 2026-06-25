@@ -344,8 +344,6 @@ function detectInstalledTools(): string {
 		"hadolint",
 		"biome",
 		// Clipboard
-		"pbcopy",
-		"pbpaste",
 		"xclip",
 		"xsel",
 		"wl-copy",

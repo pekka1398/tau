@@ -85,9 +85,9 @@ Modifier combinations: `ctrl+shift+x`, `alt+ctrl+x`, `ctrl+shift+alt+x`, `ctrl+1
 | `app.interrupt` | `escape` | Cancel / abort |
 | `app.clear` | `ctrl+c` | Clear editor |
 | `app.exit` | `ctrl+d` | Exit (when editor empty) |
-| `app.suspend` | `ctrl+z` (none on Windows) | Suspend to background |
+| `app.suspend` | `ctrl+z` | Suspend to background |
 | `app.editor.external` | `ctrl+g` | Open in external editor (`$VISUAL` or `$EDITOR`) |
-| `app.clipboard.pasteImage` | `ctrl+v` (`alt+v` on Windows) | Paste image from clipboard |
+| `app.clipboard.pasteImage` | `ctrl+v` | Paste image from clipboard |
 
 ### Sessions
 
@@ -164,8 +164,6 @@ Create `~/.tau/agent/keybindings.json`:
 ```
 
 Each action can have a single key or an array of keys. User config overrides defaults.
-
-On native Windows, `app.suspend` has no default binding because Windows terminals do not support Unix job control. If you bind it manually, tau shows a status message instead of suspending. In WSL, the normal Linux `ctrl+z`/`fg` behavior still applies.
 
 ### Emacs Example
 
