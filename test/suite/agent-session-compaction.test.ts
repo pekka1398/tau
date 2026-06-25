@@ -104,7 +104,6 @@ describe("AgentSession compaction characterization", () => {
 		expect(result.summary).toBe("summary from custom stream");
 		expect(result.keptMessageCount).toBeGreaterThan(0);
 		expect(streamSpy.getCallCount()).toBe(1);
-		expect(streamSpy.getContexts()[0]?.tools).toEqual([]);
 	});
 
 	it("reports manual compaction as in progress while the summary request is pending", async () => {

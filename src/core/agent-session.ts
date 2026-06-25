@@ -28,7 +28,6 @@ import {
 	isContextOverflow,
 	modelsAreEqual,
 	resetApiProviders,
-	streamSimple,
 } from "./ai/index.ts";
 import { type BashResult, executeBashWithOperations } from "./bash-executor.ts";
 import {
@@ -67,7 +66,7 @@ import {
 	type TurnStartEvent,
 	wrapRegisteredTools,
 } from "./extensions/index.ts";
-import { type BashExecutionMessage, type CustomMessage, convertToLlm } from "./messages.ts";
+import type { BashExecutionMessage, CustomMessage } from "./messages.ts";
 import type { ModelRegistry } from "./model-registry.ts";
 import { expandPromptTemplate, type PromptTemplate } from "./prompt-templates.ts";
 import type { ResourceExtensionPaths, ResourceLoader } from "./resource-loader.ts";
@@ -1633,64 +1632,6 @@ export class AgentSession {
 	// Compaction
 	// =========================================================================
 
-	private async _generateCompactionSummary(messages: AgentMessage[], instructions?: string): Promise<string> {
-		if (!this.model) {
-			throw new Error(
-				"No model selected. Set OPENROUTER_API_KEY environment variable and use /model to select a model.",
-			);
-		}
-
-		const model = this.model;
-		const auth = await this._modelRegistry.getApiKeyAndHeaders(model);
-		const fallbackApiKey = auth.ok ? undefined : await this.agent.getApiKey?.(model.provider);
-		if (!auth.ok && !fallbackApiKey && this.agent.streamFn === streamSimple) {
-			if (auth.error.startsWith("No API key found")) {
-				throw new Error(`No API key found for ${model.provider}. Set OPENROUTER_API_KEY environment variable.`);
-			}
-			throw new Error(auth.error);
-		}
-		const providerRetry = this.settingsManager.getProviderRetrySettings();
-		const response = await this.agent.streamFn(
-			model,
-			{
-				systemPrompt: this.systemPrompt,
-				messages: convertToLlm([
-					...messages,
-					{
-						role: "user",
-						content: [{ type: "text", text: buildCompactPrompt(instructions) }],
-						timestamp: Date.now(),
-					},
-				]),
-				tools: [],
-			},
-			{
-				apiKey: auth.ok ? auth.apiKey : fallbackApiKey,
-				headers: auth.ok ? auth.headers : undefined,
-				signal: this.agent.signal,
-				reasoning: this.thinkingLevel === "off" ? undefined : this.thinkingLevel,
-				thinkingBudgets: this.settingsManager.getThinkingBudgets(),
-				sessionId: this.sessionId,
-				onPayload: this.agent.onPayload,
-				onResponse: this.agent.onResponse,
-				timeoutMs: providerRetry.timeoutMs ?? this.settingsManager.getHttpIdleTimeoutMs(),
-				websocketConnectTimeoutMs: this.settingsManager.getWebSocketConnectTimeoutMs(),
-				maxRetries: providerRetry.maxRetries,
-				maxRetryDelayMs: providerRetry.maxRetryDelayMs,
-				serviceTier: this.settingsManager.getServiceTier(),
-			},
-		);
-		const assistantMessage = await response.result();
-		if (assistantMessage.stopReason === "error" || assistantMessage.stopReason === "aborted") {
-			throw new Error(assistantMessage.errorMessage || "Compaction summary request failed");
-		}
-		const summaryText = extractAssistantText(assistantMessage);
-		if (!summaryText) {
-			throw new Error("Model returned empty summary");
-		}
-		return summaryText;
-	}
-
 	/**
 	 * Manually compact the session context by creating a derived compacted
 	 * session. The original session JSONL is left unchanged.
@@ -1716,9 +1657,23 @@ export class AgentSession {
 
 			const originalSessionFile = this.sessionManager.getSessionFile();
 			const settings = this.settingsManager.getCompactionSettings();
-			const summaryText = await this._generateCompactionSummary(messages, instructions);
-			const splitPoint = findSplitPoint(messages, settings.keepRecentChars);
-			const keptMessages = messages.slice(splitPoint.keepFromIndex);
+			const messagesBeforeCompact = messages.length;
+
+			await this._runAgentPrompt(buildCompactPrompt(instructions));
+
+			const currentMessages = this.agent.state.messages;
+			const lastAssistant = [...currentMessages].reverse().find((m) => m.role === "assistant");
+			if (!lastAssistant) {
+				throw new Error("No summary response from model");
+			}
+			const summaryText = extractAssistantText(lastAssistant);
+			if (!summaryText) {
+				throw new Error("Model returned empty summary");
+			}
+
+			const originalMessages = currentMessages.slice(0, messagesBeforeCompact);
+			const splitPoint = findSplitPoint(originalMessages, settings.keepRecentChars);
+			const keptMessages = originalMessages.slice(splitPoint.keepFromIndex);
 
 			const rebuiltMessages = rebuildMessages(summaryText, keptMessages, {
 				originalSessionPath: originalSessionFile,

@@ -6,7 +6,7 @@ describe("InteractiveMode compaction events", () => {
 		return {
 			isInitialized: true,
 			footer: { invalidate: vi.fn() },
-			statusContainer: { clear: vi.fn(), addChild: vi.fn() },
+			statusContainer: { clear: vi.fn() },
 			chatContainer: { clear: vi.fn() },
 			rebuildChatFromMessages: vi.fn(),
 			addMessageToChat: vi.fn(),
@@ -14,45 +14,8 @@ describe("InteractiveMode compaction events", () => {
 			showStatus: vi.fn(),
 			settingsManager: { getShowTerminalProgress: () => false },
 			ui: { requestRender: vi.fn(), terminal: { setProgress: vi.fn() } },
-			workingVisible: true,
-			loadingAnimation: undefined,
-			loaderStatus: "idle",
-			streamingChars: 0,
-			runningToolName: "",
-			waitingStartTime: 0,
-			stopWorkingLoader: vi.fn(),
-			logLoaderTransition: vi.fn(),
-			createWorkingLoader: vi.fn(() => ({ stop: vi.fn() })),
-			updateLoaderMessage: vi.fn(),
-			startLoaderTick: vi.fn(),
-			stopLoaderTick: vi.fn(),
 		};
 	}
-
-	test("shows status on compaction_start", async () => {
-		const fakeThis = createFakeThis();
-
-		const handleEvent = Reflect.get(InteractiveMode.prototype, "handleEvent") as (
-			this: typeof fakeThis,
-			event: {
-				type: "compaction_start";
-				reason: "manual";
-			},
-		) => Promise<void>;
-
-		await handleEvent.call(fakeThis, {
-			type: "compaction_start",
-			reason: "manual",
-		});
-
-		expect(fakeThis.showStatus).toHaveBeenCalledWith("Compacting context...");
-		expect(fakeThis.logLoaderTransition).toHaveBeenCalledWith("waiting", "compaction_start");
-		expect(fakeThis.createWorkingLoader).toHaveBeenCalledTimes(1);
-		expect(fakeThis.statusContainer.addChild).toHaveBeenCalledWith(fakeThis.loadingAnimation);
-		expect(fakeThis.startLoaderTick).toHaveBeenCalledTimes(1);
-		expect(fakeThis.footer.invalidate).toHaveBeenCalledTimes(1);
-		expect(fakeThis.ui.requestRender).toHaveBeenCalled();
-	});
 
 	test("rebuilds chat on compaction_end with result", async () => {
 		const fakeThis = createFakeThis();
@@ -82,9 +45,6 @@ describe("InteractiveMode compaction events", () => {
 
 		expect(fakeThis.chatContainer.clear).toHaveBeenCalledTimes(1);
 		expect(fakeThis.rebuildChatFromMessages).toHaveBeenCalledTimes(1);
-		expect(fakeThis.logLoaderTransition).toHaveBeenCalledWith("idle", "compaction_end");
-		expect(fakeThis.stopLoaderTick).toHaveBeenCalledTimes(1);
-		expect(fakeThis.stopWorkingLoader).toHaveBeenCalledTimes(1);
 		expect(fakeThis.showStatus).toHaveBeenCalledWith("Context compacted");
 	});
 

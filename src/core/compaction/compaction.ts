@@ -224,7 +224,7 @@ export function findSplitPoint(messages: AgentMessage[], keepRecentChars: number
  * Strip a message to only include content counted by effectiveChars.
  * - user: keep text only
  * - assistant: keep text + toolCall name/args, drop thinking
- * - toolResult: drop entirely
+ * - toolResult: keep a bounded text prefix, drop images/details
  * - bashExecution: keep command and a bounded output prefix
  * - custom: keep text only
  * - branchSummary, compactionSummary: drop entirely
@@ -237,6 +237,21 @@ export function truncateBashOutput(output: string, limit: number): { output: str
 	const prefix = output.slice(0, limit);
 	const marker = "\n\n[output truncated during compaction; full output available in archived session]";
 	return { output: `${prefix}${marker}`, truncated: true };
+}
+
+function truncateTextBlocks(
+	content: Array<{ type: string; text?: string }>,
+	limit: number,
+): { content: Array<{ type: "text"; text: string }>; truncated: boolean } {
+	const text = content
+		.filter((block): block is { type: "text"; text: string } => block.type === "text" && Boolean(block.text))
+		.map((block) => block.text)
+		.join("\n");
+	if (!text) {
+		return { content: [], truncated: false };
+	}
+	const { output, truncated } = truncateBashOutput(text, limit);
+	return { content: [{ type: "text", text: output }], truncated };
 }
 
 function stripToEffective(message: AgentMessage, bashOutputChars: number): AgentMessage | null {
@@ -255,6 +270,10 @@ function stripToEffective(message: AgentMessage, bashOutputChars: number): Agent
 			const { output, truncated } = truncateBashOutput(message.output, bashOutputChars);
 			return { ...message, output, truncated: message.truncated || truncated };
 		}
+		case "toolResult": {
+			const { content } = truncateTextBlocks(message.content, bashOutputChars);
+			return content.length > 0 ? { ...message, content, details: undefined } : null;
+		}
 		case "custom": {
 			const content = message.content;
 			if (typeof content === "string") return message;
@@ -265,7 +284,6 @@ function stripToEffective(message: AgentMessage, bashOutputChars: number): Agent
 		case "branchSummary":
 		case "compactionSummary":
 			return message;
-		// toolResult — drop entirely
 		default:
 			return null;
 	}
