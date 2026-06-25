@@ -4,11 +4,11 @@
 		"noEmit": true,
 		"paths": {
 			"*": ["./*"],
-			"@earendil-works/tau-coding-agent": ["./packages/coding-agent/src/index.ts"],
-			"@earendil-works/tau-coding-agent/*": ["./packages/coding-agent/src/*"],
+			"@earendil-works/tau-coding-agent": ["./src/index.ts"],
+			"@earendil-works/tau-coding-agent/*": ["./src/*"],
 			"typebox": ["./node_modules/typebox"]
 		}
 	},
-	"include": ["packages/*/src/**/*", "packages/*/test/**/*", "packages/coding-agent/examples/**/*"],
-	"exclude": ["**/dist/**", "packages/coding-agent/test/**", "packages/coding-agent/examples/**", "test/**"]
+	"include": ["src/**/*", "scripts/**/*.ts"],
+	"exclude": ["**/dist/**", "test/**", "examples/**"]
 }

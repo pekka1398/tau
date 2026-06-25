@@ -37,8 +37,8 @@ tau todo add "Fix the bug" --priority high --tag bug
 ## Architecture
 
 ```
-packages/coding-agent    Main Tau CLI/app, including AI access, agent runtime, and TUI
-packages/ai-dash         Sandboxed shell (C, modified dash)
+src/         Main Tau CLI/app, including AI access, agent runtime, and TUI
+ai-dash/    Sandboxed shell (C, modified dash)
 ```
 
 ## Tools
@@ -52,11 +52,11 @@ Tau has 4 core tools:
 ## Building
 
 ```bash
-# Build all packages
+# Build the app
 bun run build
 
 # Build standalone binary
-cd packages/coding-agent && bun run build:binary
+bun run build:binary
 
 # Lint + type check
 bun run check

@@ -25,13 +25,13 @@
 	},
 	"files": {
 		"includes": [
-			"packages/*/src/**/*.ts",
-			"packages/*/test/**/*.ts",
-			"packages/coding-agent/examples/**/*.ts",
+			"src/**/*.ts",
+			"test/**/*.ts",
+			"examples/**/*.ts",
+			"scripts/**/*.ts",
 			"!**/node_modules/**/*",
 			"!**/test-sessions.ts",
 			"!**/models.generated.ts",
-			"!packages/mom/data/**/*",
 			"!!**/node_modules",
 			"!reference-repo"
 		]

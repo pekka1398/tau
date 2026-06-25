@@ -1,0 +1,14 @@
+{
+	"extends": "./tsconfig.base.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"paths": {
+			"@earendil-works/tau-coding-agent": ["./src/index.ts"],
+			"@earendil-works/tau-coding-agent/hooks": ["./src/core/hooks/index.ts"],
+			"typebox": ["./node_modules/typebox"]
+		},
+		"skipLibCheck": true
+	},
+	"include": ["examples/**/*.ts"],
+	"exclude": ["node_modules", "dist"]
+}
