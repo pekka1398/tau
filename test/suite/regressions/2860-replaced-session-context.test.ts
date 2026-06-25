@@ -139,7 +139,7 @@ describe("regression #2860: replaced session callbacks", () => {
 		return { runtime, faux };
 	}
 
-	it("rebinds before withSession, targets the replacement session, and invalidates stale pi/ctx", async () => {
+	it("rebinds before withSession, targets the replacement session, and invalidates stale api/ctx", async () => {
 		const events: string[] = [];
 		let oldCtx: ExtensionCommandContext | undefined;
 		let oldPi: ExtensionAPI | undefined;

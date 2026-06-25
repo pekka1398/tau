@@ -1,6 +1,6 @@
 # Tau
 
-AI coding agent. Fork of [pi](https://github.com/earendil-works/pi), evolved into its own thing.
+OpenRouter-only terminal coding agent with a bundled sandboxed shell.
 
 ## What is Tau?
 

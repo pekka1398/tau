@@ -8,7 +8,7 @@ import { SettingsManager } from "../src/core/settings-manager.ts";
  * Tests for the fix to a bug where external file changes to arrays were overwritten.
  *
  * The bug scenario was:
- * 1. Pi starts with settings.json containing packages: ["npm:some-pkg"]
+ * 1. Tau starts with settings.json containing packages: ["npm:some-pkg"]
  * 2. User externally edits file to packages: []
  * 3. User changes an unrelated setting (e.g., theme) via UI
  * 4. save() would overwrite packages back to ["npm:some-pkg"] from stale in-memory state
@@ -43,15 +43,15 @@ describe("SettingsManager - External Edit Preservation", () => {
 			settingsPath,
 			JSON.stringify({
 				theme: "dark",
-				packages: ["npm:pi-mcp-adapter"],
+				packages: ["npm:tau-mcp-adapter"],
 			}),
 		);
 
-		// Pi starts up, loads settings into memory
+		// Tau starts up, loads settings into memory
 		const manager = SettingsManager.create(projectDir, agentDir);
 
-		// At this point, globalSettings.packages = ["npm:pi-mcp-adapter"]
-		expect(manager.getPackages()).toEqual(["npm:pi-mcp-adapter"]);
+		// At this point, globalSettings.packages = ["npm:tau-mcp-adapter"]
+		expect(manager.getPackages()).toEqual(["npm:tau-mcp-adapter"]);
 
 		// User externally edits settings.json to remove the package
 		const currentSettings = JSON.parse(readFileSync(settingsPath, "utf-8"));

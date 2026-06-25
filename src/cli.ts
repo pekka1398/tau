@@ -13,7 +13,7 @@ process.title = APP_NAME;
 process.env.TAU_CODING_AGENT = "true";
 process.emitWarning = (() => {}) as typeof process.emitWarning;
 
-// Configure undici's global dispatcher before provider SDKs issue requests.
+// Configure undici's global dispatcher before AI HTTP requests are issued.
 // Runtime settings are applied once SettingsManager has loaded global/project settings.
 configureHttpDispatcher();
 

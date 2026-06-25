@@ -284,7 +284,7 @@ export class AuthStorage {
 		}
 
 		if (this.fallbackResolver?.(provider)) {
-			return { configured: false, source: "fallback", label: "custom provider config" };
+			return { configured: false, source: "fallback", label: "OpenRouter model config" };
 		}
 
 		return { configured: false };

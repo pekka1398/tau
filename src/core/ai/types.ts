@@ -329,7 +329,7 @@ export type AssistantMessageEvent =
 
 /**
  * Compatibility settings for OpenAI-compatible completions APIs.
- * Use this to override URL-based auto-detection for custom providers.
+ * Use this to override URL-based auto-detection for OpenRouter-compatible endpoints.
  */
 export interface OpenAICompletionsCompat {
 	/** Whether the provider supports the `store` field. Default: auto-detected from URL. */
