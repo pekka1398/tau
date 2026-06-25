@@ -1,4 +1,6 @@
+import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Context } from "../../src/core/ai/index.ts";
 import {
 	type AssistantMessage,
 	createAssistantMessageEventStream,
@@ -18,10 +20,18 @@ function createUsage(totalTokens: number) {
 	};
 }
 
-function useSummaryStreamFn(harness: Harness, summary: string): () => number {
+function useSummaryStreamFn(
+	harness: Harness,
+	summary: string,
+): {
+	getCallCount: () => number;
+	getContexts: () => Context[];
+} {
 	let callCount = 0;
-	harness.session.agent.streamFn = (model) => {
+	const contexts: Context[] = [];
+	harness.session.agent.streamFn = (model, context) => {
 		callCount++;
+		contexts.push(context);
 		const stream = createAssistantMessageEventStream();
 		queueMicrotask(() => {
 			const message: AssistantMessage = {
@@ -35,7 +45,10 @@ function useSummaryStreamFn(harness: Harness, summary: string): () => number {
 		});
 		return stream;
 	};
-	return () => callCount;
+	return {
+		getCallCount: () => callCount,
+		getContexts: () => contexts,
+	};
 }
 
 function seedCompactableSession(harness: Harness): void {
@@ -84,12 +97,47 @@ describe("AgentSession compaction characterization", () => {
 		const harness = await createHarness({ withConfiguredAuth: false });
 		harnesses.push(harness);
 		seedCompactableSession(harness);
-		const getStreamCallCount = useSummaryStreamFn(harness, "summary from custom stream");
+		const streamSpy = useSummaryStreamFn(harness, "summary from custom stream");
 
 		const result = await harness.session.compact();
 
 		expect(result.summary).toBe("summary from custom stream");
 		expect(result.keptMessageCount).toBeGreaterThan(0);
-		expect(getStreamCallCount()).toBe(1);
+		expect(streamSpy.getCallCount()).toBe(1);
+		expect(streamSpy.getContexts()[0]?.tools).toEqual([]);
+	});
+
+	it("creates a derived persisted session and leaves the original JSONL unchanged", async () => {
+		const harness = await createHarness({ persistSession: true });
+		harnesses.push(harness);
+		seedCompactableSession(harness);
+		const originalSessionFile = harness.sessionManager.getSessionFile();
+		expect(originalSessionFile).toBeDefined();
+		const originalJsonl = readFileSync(originalSessionFile!, "utf8");
+		const streamSpy = useSummaryStreamFn(harness, "summary from persisted compact");
+
+		const result = await harness.session.compact("focus on files changed");
+
+		expect(streamSpy.getCallCount()).toBe(1);
+		expect(readFileSync(originalSessionFile!, "utf8")).toBe(originalJsonl);
+		expect(result.compactedFrom).toBe(originalSessionFile);
+		expect(result.sessionFile).toBeDefined();
+		expect(result.sessionFile).not.toBe(originalSessionFile);
+
+		const header = harness.sessionManager.getHeader();
+		expect(header?.compactedFrom).toBe(originalSessionFile);
+		expect(header?.parentSession).toBe(originalSessionFile);
+		expect(header?.compactInstructions).toBe("focus on files changed");
+		expect(header?.compactedAt).toEqual(expect.any(String));
+
+		const compactedContext = harness.sessionManager.buildSessionContext();
+		const summaryText = compactedContext.messages[0]?.content;
+		expect(JSON.stringify(summaryText)).toContain("The conversation before this point was compacted.");
+		expect(JSON.stringify(summaryText)).toContain(`Full original transcript:\\n${originalSessionFile}`);
+		expect(JSON.stringify(summaryText)).toContain("summary from persisted compact");
+
+		const requestText = JSON.stringify(streamSpy.getContexts()[0]?.messages.at(-1));
+		expect(requestText).toContain("Additional user instructions for this compaction:");
+		expect(requestText).toContain("focus on files changed");
 	});
 });

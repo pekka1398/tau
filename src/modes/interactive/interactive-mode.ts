@@ -2566,9 +2566,9 @@ export class InteractiveMode {
 				await this.handleClearCommand();
 				return;
 			}
-			if (text === "/compact") {
+			if (text === "/compact" || text.startsWith("/compact ")) {
 				this.editor.setText("");
-				await this.handleCompactCommand();
+				await this.handleCompactCommand(text.slice("/compact".length).trim() || undefined);
 				return;
 			}
 			if (text === "/reload") {
@@ -2991,8 +2991,8 @@ export class InteractiveMode {
 				break;
 
 			case "compaction_start": {
-				// Approach A: model streams summary directly through the agent loop.
-				// No special UI needed — the normal message streaming handles it.
+				// Summary generation is a direct text-only model request; the UI updates
+				// after the derived compacted session is created.
 				break;
 			}
 
@@ -5257,7 +5257,7 @@ export class InteractiveMode {
 		this.ui.requestRender();
 	}
 
-	private async handleCompactCommand(): Promise<void> {
+	private async handleCompactCommand(customInstructions?: string): Promise<void> {
 		const entries = this.sessionManager.getEntries();
 		const messageCount = entries.filter((e) => e.type === "message").length;
 
@@ -5273,7 +5273,7 @@ export class InteractiveMode {
 		this.statusContainer.clear();
 
 		try {
-			await this.session.compact();
+			await this.session.compact(customInstructions);
 		} catch {
 			// Ignore, will be emitted as an event
 		}

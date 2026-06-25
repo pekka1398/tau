@@ -1,9 +1,9 @@
 /**
- * E2E tests for AgentSession compaction behavior (Approach A).
+ * E2E tests for AgentSession compaction behavior.
  *
  * These tests use real LLM calls (no mocking) to verify:
  * - Manual compaction works correctly via /compact
- * - Session is rebuilt after compaction (summary as user msg + kept recent)
+ * - Session is compacted into summary as user msg + kept recent context
  * - Compaction events are emitted
  */
 

@@ -26,23 +26,15 @@ Both use the same structured summary format and track file operations cumulative
 
 ### When It Triggers
 
-Auto-compaction triggers when:
-
-```
-contextTokens > contextWindow - reserveTokens
-```
-
-By default, `reserveTokens` is 16384 tokens (configurable in `~/.tau/agent/settings.json` or `<project-dir>/.tau/settings.json`). This leaves room for the LLM's response.
-
-You can also trigger manually with `/compact [instructions]`, where optional instructions focus the summary.
+Compaction is manual. Trigger it with `/compact [instructions]`, where optional instructions focus the summary.
 
 ### How It Works
 
-1. **Find cut point**: Walk backwards from newest message, accumulating token estimates until `keepRecentTokens` (default 20k, configurable in `~/.tau/agent/settings.json` or `<project-dir>/.tau/settings.json`) is reached
-2. **Extract messages**: Collect messages from the previous kept boundary (or session start) up to the cut point
-3. **Generate summary**: Call LLM to summarize with structured format, passing the previous summary as iterative context when present
-4. **Append entry**: Save `CompactionEntry` with summary and `firstKeptEntryId`
-5. **Reload**: Session reloads, using summary + messages from `firstKeptEntryId` onwards
+1. **Preserve original**: The current session JSONL is left unchanged.
+2. **Generate summary**: Tau calls the model with executable tools disabled at runtime. The prompt still says `Do NOT use tools. Only output the summary text.`
+3. **Find recent tail**: Tau walks backward from the newest message until `keepRecentChars` is reached.
+4. **Create derived session**: Tau writes a new session file with compaction metadata in the header.
+5. **Switch session**: The active session becomes the derived compacted session.
 
 ```
 Before compaction:
@@ -56,16 +48,14 @@ Before compaction:
                                    ↑
                           firstKeptEntryId (entry 4)
 
-After compaction (new entry appended):
+After compaction (new derived session):
 
-  entry:  0     1     2     3      4     5     6      7      8     9     10
-        ┌─────┬─────┬─────┬─────┬──────┬─────┬─────┬──────┬──────┬─────┬─────┐
-        │ hdr │ usr │ ass │ tool │ usr │ ass │ tool │ tool │ ass │ tool│ cmp │
-        └─────┴─────┴─────┴──────┴─────┴─────┴──────┴──────┴─────┴─────┴─────┘
-               └──────────┬──────┘ └──────────────────────┬───────────────────┘
-                 not sent to LLM                    sent to LLM
-                                                         ↑
-                                              starts from firstKeptEntryId
+  entry:  0       1           2     3      4      5     6
+        ┌─────┬─────────┬─────┬─────┬──────┬──────┬─────┐
+        │ hdr │ summary │ usr │ ass │ tool │ tool │ ass │
+        └─────┴─────────┴─────┴─────┴──────┴──────┴─────┘
+                 ↑          └──────── recent exact tail ────────┘
+         synthetic user message
 
 What the LLM sees:
 
@@ -73,76 +63,58 @@ What the LLM sees:
   │ system │ summary │ usr │ ass │ tool │ tool │ ass │ tool │
   └────────┴─────────┴─────┴─────┴──────┴──────┴─────┴──────┘
        ↑         ↑      └─────────────────┬────────────────┘
-    prompt   from cmp          messages from firstKeptEntryId
+    prompt  synthetic          recent retained messages
 ```
 
-On repeated compactions, the summarized span starts at the previous compaction's kept boundary (`firstKeptEntryId`), not at the compaction entry itself, falling back to the entry after the previous compaction if that kept entry cannot be found in the path. This preserves messages that survived the earlier compaction by including them in the next summarization pass as well. Tau also recalculates `tokensBefore` from the rebuilt session context before writing the new `CompactionEntry`, so the token count reflects the actual pre-compaction context being replaced.
+The synthetic user message has this shape:
 
-### Split Turns
+```text
+The conversation before this point was compacted.
 
-A "turn" starts with a user message and includes all assistant responses and tool calls until the next user message. Normally, compaction cuts at turn boundaries.
+Full original transcript:
+/absolute/path/to/original-session.jsonl
 
-When a single turn exceeds `keepRecentTokens`, the cut point lands mid-turn at an assistant message. This is a "split turn":
+Summary:
+<model-generated summary>
+```
+
+### Recent Tail
+
+Tau chooses the retained tail by walking backward through messages and accumulating effective characters until `keepRecentChars` is reached. This is a character-budget split, not a semantic turn split, so the retained tail can start mid-turn.
 
 ```
-Split turn (one huge turn exceeds budget):
+Retained tail:
 
   entry:  0     1     2      3     4      5      6     7      8
         ┌─────┬─────┬─────┬──────┬─────┬──────┬──────┬─────┬──────┐
         │ hdr │ usr │ ass │ tool │ ass │ tool │ tool │ ass │ tool │
         └─────┴─────┴─────┴──────┴─────┴──────┴──────┴─────┴──────┘
-                ↑                                     ↑
-         turnStartIndex = 1                  firstKeptEntryId = 7
-                │                                     │
-                └──── turnPrefixMessages (1-6) ───────┘
-                                                      └── kept (7-8)
-
-  isSplitTurn = true
-  messagesToSummarize = []  (no complete turns before)
-  turnPrefixMessages = [usr, ass, tool, ass, tool, tool]
+                                                      ↑
+                                             keepFromIndex = 7
+                                                      └── retained tail
 ```
 
-For split turns, tau generates two summaries and merges them:
-1. **History summary**: Previous context (if any)
-2. **Turn prefix summary**: The early part of the split turn
+Before writing the derived session, retained messages are stripped to effective content: user text, assistant text and tool-call arguments, custom text, and bash commands. Bash output is truncated to `bashOutputChars`; tool result messages and thinking blocks are dropped.
 
-### Cut Point Rules
+### Derived Session Metadata
 
-Valid cut points are:
-- User messages
-- Assistant messages
-- BashExecution messages
-- Custom messages (custom_message, branch_summary)
-
-Never cut at tool results (they must stay with their tool call).
-
-### CompactionEntry Structure
-
-Defined in [`session-manager.ts`](https://github.com/pekka1398/tau/blob/main/src/core/session-manager.ts):
+Compaction metadata is stored in the new session header:
 
 ```typescript
-interface CompactionEntry<T = unknown> {
-  type: "compaction";
+interface SessionHeader {
+  type: "session";
+  version: 3;
   id: string;
-  parentId: string;
-  timestamp: number;
-  summary: string;
-  firstKeptEntryId: string;
-  tokensBefore: number;
-  fromHook?: boolean;  // true if provided by extension (legacy field name)
-  details?: T;         // implementation-specific data
-}
-
-// Default compaction uses this for details (from compaction.ts):
-interface CompactionDetails {
-  readFiles: string[];
-  modifiedFiles: string[];
+  timestamp: string;
+  cwd: string;
+  parentSession?: string;
+  compactedFrom?: string;
+  compactedAt?: string;
+  compactInstructions?: string;
 }
 ```
 
-Extensions can store any JSON-serializable data in `details`. The default compaction tracks file operations, but custom extension implementations can use their own structure.
-
-See [`prepareCompaction()`](https://github.com/pekka1398/tau/blob/main/src/core/compaction/compaction.ts) and [`compact()`](https://github.com/pekka1398/tau/blob/main/src/core/compaction/compaction.ts) for the implementation.
+`compactedFrom` and `parentSession` point to the original session JSONL.
 
 ## Branch Summarization
 
@@ -379,16 +351,20 @@ Configure compaction in `~/.tau/agent/settings.json` or `<project-dir>/.tau/sett
 {
   "compaction": {
     "enabled": true,
-    "reserveTokens": 16384,
-    "keepRecentTokens": 20000
+    "keepRecentChars": 100000,
+    "bashOutputChars": 1000
   }
 }
 ```
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `enabled` | `true` | Enable auto-compaction |
-| `reserveTokens` | `16384` | Tokens to reserve for LLM response |
-| `keepRecentTokens` | `20000` | Recent tokens to keep (not summarized) |
+| `enabled` | `true` | Compatibility flag for compaction settings |
+| `keepRecentChars` | `100000` | Recent effective context characters to keep |
+| `bashOutputChars` | `1000` | Bash output characters to keep per retained bash message |
 
-Disable auto-compaction with `"enabled": false`. You can still compact manually with `/compact`.
+For retained bash messages, Tau keeps the command and the first `bashOutputChars` characters of output. If output was longer, Tau appends:
+
+```text
+[output truncated during compaction; full output available in archived session]
+```

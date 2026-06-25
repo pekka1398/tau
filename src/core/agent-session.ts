@@ -28,16 +28,16 @@ import {
 	isContextOverflow,
 	modelsAreEqual,
 	resetApiProviders,
+	streamSimple,
 } from "./ai/index.ts";
 import { type BashResult, executeBashWithOperations } from "./bash-executor.ts";
 import {
-	COMPACT_PROMPT,
+	buildCompactPrompt,
 	type CompactionResult,
 	collectEntriesForBranchSummary,
 	extractAssistantText,
 	findSplitPoint,
 	generateBranchSummary,
-	KEEP_RECENT_CHARS,
 	rebuildMessages,
 } from "./compaction/index.ts";
 import { DEFAULT_THINKING_LEVEL } from "./defaults.ts";
@@ -67,7 +67,7 @@ import {
 	type TurnStartEvent,
 	wrapRegisteredTools,
 } from "./extensions/index.ts";
-import type { BashExecutionMessage, CustomMessage } from "./messages.ts";
+import { type BashExecutionMessage, type CustomMessage, convertToLlm } from "./messages.ts";
 import type { ModelRegistry } from "./model-registry.ts";
 import { expandPromptTemplate, type PromptTemplate } from "./prompt-templates.ts";
 import type { ResourceExtensionPaths, ResourceLoader } from "./resource-loader.ts";
@@ -1632,17 +1632,69 @@ export class AgentSession {
 	// Compaction
 	// =========================================================================
 
+	private async _generateCompactionSummary(messages: AgentMessage[], instructions?: string): Promise<string> {
+		if (!this.model) {
+			throw new Error(
+				"No model selected. Set OPENROUTER_API_KEY environment variable and use /model to select a model.",
+			);
+		}
+
+		const model = this.model;
+		const auth = await this._modelRegistry.getApiKeyAndHeaders(model);
+		const fallbackApiKey = auth.ok ? undefined : await this.agent.getApiKey?.(model.provider);
+		if (!auth.ok && !fallbackApiKey && this.agent.streamFn === streamSimple) {
+			if (auth.error.startsWith("No API key found")) {
+				throw new Error(`No API key found for ${model.provider}. Set OPENROUTER_API_KEY environment variable.`);
+			}
+			throw new Error(auth.error);
+		}
+		const providerRetry = this.settingsManager.getProviderRetrySettings();
+		const response = await this.agent.streamFn(
+			model,
+			{
+				systemPrompt: this.systemPrompt,
+				messages: convertToLlm([
+					...messages,
+					{
+						role: "user",
+						content: [{ type: "text", text: buildCompactPrompt(instructions) }],
+						timestamp: Date.now(),
+					},
+				]),
+				tools: [],
+			},
+			{
+				apiKey: auth.ok ? auth.apiKey : fallbackApiKey,
+				headers: auth.ok ? auth.headers : undefined,
+				signal: this.agent.signal,
+				reasoning: this.thinkingLevel === "off" ? undefined : this.thinkingLevel,
+				thinkingBudgets: this.settingsManager.getThinkingBudgets(),
+				sessionId: this.sessionId,
+				onPayload: this.agent.onPayload,
+				onResponse: this.agent.onResponse,
+				timeoutMs: providerRetry.timeoutMs ?? this.settingsManager.getHttpIdleTimeoutMs(),
+				websocketConnectTimeoutMs: this.settingsManager.getWebSocketConnectTimeoutMs(),
+				maxRetries: providerRetry.maxRetries,
+				maxRetryDelayMs: providerRetry.maxRetryDelayMs,
+				serviceTier: this.settingsManager.getServiceTier(),
+			},
+		);
+		const assistantMessage = await response.result();
+		if (assistantMessage.stopReason === "error" || assistantMessage.stopReason === "aborted") {
+			throw new Error(assistantMessage.errorMessage || "Compaction summary request failed");
+		}
+		const summaryText = extractAssistantText(assistantMessage);
+		if (!summaryText) {
+			throw new Error("Model returned empty summary");
+		}
+		return summaryText;
+	}
+
 	/**
-	 * Manually compact the session context (Approach A).
-	 *
-	 * Sends a summarization prompt as a user message into the ongoing
-	 * conversation so the existing cache prefix is preserved. After the
-	 * model responds with a summary, the session is rebuilt:
-	 * [summary as user message] + [most recent ~50 000 chars of effective content].
-	 *
-	 * Manual only — no auto-trigger.
+	 * Manually compact the session context by creating a derived compacted
+	 * session. The original session JSONL is left unchanged.
 	 */
-	async compact(): Promise<CompactionResult> {
+	async compact(instructions?: string): Promise<CompactionResult> {
 		this._emit({ type: "compaction_start", reason: "manual" });
 
 		try {
@@ -1657,41 +1709,30 @@ export class AgentSession {
 				throw new Error("Nothing to compact (session too small)");
 			}
 
-			// Remember the message count before the summarization prompt
-			const messagesBeforeCompact = messages.length;
+			const originalSessionFile = this.sessionManager.getSessionFile();
+			const settings = this.settingsManager.getCompactionSettings();
+			const summaryText = await this._generateCompactionSummary(messages, instructions);
+			const splitPoint = findSplitPoint(messages, settings.keepRecentChars);
+			const keptMessages = messages.slice(splitPoint.keepFromIndex);
 
-			// Send the summarization prompt as a normal user message (Approach A — preserves cache)
-			await this._runAgentPrompt(COMPACT_PROMPT);
-
-			// After the model responds, extract the summary from the last assistant message
-			const currentMessages = this.agent.state.messages;
-			const lastAssistant = [...currentMessages].reverse().find((m) => m.role === "assistant");
-			if (!lastAssistant) {
-				throw new Error("No summary response from model");
-			}
-			const summaryText = extractAssistantText(lastAssistant);
-			if (!summaryText) {
-				throw new Error("Model returned empty summary");
-			}
-
-			// The messages array now contains: [original..., compact prompt (user), summary (assistant)]
-			// We need to rebuild: [summary as user message, ...kept recent messages]
-
-			// Use only the original messages (before the compact prompt) for finding the split point
-			const originalMessages = currentMessages.slice(0, messagesBeforeCompact);
-			const splitPoint = findSplitPoint(originalMessages, KEEP_RECENT_CHARS);
-			const keptMessages = originalMessages.slice(splitPoint.keepFromIndex);
-
-			// Rebuild agent state
-			const rebuiltMessages = rebuildMessages(summaryText, keptMessages);
+			const rebuiltMessages = rebuildMessages(summaryText, keptMessages, {
+				originalSessionPath: originalSessionFile,
+				bashOutputChars: settings.bashOutputChars,
+			});
 			this.agent.state.messages = rebuiltMessages;
 
-			// Rebuild session manager to match — create a fresh session with the rebuilt messages
-			this.sessionManager.rebuildFromMessages(rebuiltMessages);
+			const compactedAt = new Date().toISOString();
+			const sessionFile = this.sessionManager.createCompactedSession(rebuiltMessages, {
+				compactedFrom: originalSessionFile,
+				compactedAt,
+				compactInstructions: instructions?.trim() || undefined,
+			});
 
 			const result: CompactionResult = {
 				summary: summaryText,
 				keptMessageCount: keptMessages.length,
+				sessionFile,
+				compactedFrom: originalSessionFile,
 			};
 			this._emit({
 				type: "compaction_end",
@@ -1901,7 +1942,7 @@ export class AgentSession {
 				compact: (options) => {
 					void (async () => {
 						try {
-							const result = await this.compact();
+							const result = await this.compact(options?.customInstructions);
 							options?.onComplete?.(result);
 						} catch (error) {
 							const err = error instanceof Error ? error : new Error(String(error));

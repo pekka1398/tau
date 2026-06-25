@@ -1,5 +1,5 @@
 /**
- * Compaction module — manual-only context compaction via Approach A.
+ * Compaction module — manual-only derived-session context compaction.
  */
 
 // Branch summarization is still used by tree navigation
@@ -13,8 +13,11 @@ export {
 	prepareBranchEntries,
 } from "./branch-summarization.ts";
 export {
+	BASH_OUTPUT_CHARS,
+	buildCompactPrompt,
 	COMPACT_PROMPT,
 	type CompactionResult,
+	createCompactionSummaryUserMessage,
 	effectiveChars,
 	estimateTokens,
 	extractAssistantText,
@@ -24,4 +27,5 @@ export {
 	rebuildMessages,
 	type SplitPoint,
 	totalMessageChars,
+	truncateBashOutput,
 } from "./compaction.ts";

@@ -1,12 +1,9 @@
 /**
  * Context compaction for long sessions.
  *
- * When the user runs /compact, a summarization prompt is injected as a user
- * message into the ongoing conversation (Approach A) so the existing cache
- * prefix is preserved. After the model responds with a summary, the session
- * is rebuilt: summary (as user message) + the most recent ~50 000 chars of
- * "effective content" (user msg + assistant text + tool calls, no thinking /
- * tool results).
+ * When the user runs /compact, Tau creates a new derived session. The original
+ * JSONL stays unchanged; the new session starts with a synthetic summary
+ * message and keeps a recent exact tail from the original conversation.
  *
  * Compaction is manual only — no auto-trigger.
  */
@@ -17,8 +14,11 @@ import type { AgentMessage } from "../agent/index.ts";
 // Constants
 // ============================================================================
 
-/** How many chars of effective content to keep after compaction. */
-export const KEEP_RECENT_CHARS = 50_000;
+/** How many chars of effective content to keep after compaction by default. */
+export const KEEP_RECENT_CHARS = 100_000;
+
+/** How many bash output chars to keep in compacted tail messages by default. */
+export const BASH_OUTPUT_CHARS = 1_000;
 
 /** The prompt injected into the conversation to trigger summarization. */
 export const COMPACT_PROMPT =
@@ -39,6 +39,12 @@ export const COMPACT_PROMPT =
 	"## Key Decisions\n" +
 	"- **[Decision]**: [Rationale]\n\n" +
 	"Do NOT use any tools. Only output the summary as text.";
+
+export function buildCompactPrompt(instructions?: string): string {
+	const trimmedInstructions = instructions?.trim();
+	if (!trimmedInstructions) return COMPACT_PROMPT;
+	return `${COMPACT_PROMPT}\n\nAdditional user instructions for this compaction:\n${trimmedInstructions}`;
+}
 
 // ============================================================================
 // Effective content helpers
@@ -219,11 +225,21 @@ export function findSplitPoint(messages: AgentMessage[], keepRecentChars: number
  * - user: keep text only
  * - assistant: keep text + toolCall name/args, drop thinking
  * - toolResult: drop entirely
- * - bashExecution: keep command only, drop output
+ * - bashExecution: keep command and a bounded output prefix
  * - custom: keep text only
  * - branchSummary, compactionSummary: drop entirely
  */
-function stripToEffective(message: AgentMessage): AgentMessage | null {
+export function truncateBashOutput(output: string, limit: number): { output: string; truncated: boolean } {
+	if (limit < 0) limit = 0;
+	if (output.length <= limit) {
+		return { output, truncated: false };
+	}
+	const prefix = output.slice(0, limit);
+	const marker = "\n\n[output truncated during compaction; full output available in archived session]";
+	return { output: `${prefix}${marker}`, truncated: true };
+}
+
+function stripToEffective(message: AgentMessage, bashOutputChars: number): AgentMessage | null {
 	switch (message.role) {
 		case "user": {
 			const content = message.content;
@@ -235,8 +251,10 @@ function stripToEffective(message: AgentMessage): AgentMessage | null {
 			const stripped = message.content.filter((b) => (b.type === "text" && b.text) || b.type === "toolCall");
 			return stripped.length > 0 ? { ...message, content: stripped } : null;
 		}
-		case "bashExecution":
-			return { ...message, output: "" };
+		case "bashExecution": {
+			const { output, truncated } = truncateBashOutput(message.output, bashOutputChars);
+			return { ...message, output, truncated: message.truncated || truncated };
+		}
 		case "custom": {
 			const content = message.content;
 			if (typeof content === "string") return message;
@@ -253,19 +271,39 @@ function stripToEffective(message: AgentMessage): AgentMessage | null {
 	}
 }
 
-export function rebuildMessages(summaryText: string, keptMessages: AgentMessage[]): AgentMessage[] {
-	const summaryMessage: AgentMessage = {
+export function createCompactionSummaryUserMessage(
+	summaryText: string,
+	originalSessionPath: string | undefined,
+): AgentMessage {
+	const transcriptPath = originalSessionPath ?? "(in-memory session)";
+	return {
 		role: "user",
 		content: [
 			{
 				type: "text",
-				text: `The conversation history before this point was compacted into the following summary:\n\n${summaryText}`,
+				text:
+					"The conversation before this point was compacted.\n\n" +
+					`Full original transcript:\n${transcriptPath}\n\n` +
+					`Summary:\n${summaryText}`,
 			},
 		],
 		timestamp: Date.now(),
 	};
+}
 
-	const stripped = keptMessages.map(stripToEffective).filter((m): m is AgentMessage => m !== null);
+export function rebuildMessages(
+	summaryText: string,
+	keptMessages: AgentMessage[],
+	options: { originalSessionPath?: string; bashOutputChars?: number } = {},
+): AgentMessage[] {
+	const summaryMessage: AgentMessage = {
+		...createCompactionSummaryUserMessage(summaryText, options.originalSessionPath),
+	};
+	const bashOutputChars = options.bashOutputChars ?? BASH_OUTPUT_CHARS;
+
+	const stripped = keptMessages
+		.map((message) => stripToEffective(message, bashOutputChars))
+		.filter((m): m is AgentMessage => m !== null);
 
 	return [summaryMessage, ...stripped];
 }
@@ -277,6 +315,8 @@ export function rebuildMessages(summaryText: string, keptMessages: AgentMessage[
 export interface CompactionResult {
 	summary: string;
 	keptMessageCount: number;
+	sessionFile?: string;
+	compactedFrom?: string;
 }
 
 /**

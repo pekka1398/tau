@@ -197,6 +197,12 @@ For sessions with a parent (created via `/fork`, `/clone`, or `newSession({ pare
 {"type":"session","version":3,"id":"uuid","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/path/to/project","parentSession":"/path/to/original/session.jsonl"}
 ```
 
+Compacted sessions are derived sessions. The original session JSONL is not modified; the new session header records where it came from:
+
+```json
+{"type":"session","version":3,"id":"uuid","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/path/to/project","parentSession":"/path/to/original/session.jsonl","compactedFrom":"/path/to/original/session.jsonl","compactedAt":"2024-12-03T14:10:00.000Z","compactInstructions":"focus on failing tests"}
+```
+
 ### SessionMessageEntry
 
 A message in the conversation. The `message` field contains an `AgentMessage`.
@@ -225,7 +231,7 @@ Emitted when the user changes the thinking/reasoning level.
 
 ### CompactionEntry
 
-Created when context is compacted. Stores a summary of earlier messages.
+Legacy entry created by older in-place compaction implementations. New manual compaction creates a derived session instead and stores compaction metadata in `SessionHeader`.
 
 ```json
 {"type":"compaction","id":"f6g7h8i9","parentId":"e5f6g7h8","timestamp":"2024-12-03T14:10:00.000Z","summary":"User discussed X, Y, Z...","firstKeptEntryId":"c3d4e5f6","tokensBefore":50000}
@@ -310,7 +316,7 @@ Entries form a tree:
 
 1. Collects all entries on the path
 2. Extracts current model and thinking level settings
-3. If a `CompactionEntry` is on the path:
+3. If a legacy `CompactionEntry` is on the path:
    - Emits the summary first
    - Then messages from `firstKeptEntryId` to compaction
    - Then messages after compaction

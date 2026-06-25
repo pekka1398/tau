@@ -6,11 +6,14 @@ import { normalizePath, resolvePath } from "../utils/paths.ts";
 import type { Transport } from "./ai/index.ts";
 import { DEFAULT_HTTP_IDLE_TIMEOUT_MS, parseHttpIdleTimeoutMs } from "./http-dispatcher.ts";
 
-/** @deprecated Only `enabled` is used. Token-based fields are no longer consumed. */
 export interface CompactionSettings {
 	enabled?: boolean; // default: true
-	reserveTokens?: number; // unused — compaction uses KEEP_RECENT_CHARS
-	keepRecentTokens?: number; // unused — compaction uses KEEP_RECENT_CHARS
+	keepRecentChars?: number; // default: 100000
+	bashOutputChars?: number; // default: 1000
+	/** @deprecated Use keepRecentChars. */
+	reserveTokens?: number;
+	/** @deprecated Use keepRecentChars. */
+	keepRecentTokens?: number;
 }
 
 export interface BranchSummarySettings {
@@ -721,6 +724,14 @@ export class SettingsManager {
 
 	getCompactionEnabled(): boolean {
 		return this.settings.compaction?.enabled ?? true;
+	}
+
+	getCompactionSettings(): { enabled: boolean; keepRecentChars: number; bashOutputChars: number } {
+		return {
+			enabled: this.getCompactionEnabled(),
+			keepRecentChars: this.settings.compaction?.keepRecentChars ?? 100_000,
+			bashOutputChars: this.settings.compaction?.bashOutputChars ?? 1_000,
+		};
 	}
 
 	getBranchSummarySettings(): { reserveTokens: number; skipPrompt: boolean } {

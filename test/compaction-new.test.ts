@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { AgentMessage } from "../src/core/agent/index.ts";
 import {
+	BASH_OUTPUT_CHARS,
+	buildCompactPrompt,
 	COMPACT_PROMPT,
 	effectiveChars,
 	extractAssistantText,
@@ -9,6 +11,7 @@ import {
 	KEEP_RECENT_CHARS,
 	rebuildMessages,
 	totalMessageChars,
+	truncateBashOutput,
 } from "../src/core/compaction/index.ts";
 
 // ============================================================================
@@ -312,10 +315,49 @@ describe("rebuildMessages", () => {
 	});
 
 	it("summary message contains compaction marker", () => {
-		const result = rebuildMessages("summary text", []);
+		const result = rebuildMessages("summary text", [], { originalSessionPath: "/tmp/original.jsonl" });
 		const text = (result[0].content as Array<{ type: string; text: string }>)[0].text;
-		expect(text).toContain("compacted into the following summary");
-		expect(text).toContain("summary text");
+		expect(text).toContain("The conversation before this point was compacted.");
+		expect(text).toContain("Full original transcript:\n/tmp/original.jsonl");
+		expect(text).toContain("Summary:\nsummary text");
+	});
+
+	it("keeps command and truncates long bash output in rebuilt tail", () => {
+		const result = rebuildMessages(
+			"summary text",
+			[
+				{
+					role: "bashExecution",
+					command: "bun test",
+					output: "a".repeat(20),
+					exitCode: 0,
+					cancelled: false,
+					truncated: false,
+					timestamp: Date.now(),
+				},
+			],
+			{ bashOutputChars: 5 },
+		);
+		const bashMessage = result[1];
+		expect(bashMessage.role).toBe("bashExecution");
+		if (bashMessage.role !== "bashExecution") return;
+		expect(bashMessage.command).toBe("bun test");
+		expect(bashMessage.output).toContain("aaaaa");
+		expect(bashMessage.output).toContain(
+			"[output truncated during compaction; full output available in archived session]",
+		);
+		expect(bashMessage.truncated).toBe(true);
+	});
+
+	it("truncateBashOutput leaves short output unchanged", () => {
+		expect(truncateBashOutput("short", 10)).toEqual({ output: "short", truncated: false });
+	});
+
+	it("buildCompactPrompt appends custom instructions", () => {
+		const prompt = buildCompactPrompt("focus on failing tests");
+		expect(prompt).toContain(COMPACT_PROMPT);
+		expect(prompt).toContain("Additional user instructions for this compaction:");
+		expect(prompt).toContain("focus on failing tests");
 	});
 });
 
@@ -324,8 +366,12 @@ describe("rebuildMessages", () => {
 // ============================================================================
 
 describe("constants", () => {
-	it("KEEP_RECENT_CHARS is 50000", () => {
-		expect(KEEP_RECENT_CHARS).toBe(50_000);
+	it("KEEP_RECENT_CHARS is 100000", () => {
+		expect(KEEP_RECENT_CHARS).toBe(100_000);
+	});
+
+	it("BASH_OUTPUT_CHARS is 1000", () => {
+		expect(BASH_OUTPUT_CHARS).toBe(1_000);
 	});
 
 	it("COMPACT_PROMPT tells model not to use tools", () => {

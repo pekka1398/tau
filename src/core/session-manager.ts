@@ -36,11 +36,17 @@ export interface SessionHeader {
 	timestamp: string;
 	cwd: string;
 	parentSession?: string;
+	compactedFrom?: string;
+	compactedAt?: string;
+	compactInstructions?: string;
 }
 
 export interface NewSessionOptions {
 	id?: string;
 	parentSession?: string;
+	compactedFrom?: string;
+	compactedAt?: string;
+	compactInstructions?: string;
 }
 
 export interface SessionEntryBase {
@@ -832,6 +838,9 @@ export class SessionManager {
 			timestamp,
 			cwd: this.cwd,
 			parentSession: options?.parentSession,
+			compactedFrom: options?.compactedFrom,
+			compactedAt: options?.compactedAt,
+			compactInstructions: options?.compactInstructions,
 		};
 		this.fileEntries = [header];
 		this.byId.clear();
@@ -935,7 +944,7 @@ export class SessionManager {
 	/**
 	 * Rebuild session entries from a list of messages.
 	 * Keeps the session header, replaces everything else.
-	 * Used by compaction (Approach A) to rewrite the session after summarization.
+	 * Kept for tests and legacy callers that need an in-place rebuild.
 	 */
 	rebuildFromMessages(messages: AgentMessage[]): void {
 		// Keep only the session header
@@ -958,6 +967,32 @@ export class SessionManager {
 		// Rewrite the entire session file
 		this._rewriteFile();
 		this.flushed = true;
+	}
+
+	/**
+	 * Create a new compacted session from already-built messages and switch this
+	 * manager to it. The current session file is left untouched.
+	 */
+	createCompactedSession(
+		messages: AgentMessage[],
+		options: { compactedFrom?: string; compactedAt?: string; compactInstructions?: string } = {},
+	): string | undefined {
+		const compactedFrom = options.compactedFrom ? resolvePath(options.compactedFrom) : undefined;
+		const sessionFile = this.newSession({
+			parentSession: compactedFrom,
+			compactedFrom,
+			compactedAt: options.compactedAt ?? new Date().toISOString(),
+			compactInstructions: options.compactInstructions,
+		});
+
+		for (const message of messages) {
+			if (message.role === "compactionSummary" || message.role === "branchSummary") continue;
+			this.appendMessage(message as Message | CustomMessage | BashExecutionMessage);
+		}
+
+		this._rewriteFile();
+		this.flushed = this.persist;
+		return sessionFile;
 	}
 
 	private _appendEntry(entry: SessionEntry): void {
