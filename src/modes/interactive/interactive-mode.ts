@@ -2993,12 +2993,36 @@ export class InteractiveMode {
 			case "compaction_start": {
 				// Summary generation is a direct text-only model request; the UI updates
 				// after the derived compacted session is created.
+				if (this.settingsManager.getShowTerminalProgress()) {
+					this.ui.terminal.setProgress(true);
+				}
+				this.stopWorkingLoader();
+				this.logLoaderTransition("waiting", "compaction_start");
+				this.loaderStatus = "waiting";
+				this.streamingChars = 0;
+				this.runningToolName = "";
+				this.waitingStartTime = Date.now();
+				if (this.workingVisible) {
+					this.loadingAnimation = this.createWorkingLoader();
+					this.updateLoaderMessage();
+					this.statusContainer.addChild(this.loadingAnimation);
+				}
+				this.startLoaderTick();
 				this.showStatus("Compacting context...");
 				this.ui.requestRender();
 				break;
 			}
 
 			case "compaction_end": {
+				if (this.settingsManager.getShowTerminalProgress()) {
+					this.ui.terminal.setProgress(false);
+				}
+				this.logLoaderTransition("idle", "compaction_end");
+				this.loaderStatus = "idle";
+				this.streamingChars = 0;
+				this.runningToolName = "";
+				this.stopLoaderTick();
+				this.stopWorkingLoader();
 				if (event.result) {
 					// Rebuild chat from the new agent state (summary + kept messages)
 					this.chatContainer.clear();
