@@ -18,7 +18,6 @@ dist-firefox/
 .claude/
 *.swp
 *.swo
-test
 note
 *~
 
@@ -41,6 +40,15 @@ out.jsonl
 pi-*.html
 out.html
 native/
+test/pdf/
+test/smlab/
+test/*.m4a
+test/*.png
+test/*.md
+test/*.py
+test/*.sh
+test/*.bat
+test/*.ps1
 
 # ai-dash build artifacts
 .dirstamp

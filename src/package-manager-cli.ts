@@ -4,7 +4,6 @@ import {
 	APP_NAME,
 	detectInstallMethod,
 	getAgentDir,
-	getPackageDir,
 	getSelfUpdateCommand,
 	getSelfUpdateUnavailableInstruction,
 	PACKAGE_NAME,
@@ -17,10 +16,6 @@ import { hasProjectTrustInputs, ProjectTrustStore } from "./core/trust-manager.t
 import { Markdown, type MarkdownTheme } from "./core/tui/index.ts";
 import { spawnProcess } from "./utils/child-process.ts";
 import { getLatestTauRelease, isNewerPackageVersion } from "./utils/version-check.ts";
-import {
-	cleanupWindowsSelfUpdateQuarantine,
-	quarantineWindowsNativeDependencies,
-} from "./utils/windows-self-update.ts";
 
 export type PackageCommand = "install" | "remove" | "update" | "list";
 
@@ -403,16 +398,6 @@ async function runSelfUpdate(command: SelfUpdateCommand): Promise<void> {
 	}
 }
 
-function prepareWindowsNpmSelfUpdate(): void {
-	if (process.platform !== "win32") {
-		return;
-	}
-
-	const packageDir = getPackageDir();
-	cleanupWindowsSelfUpdateQuarantine(packageDir);
-	quarantineWindowsNativeDependencies(packageDir);
-}
-
 function parseProjectTrustOverride(args: readonly string[]): boolean | undefined {
 	let trustOverride: boolean | undefined;
 	for (const arg of args) {
@@ -616,9 +601,6 @@ export async function handlePackageCommand(args: string[]): Promise<boolean> {
 						printSelfUpdateNote(selfUpdatePlan.note);
 					}
 					try {
-						if (installMethod === "npm") {
-							prepareWindowsNpmSelfUpdate();
-						}
 						await runSelfUpdate(selfUpdateCommand);
 					} catch (error: unknown) {
 						const message = error instanceof Error ? error.message : "Unknown package command error";

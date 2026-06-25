@@ -1,12 +1,7 @@
 import * as fs from "node:fs";
-import { createRequire } from "node:module";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 import { setKittyProtocolActive } from "./keys.ts";
-import { isNativeModifierPressed } from "./native-modifiers.ts";
 import { StdinBuffer } from "./stdin-buffer.ts";
-
-const cjsRequire = createRequire(import.meta.url);
 
 const TERMINAL_PROGRESS_KEEPALIVE_MS = 1000;
 const TERMINAL_PROGRESS_ACTIVE_SEQUENCE = "\x1b]9;4;3\x07";
@@ -154,12 +149,6 @@ export class ProcessTerminal implements Terminal {
 		if (process.platform !== "win32") {
 			process.kill(process.pid, "SIGWINCH");
 		}
-
-		// On Windows, enable ENABLE_VIRTUAL_TERMINAL_INPUT so the console sends
-		// VT escape sequences (e.g. \x1b[Z for Shift+Tab) instead of raw console
-		// events that lose modifier information. Must run AFTER setRawMode(true)
-		// since that resets console mode flags.
-		this.enableWindowsVTInput();
 
 		// Query Kitty keyboard protocol and fall back to modifyOtherKeys when DA confirms no Kitty response.
 		// See: https://sw.kovidgoyal.net/kitty/keyboard-protocol/
@@ -309,11 +298,7 @@ export class ProcessTerminal implements Terminal {
 	private forwardInputSequence(sequence: string): void {
 		if (!this.inputHandler) return;
 		const isAppleTerminal = sequence === "\r" && isAppleTerminalSession();
-		const input = normalizeAppleTerminalInput(
-			sequence,
-			isAppleTerminal,
-			isAppleTerminal && isNativeModifierPressed("shift"),
-		);
+		const input = normalizeAppleTerminalInput(sequence, isAppleTerminal, false);
 		this.inputHandler(input);
 	}
 
@@ -327,43 +312,6 @@ export class ProcessTerminal implements Terminal {
 		if (!this._modifyOtherKeysActive) return;
 		process.stdout.write("\x1b[>4;0m");
 		this._modifyOtherKeysActive = false;
-	}
-
-	/**
-	 * On Windows, add ENABLE_VIRTUAL_TERMINAL_INPUT (0x0200) to the stdin
-	 * console handle so the terminal sends VT sequences for modified keys
-	 * (e.g. \x1b[Z for Shift+Tab). Without this, libuv's ReadConsoleInputW
-	 * discards modifier state and Shift+Tab arrives as plain \t.
-	 */
-	private enableWindowsVTInput(): void {
-		if (process.platform !== "win32") return;
-		try {
-			const arch = process.arch;
-			if (arch !== "x64" && arch !== "arm64") return;
-
-			// Dynamic require so non-Windows and bundled/browser paths never load the
-			// native helper. In the npm package native/ is next to dist/; in compiled
-			// binary archives native/ is copied next to the executable.
-			const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-			const nativePath = path.join("native", "win32", "prebuilds", `win32-${arch}`, "win32-console-mode.node");
-			const candidates = [
-				path.join(moduleDir, "..", "..", "..", nativePath),
-				path.join(moduleDir, "..", nativePath),
-				path.join(moduleDir, nativePath),
-				path.join(path.dirname(process.execPath), nativePath),
-			];
-			for (const modulePath of candidates) {
-				try {
-					const helper = cjsRequire(modulePath) as { enableVirtualTerminalInput?: () => boolean };
-					helper.enableVirtualTerminalInput?.();
-					return;
-				} catch {
-					// Try the next possible packaging location.
-				}
-			}
-		} catch {
-			// Native helper not available — Shift+Tab won't be distinguishable from Tab.
-		}
 	}
 
 	async drainInput(maxMs = 1000, idleMs = 50): Promise<void> {
