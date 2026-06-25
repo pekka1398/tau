@@ -63,7 +63,7 @@ describe("AgentSession concurrent prompt guard", () => {
 	let tempDir: string;
 
 	beforeEach(() => {
-		tempDir = join(tmpdir(), `pi-concurrent-test-${Date.now()}`);
+		tempDir = join(tmpdir(), `tau-concurrent-test-${Date.now()}`);
 		mkdirSync(tempDir, { recursive: true });
 	});
 
@@ -240,11 +240,11 @@ describe("AgentSession concurrent prompt guard", () => {
 		authStorage.setRuntimeApiKey("openrouter", "test-key");
 
 		const extensionsResult = await createTestExtensionsResult([
-			(pi) => {
-				(globalThis as typeof globalThis & { testExtensionApi?: unknown }).testExtensionApi = pi;
+			(api) => {
+				(globalThis as typeof globalThis & { testExtensionApi?: unknown }).testExtensionApi = api;
 			},
-			(pi) => {
-				pi.on("input", async (event) => {
+			(api) => {
+				api.on("input", async (event) => {
 					lastInputSource = event.source;
 				});
 			},

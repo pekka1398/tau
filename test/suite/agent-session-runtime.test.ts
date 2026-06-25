@@ -129,8 +129,8 @@ describe("AgentSessionRuntime characterization", () => {
 	}
 
 	it("persists message_end assistant replacements to the session manager", async () => {
-		const { runtime } = await createRuntimeForTest((pi: ExtensionAPI) => {
-			pi.on("message_end", (event) => {
+		const { runtime } = await createRuntimeForTest((api: ExtensionAPI) => {
+			api.on("message_end", (event) => {
 				if (event.message.role !== "assistant") return;
 
 				return {
@@ -171,14 +171,14 @@ describe("AgentSessionRuntime characterization", () => {
 
 	it("emits session_before_switch and session_start for new and resume flows", async () => {
 		const events: RecordedSessionEvent[] = [];
-		const { runtime } = await createRuntimeForTest((pi: ExtensionAPI) => {
-			pi.on("session_before_switch", (event) => {
+		const { runtime } = await createRuntimeForTest((api: ExtensionAPI) => {
+			api.on("session_before_switch", (event) => {
 				events.push(event);
 			});
-			pi.on("session_shutdown", (event) => {
+			api.on("session_shutdown", (event) => {
 				events.push(event);
 			});
-			pi.on("session_start", (event) => {
+			api.on("session_start", (event) => {
 				events.push(event);
 			});
 		});
@@ -217,14 +217,14 @@ describe("AgentSessionRuntime characterization", () => {
 	it("honors session_before_switch cancellation for new and resume", async () => {
 		const events: RecordedSessionEvent[] = [];
 		let cancelReason: "new" | "resume" | undefined;
-		const { runtime } = await createRuntimeForTest((pi: ExtensionAPI) => {
-			pi.on("session_before_switch", (event) => {
+		const { runtime } = await createRuntimeForTest((api: ExtensionAPI) => {
+			api.on("session_before_switch", (event) => {
 				events.push(event);
 				if (event.reason === cancelReason) {
 					return { cancel: true };
 				}
 			});
-			pi.on("session_start", (event) => {
+			api.on("session_start", (event) => {
 				events.push(event);
 			});
 		});
@@ -252,18 +252,18 @@ describe("AgentSessionRuntime characterization", () => {
 	it("emits session_before_fork and session_start and honors cancellation", async () => {
 		const events: RecordedSessionEvent[] = [];
 		let cancelNextFork = false;
-		const { runtime } = await createRuntimeForTest((pi: ExtensionAPI) => {
-			pi.on("session_before_fork", (event) => {
+		const { runtime } = await createRuntimeForTest((api: ExtensionAPI) => {
+			api.on("session_before_fork", (event) => {
 				events.push(event);
 				if (cancelNextFork) {
 					cancelNextFork = false;
 					return { cancel: true };
 				}
 			});
-			pi.on("session_shutdown", (event) => {
+			api.on("session_shutdown", (event) => {
 				events.push(event);
 			});
-			pi.on("session_start", (event) => {
+			api.on("session_start", (event) => {
 				events.push(event);
 			});
 		});

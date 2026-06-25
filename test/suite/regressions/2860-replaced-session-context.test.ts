@@ -37,7 +37,7 @@ describe("regression #2860: replaced session callbacks", () => {
 	});
 
 	async function createRuntimeForTest(extensionFactory: ExtensionFactory, responses: string[]) {
-		const tempDir = join(tmpdir(), `pi-2860-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+		const tempDir = join(tmpdir(), `tau-2860-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 		mkdirSync(tempDir, { recursive: true });
 
 		const faux = registerFauxProvider({
@@ -142,26 +142,26 @@ describe("regression #2860: replaced session callbacks", () => {
 	it("rebinds before withSession, targets the replacement session, and invalidates stale api/ctx", async () => {
 		const events: string[] = [];
 		let oldCtx: ExtensionCommandContext | undefined;
-		let oldPi: ExtensionAPI | undefined;
+		let oldApi: ExtensionAPI | undefined;
 		let oldSessionFile: string | undefined;
 		let staleCtxThrows = false;
 		let stalePiThrows = false;
 		let replacementSessionFile: string | undefined;
 		let instanceId = 0;
 		const { runtime } = await createRuntimeForTest(
-			(pi) => {
+			(api) => {
 				const currentInstance = ++instanceId;
-				pi.on("session_start", () => {
+				api.on("session_start", () => {
 					events.push(`start:${currentInstance}`);
 				});
-				pi.on("session_shutdown", () => {
+				api.on("session_shutdown", () => {
 					events.push(`shutdown:${currentInstance}`);
 				});
-				pi.registerCommand("repro", {
+				api.registerCommand("repro", {
 					description: "repro",
 					handler: async (_args, ctx) => {
 						oldCtx = ctx;
-						oldPi = pi;
+						oldApi = api;
 						oldSessionFile = ctx.sessionManager.getSessionFile();
 						await ctx.newSession({
 							parentSession: oldSessionFile,
@@ -174,7 +174,7 @@ describe("regression #2860: replaced session callbacks", () => {
 									staleCtxThrows = true;
 								}
 								try {
-									oldPi?.sendUserMessage("stale message");
+									oldApi?.sendUserMessage("stale message");
 								} catch {
 									stalePiThrows = true;
 								}
@@ -204,8 +204,8 @@ describe("regression #2860: replaced session callbacks", () => {
 
 	it("supports withSession for fork", async () => {
 		const { runtime } = await createRuntimeForTest(
-			(pi) => {
-				pi.registerCommand("fork-it", {
+			(api) => {
+				api.registerCommand("fork-it", {
 					description: "fork-it",
 					handler: async (_args, ctx) => {
 						const leafId = ctx.sessionManager.getLeafId();
@@ -238,8 +238,8 @@ describe("regression #2860: replaced session callbacks", () => {
 	it("supports withSession for switchSession", async () => {
 		let targetSessionPath = "";
 		const { runtime } = await createRuntimeForTest(
-			(pi) => {
-				pi.registerCommand("switch-it", {
+			(api) => {
+				api.registerCommand("switch-it", {
 					description: "switch-it",
 					handler: async (_args, ctx) => {
 						await ctx.switchSession(targetSessionPath, {

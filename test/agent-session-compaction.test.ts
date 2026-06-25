@@ -28,7 +28,7 @@ describe.skipIf(!API_KEY)("AgentSession compaction e2e", () => {
 	let events: AgentSessionEvent[];
 
 	beforeEach(() => {
-		tempDir = join(tmpdir(), `pi-compaction-test-${Date.now()}`);
+		tempDir = join(tmpdir(), `tau-compaction-test-${Date.now()}`);
 		mkdirSync(tempDir, { recursive: true });
 		events = [];
 	});
