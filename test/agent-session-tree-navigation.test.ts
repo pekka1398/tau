@@ -316,5 +316,5 @@ describe.skipIf(!API_KEY)("AgentSession tree navigation - branch scenarios", () 
 
 		// Summary captures the branch we're leaving (the "Branch path" conversation)
 		expect(result.summaryEntry?.summary.length).toBeGreaterThan(0);
-	}, 180000);
+	}, 300000);
 });
