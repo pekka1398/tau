@@ -3,7 +3,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { OpenAICompletionsCompat } from "../src/core/ai/index.ts";
-import { getApiProvider } from "../src/core/ai/index.ts";
 import { AuthStorage } from "../src/core/auth-storage.ts";
 import { clearApiKeyCache, ModelRegistry, type ProviderConfigInput } from "../src/core/model-registry.ts";
 import { clearDeprecationWarningsForTests } from "../src/utils/deprecation.ts";
@@ -299,13 +298,31 @@ describe("ModelRegistry", () => {
 	});
 
 	describe("dynamic provider lifecycle", () => {
-		test("getProviderDisplayName resolves OpenRouter, registered names, and fallback names", () => {
+		test("getProviderDisplayName resolves OpenRouter and fallback names", () => {
 			const registry = ModelRegistry.create(authStorage, modelsJsonPath);
 
 			expect(registry.getProviderDisplayName("openrouter")).toBe("OpenRouter");
 			expect(registry.getProviderDisplayName("unknown-provider")).toBe("unknown-provider");
+		});
 
-			registry.registerProvider("local-proxy", {
+		test("registerProvider rejects non-OpenRouter providers", () => {
+			const registry = ModelRegistry.create(authStorage, modelsJsonPath);
+
+			expect(() =>
+				registry.registerProvider("local-proxy", {
+					name: "Local Proxy",
+					baseUrl: "http://localhost:11434/v1",
+					apiKey: "local-key",
+					api: "openai-completions",
+					models: [modelConfig("local-model")],
+				}),
+			).toThrow('only supports runtime registration for "openrouter"');
+		});
+
+		test("registerTestProvider supports isolated faux providers", () => {
+			const registry = ModelRegistry.create(authStorage, modelsJsonPath);
+
+			registry.registerTestProvider("local-proxy", {
 				name: "Local Proxy",
 				baseUrl: "http://localhost:11434/v1",
 				apiKey: "local-key",
@@ -314,6 +331,7 @@ describe("ModelRegistry", () => {
 			});
 
 			expect(registry.getProviderDisplayName("local-proxy")).toBe("Local Proxy");
+			expect(registry.find("local-proxy", "local-model")).toBeDefined();
 		});
 
 		test("baseUrl-only registerProvider override updates OpenRouter models and refresh preserves it", () => {
@@ -343,44 +361,6 @@ describe("ModelRegistry", () => {
 
 			expect(registry.find("openrouter", "dynamic-model")).toBeUndefined();
 			expect(registry.find("openrouter", "anthropic/claude-sonnet-4.5")).toBeDefined();
-		});
-
-		test("registerProvider validates streamSimple configs without removing existing models", () => {
-			const registry = ModelRegistry.create(authStorage, modelsJsonPath);
-			const before = getModelsForProvider(registry, "openrouter").length;
-
-			expect(() =>
-				registry.registerProvider("openrouter", {
-					streamSimple: (() => {
-						throw new Error("not called");
-					}) as ProviderConfigInput["streamSimple"],
-				}),
-			).toThrow('"api" is required');
-
-			expect(getModelsForProvider(registry, "openrouter")).toHaveLength(before);
-		});
-
-		test("streamSimple registration overrides and unregister restores the API handler", () => {
-			const registry = ModelRegistry.create(authStorage, modelsJsonPath);
-			const original = getApiProvider("openai-completions");
-			const streamSimple = (() => {
-				throw new Error("not called");
-			}) as ProviderConfigInput["streamSimple"];
-
-			registry.registerProvider("local-proxy", {
-				baseUrl: "https://local.example.com/v1",
-				apiKey: "local-key",
-				api: "openai-completions",
-				streamSimple,
-				models: [modelConfig("local-model")],
-			});
-
-			expect(getApiProvider("openai-completions")).not.toBe(original);
-
-			registry.unregisterProvider("local-proxy");
-
-			expect(getApiProvider("openai-completions")).toBeDefined();
-			expect(getApiProvider("openai-completions")?.streamSimple).not.toBe(streamSimple);
 		});
 	});
 

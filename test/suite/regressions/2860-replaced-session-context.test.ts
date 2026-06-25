@@ -48,7 +48,7 @@ describe("regression #2860: replaced session callbacks", () => {
 		const authStorage = AuthStorage.inMemory();
 		authStorage.setRuntimeApiKey(faux.getModel().provider, "faux-key");
 		const modelRegistry = ModelRegistry.inMemory(authStorage);
-		modelRegistry.registerProvider(faux.getModel().provider, {
+		modelRegistry.registerTestProvider(faux.getModel().provider, {
 			baseUrl: faux.getModel().baseUrl,
 			apiKey: "faux-key",
 			api: faux.api,

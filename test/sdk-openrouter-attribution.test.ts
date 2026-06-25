@@ -7,7 +7,9 @@ import {
 	type AssistantMessage,
 	createAssistantMessageEventStream,
 	type Model,
+	registerApiProvider,
 	type SimpleStreamOptions,
+	unregisterApiProviders,
 } from "../src/core/ai/index.ts";
 import { AuthStorage } from "../src/core/auth-storage.ts";
 import { ModelRegistry } from "../src/core/model-registry.ts";
@@ -16,6 +18,8 @@ import { SessionManager } from "../src/core/session-manager.ts";
 import { SettingsManager } from "../src/core/settings-manager.ts";
 
 describe("createAgentSession provider attribution headers", () => {
+	const CAPTURE_API = "capture-openrouter-attribution";
+
 	let tempDir: string;
 	let cwd: string;
 	let agentDir: string;
@@ -46,7 +50,7 @@ describe("createAgentSession provider attribution headers", () => {
 		return {
 			id,
 			name: `${provider} Test Model`,
-			api: "openai-completions",
+			api: CAPTURE_API,
 			provider,
 			baseUrl,
 			reasoning: false,
@@ -62,7 +66,7 @@ describe("createAgentSession provider attribution headers", () => {
 		const message: AssistantMessage = {
 			role: "assistant",
 			content: [{ type: "text", text: "ok" }],
-			api: "openai-completions",
+			api: CAPTURE_API,
 			provider: "capture-provider",
 			model: "capture-model",
 			usage: {
@@ -97,20 +101,26 @@ describe("createAgentSession provider attribution headers", () => {
 		const authStorage = AuthStorage.create(join(agentDir, "auth.json"));
 		authStorage.setRuntimeApiKey(model.provider, "test-api-key");
 		const modelRegistry = ModelRegistry.create(authStorage, join(agentDir, "models.json"));
-		const registeredProviders = ["capture-provider"];
+		const sourceId = `test:${CAPTURE_API}`;
 		let capturedOptions: SimpleStreamOptions | undefined;
 
-		modelRegistry.registerProvider("capture-provider", {
-			api: "openai-completions",
-			streamSimple: (_model, _context, providerOptions) => {
-				capturedOptions = providerOptions;
-				return createDoneStream();
+		registerApiProvider(
+			{
+				api: CAPTURE_API,
+				stream: (_model, _context, providerOptions) => {
+					capturedOptions = providerOptions as SimpleStreamOptions;
+					return createDoneStream();
+				},
+				streamSimple: (_model, _context, providerOptions) => {
+					capturedOptions = providerOptions;
+					return createDoneStream();
+				},
 			},
-		});
+			sourceId,
+		);
 
 		if (options.providerHeaders) {
 			modelRegistry.registerProvider(model.provider, { headers: options.providerHeaders });
-			registeredProviders.push(model.provider);
 		}
 
 		const sessionManager = SessionManager.inMemory(cwd);
@@ -140,8 +150,9 @@ describe("createAgentSession provider attribution headers", () => {
 			return capturedOptions?.headers;
 		} finally {
 			session.dispose();
-			for (const provider of registeredProviders.reverse()) {
-				modelRegistry.unregisterProvider(provider);
+			unregisterApiProviders(sourceId);
+			if (options.providerHeaders) {
+				modelRegistry.unregisterProvider(model.provider);
 			}
 		}
 	}
@@ -158,22 +169,6 @@ describe("createAgentSession provider attribution headers", () => {
 		const headers = await captureHeaders(createModel("openrouter", "https://openrouter.ai/api/v1"), {
 			telemetryEnabled: false,
 		});
-
-		expect(headers?.["HTTP-Referer"]).toBe("https://tau.dev");
-		expect(headers?.["X-OpenRouter-Title"]).toBe("tau");
-		expect(headers?.["X-OpenRouter-Categories"]).toBe("cli-agent");
-	});
-
-	it("adds attribution headers for custom providers routed through OpenRouter", async () => {
-		const headers = await captureHeaders(createModel("custom-openrouter", "https://openrouter.ai/api/v1"));
-
-		expect(headers?.["HTTP-Referer"]).toBe("https://tau.dev");
-		expect(headers?.["X-OpenRouter-Title"]).toBe("tau");
-		expect(headers?.["X-OpenRouter-Categories"]).toBe("cli-agent");
-	});
-
-	it("preserves legacy OpenRouter base URL substring attribution matching", async () => {
-		const headers = await captureHeaders(createModel("custom-openrouter", "not-a-url-openrouter.ai"));
 
 		expect(headers?.["HTTP-Referer"]).toBe("https://tau.dev");
 		expect(headers?.["X-OpenRouter-Title"]).toBe("tau");

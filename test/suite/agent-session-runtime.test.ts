@@ -41,7 +41,7 @@ describe("AgentSessionRuntime characterization", () => {
 		faux: ReturnType<typeof registerFauxProvider>,
 	): ModelRegistry {
 		const modelRegistry = ModelRegistry.inMemory(authStorage);
-		modelRegistry.registerProvider(faux.getModel().provider, {
+		modelRegistry.registerTestProvider(faux.getModel().provider, {
 			baseUrl: faux.getModel().baseUrl,
 			apiKey: "faux-key",
 			api: faux.api,

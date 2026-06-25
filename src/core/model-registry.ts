@@ -13,16 +13,12 @@ import { stripJsonComments } from "../utils/json.ts";
 import { normalizePath } from "../utils/paths.ts";
 import {
 	type Api,
-	type AssistantMessageEventStream,
-	type Context,
 	getModels,
 	getProviders,
 	type KnownProvider,
 	type Model,
 	type OpenAICompletionsCompat,
-	registerApiProvider,
 	resetApiProviders,
-	type SimpleStreamOptions,
 } from "./ai/index.ts";
 import type { AuthStatus, AuthStorage } from "./auth-storage.ts";
 import { BUILT_IN_PROVIDER_DISPLAY_NAMES } from "./provider-display-names.ts";
@@ -818,12 +814,29 @@ export class ModelRegistry {
 	}
 
 	/**
-	 * Register a provider dynamically (from extensions).
+	 * Register a runtime provider override.
 	 *
-	 * If provider has models: replaces all existing models for this provider.
-	 * If provider has only baseUrl/headers: overrides existing models' URLs.
+	 * Tau only supports OpenRouter as a product provider. Tests that need faux
+	 * providers should use registerTestProvider().
 	 */
 	registerProvider(providerName: string, config: ProviderConfigInput): void {
+		if (providerName !== "openrouter") {
+			throw new Error(`Provider ${providerName}: Tau only supports runtime registration for "openrouter".`);
+		}
+		this.registerProviderInternal(providerName, config);
+	}
+
+	/**
+	 * Register a provider for internal test harnesses.
+	 *
+	 * This keeps faux providers out of the product extension/model config surface
+	 * while preserving isolated tests for the agent runtime.
+	 */
+	registerTestProvider(providerName: string, config: ProviderConfigInput): void {
+		this.registerProviderInternal(providerName, config);
+	}
+
+	private registerProviderInternal(providerName: string, config: ProviderConfigInput): void {
 		const migratedConfig = migrateLegacyRegisterProviderConfigValues(providerName, config);
 		this.validateProviderConfig(providerName, migratedConfig);
 		this.applyProviderConfig(providerName, migratedConfig);
@@ -865,10 +878,6 @@ export class ModelRegistry {
 	}
 
 	private validateProviderConfig(providerName: string, config: ProviderConfigInput): void {
-		if (config.streamSimple && !config.api) {
-			throw new Error(`Provider ${providerName}: "api" is required when registering streamSimple.`);
-		}
-
 		if (!config.models || config.models.length === 0) {
 			return;
 		}
@@ -889,18 +898,6 @@ export class ModelRegistry {
 	}
 
 	private applyProviderConfig(providerName: string, config: ProviderConfigInput): void {
-		if (config.streamSimple) {
-			const streamSimple = config.streamSimple;
-			registerApiProvider(
-				{
-					api: config.api!,
-					stream: (model, context, options) => streamSimple(model, context, options as SimpleStreamOptions),
-					streamSimple,
-				},
-				`provider:${providerName}`,
-			);
-		}
-
 		this.storeProviderRequestConfig(providerName, config);
 
 		if (config.models && config.models.length > 0) {
@@ -949,7 +946,6 @@ export interface ProviderConfigInput {
 	baseUrl?: string;
 	apiKey?: string;
 	api?: Api;
-	streamSimple?: (model: Model<Api>, context: Context, options?: SimpleStreamOptions) => AssistantMessageEventStream;
 	headers?: Record<string, string>;
 	authHeader?: boolean;
 	models?: Array<{

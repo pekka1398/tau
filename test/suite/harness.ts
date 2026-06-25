@@ -117,7 +117,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
 	}
 	const modelRegistry = ModelRegistry.inMemory(authStorage);
 	if (withConfiguredAuth) {
-		modelRegistry.registerProvider(model.provider, {
+		modelRegistry.registerTestProvider(model.provider, {
 			baseUrl: model.baseUrl,
 			apiKey: "faux-key",
 			api: fauxProvider.api,

@@ -35,7 +35,7 @@ describe("issue #2753 reload stale resource settings", () => {
 		const authStorage = AuthStorage.inMemory();
 		authStorage.setRuntimeApiKey(faux.getModel().provider, "faux-key");
 		const modelRegistry = ModelRegistry.inMemory(authStorage);
-		modelRegistry.registerProvider(faux.getModel().provider, {
+		modelRegistry.registerTestProvider(faux.getModel().provider, {
 			baseUrl: faux.getModel().baseUrl,
 			apiKey: "faux-key",
 			api: faux.api,

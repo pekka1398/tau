@@ -7,7 +7,9 @@ import {
 	type AssistantMessage,
 	createAssistantMessageEventStream,
 	type Model,
+	registerApiProvider,
 	type SimpleStreamOptions,
+	unregisterApiProviders,
 } from "../src/core/ai/index.ts";
 import { AuthStorage } from "../src/core/auth-storage.ts";
 import { ModelRegistry } from "../src/core/model-registry.ts";
@@ -16,6 +18,8 @@ import { SessionManager } from "../src/core/session-manager.ts";
 import { SettingsManager } from "../src/core/settings-manager.ts";
 
 describe("createAgentSession stream options", () => {
+	const CAPTURE_API = "capture-stream-options";
+
 	let tempDir: string;
 	let cwd: string;
 	let agentDir: string;
@@ -34,13 +38,13 @@ describe("createAgentSession stream options", () => {
 		}
 	});
 
-	function createModel(api: Api): Model<Api> {
+	function createModel(): Model<Api> {
 		return {
 			id: "capture-model",
 			name: "Capture Model",
-			api,
-			provider: "capture-provider",
-			baseUrl: "https://capture.invalid/v1",
+			api: CAPTURE_API,
+			provider: "openrouter",
+			baseUrl: "https://openrouter.ai/api/v1",
 			reasoning: false,
 			input: ["text"],
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -49,13 +53,13 @@ describe("createAgentSession stream options", () => {
 		};
 	}
 
-	function createDoneStream(api: Api) {
+	function createDoneStream() {
 		const stream = createAssistantMessageEventStream();
 		const message: AssistantMessage = {
 			role: "assistant",
 			content: [{ type: "text", text: "ok" }],
-			api,
-			provider: "capture-provider",
+			api: CAPTURE_API,
+			provider: "openrouter",
 			model: "capture-model",
 			usage: {
 				input: 0,
@@ -73,25 +77,32 @@ describe("createAgentSession stream options", () => {
 	}
 
 	async function captureStreamOptions(
-		api: Api,
 		settings: { httpIdleTimeoutMs?: number; websocketConnectTimeoutMs?: number },
 		requestOptions: SimpleStreamOptions = {},
 	): Promise<SimpleStreamOptions | undefined> {
-		const model = createModel(api);
+		const model = createModel();
 		const settingsManager = SettingsManager.inMemory(settings);
 
 		const authStorage = AuthStorage.create(join(agentDir, "auth.json"));
 		authStorage.setRuntimeApiKey(model.provider, "test-api-key");
 		const modelRegistry = ModelRegistry.create(authStorage, join(agentDir, "models.json"));
+		const sourceId = `test:${CAPTURE_API}`;
 		let capturedOptions: SimpleStreamOptions | undefined;
 
-		modelRegistry.registerProvider(model.provider, {
-			api,
-			streamSimple: (_model, _context, providerOptions) => {
-				capturedOptions = providerOptions;
-				return createDoneStream(api);
+		registerApiProvider(
+			{
+				api: CAPTURE_API,
+				stream: (_model, _context, providerOptions) => {
+					capturedOptions = providerOptions as SimpleStreamOptions;
+					return createDoneStream();
+				},
+				streamSimple: (_model, _context, providerOptions) => {
+					capturedOptions = providerOptions;
+					return createDoneStream();
+				},
 			},
-		});
+			sourceId,
+		);
 
 		const sessionManager = SessionManager.inMemory(cwd);
 		const { session } = await createAgentSession({
@@ -109,40 +120,36 @@ describe("createAgentSession stream options", () => {
 			return capturedOptions;
 		} finally {
 			session.dispose();
-			modelRegistry.unregisterProvider(model.provider);
+			unregisterApiProviders(sourceId);
 		}
 	}
 
 	it("forwards httpIdleTimeoutMs as timeoutMs", async () => {
-		const options = await captureStreamOptions("openai-completions", { httpIdleTimeoutMs: 1234 });
+		const options = await captureStreamOptions({ httpIdleTimeoutMs: 1234 });
 
 		expect(options?.timeoutMs).toBe(1234);
 	});
 
 	it("defaults timeoutMs from httpIdleTimeoutMs for all providers", async () => {
-		const options = await captureStreamOptions("openai-completions", { httpIdleTimeoutMs: 1234 });
+		const options = await captureStreamOptions({ httpIdleTimeoutMs: 1234 });
 
 		expect(options?.timeoutMs).toBe(1234);
 	});
 
 	it("lets request timeoutMs override httpIdleTimeoutMs", async () => {
-		const options = await captureStreamOptions("openai-completions", { httpIdleTimeoutMs: 1234 }, { timeoutMs: 0 });
+		const options = await captureStreamOptions({ httpIdleTimeoutMs: 1234 }, { timeoutMs: 0 });
 
 		expect(options?.timeoutMs).toBe(0);
 	});
 
 	it("forwards websocketConnectTimeoutMs from settings", async () => {
-		const options = await captureStreamOptions("openai-completions", { websocketConnectTimeoutMs: 1234 });
+		const options = await captureStreamOptions({ websocketConnectTimeoutMs: 1234 });
 
 		expect(options?.websocketConnectTimeoutMs).toBe(1234);
 	});
 
 	it("lets request websocketConnectTimeoutMs override settings", async () => {
-		const options = await captureStreamOptions(
-			"openai-completions",
-			{ websocketConnectTimeoutMs: 1234 },
-			{ websocketConnectTimeoutMs: 0 },
-		);
+		const options = await captureStreamOptions({ websocketConnectTimeoutMs: 1234 }, { websocketConnectTimeoutMs: 0 });
 
 		expect(options?.websocketConnectTimeoutMs).toBe(0);
 	});
